@@ -1,0 +1,11 @@
+{
+  "currentSkills": ["Java", "Spring Boot", "SQL", "REST API"],
+  "experienceYears": 3,
+  "preferredType": "B2B",
+  "preferredRemote": true,
+  "salaryMin": 15000,
+  "currency": "PLN",
+  "contractType": "B2B",
+  "locations": ["Warsaw", "Kraków", "Remote"],
+  "minMatchScore": 6
+}
