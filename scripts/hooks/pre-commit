@@ -24,14 +24,14 @@ if ! echo "$VALID_TYPES" | grep -qw "$PREFIX"; then
 fi
 
 if [[ "$PREFIX" != "chore" ]]; then
-  if ! [[ "$BRANCH" =~ ^(feat|fix|refactor|docs|style|test)/VC-[0-9]{2,3}-[a-z0-9]+(-[a-z0-9]+)*$ ]]; then
+  if ! [[ "$BRANCH" =~ ^(feat|fix|refactor|docs|style|test)/VR-[0-9]{2,3}-[a-z0-9]+(-[a-z0-9]+)*$ ]]; then
     echo "❌ Invalid branch name: '$BRANCH'" >&2
     echo "" >&2
-    echo "   Expected format: <type>/VC-<00-999>-short-description" >&2
+    echo "   Expected format: <type>/VR-<00-999>-short-description" >&2
     echo "" >&2
     echo "   Examples:" >&2
-    echo "     feat/VC-123-add-scraper" >&2
-    echo "     fix/VC-12-fix-parser" >&2
+    echo "     feat/VR-123-add-scraper" >&2
+    echo "     fix/VR-12-fix-parser" >&2
     echo "     chore/setup-project    ← no ticket required for chore" >&2
     exit 1
   fi
