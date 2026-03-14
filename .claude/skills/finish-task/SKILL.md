@@ -1,11 +1,11 @@
 ---
 name: finish-task
-description: Finish a task: create a branch per naming convention, commit staged changes with the correct message format, and move the issue to Done in GitHub project. Usage: /finish-task <issue-number>
+description: Finish a task: create a branch per naming convention, commit staged changes with the correct message format, push, open a PR, and move the issue to Done in GitHub project. Usage: /finish-task <issue-number>
 user-invocable: true
 allowed-tools: Bash, Read
 ---
 
-Finish task #$ARGUMENTS — create branch, commit, and move to Done in GitHub project.
+Finish task #$ARGUMENTS — create branch, commit, push, open PR, and move to Done in GitHub project.
 
 ## Step 1 — Fetch issue
 
@@ -61,7 +61,30 @@ If there are staged changes, commit using the correct message format:
 
 If there are no staged changes, skip this step and inform the user.
 
-## Step 6 — Move issue to Done in GitHub project
+## Step 6 — Push branch to remote
+
+```
+git push -u origin <branch-name>
+```
+
+## Step 7 — Create Pull Request
+
+```
+gh pr create --title "<type>(VR-<number>): <issue title>" --body "$(cat <<'EOF'
+## Summary
+- <bullet points summarizing what was done>
+
+Closes #<number>
+
+🤖 Generated with [Claude Code](https://claude.com/claude-code)
+EOF
+)" --base main
+```
+
+- Title format matches commit message style: `<type>(VR-<number>): <short description>`
+- Body should summarize the changes from the commit
+
+## Step 8 — Move issue to Done in GitHub project
 
 1. Get the project item ID for issue #$ARGUMENTS:
 ```
@@ -76,12 +99,14 @@ gh api graphql -f mutation='mutation { updateProjectV2ItemFieldValue(input: { pr
 
 3. If not found in project → warn the user that the issue is not in the project board, but continue.
 
-## Step 7 — Report
+## Step 9 — Report
 
 Print a summary:
 ```
 ✓ Branch: <branch-name>
 ✓ Commit: <commit message or "no staged changes — commit manually">
+✓ Pushed to origin
+✓ PR: <pr url>
 ✓ Issue #$ARGUMENTS moved to Done
   URL: <issue url>
 ```
