@@ -3,25 +3,25 @@
 ## Task Graph
 
 ```
-VR-001 (scaffold)
-    └── VR-002 (models)
-            ├── VR-003 (repository)
-            │       ├── VR-005 (ScraperService)
-            │       │       └── VR-008 (scan orchestration)
-            │       │               └── VR-009 (REST controllers + SSE)
-            │       ├── VR-006 (EnricherService)
-            │       │       └── VR-008
-            │       └── VR-007 (ReporterService)
-            │               └── VR-008
-            └── VR-004 (JustJoinConnector)
-                    └── VR-005
+#3 (scaffold)
+    └── #4 (models)
+            ├── #5 (repository)
+            │       ├── #7 (ScraperService)
+            │       │       └── #10 (scan orchestration)
+            │       │               └── #11 (REST controllers + SSE)
+            │       ├── #8 (EnricherService)
+            │       │       └── #10
+            │       └── #9 (ReporterService)
+            │               └── #10
+            └── #6 (JustJoinConnector)
+                    └── #7
 ```
 
 **Legend:** each task depends on the one above it unless marked `parallel`.
 
 ---
 
-# VR-001: Project Scaffold [#3](https://github.com/MaleyDenis/vacancy-radar/issues/3)
+# [#3 Project Scaffold](https://github.com/MaleyDenis/vacancy-radar/issues/3)
 
 ## Context
 - New project, nothing exists yet
@@ -34,20 +34,17 @@ VR-001 (scaffold)
    - `org.jsoup:jsoup`
    - `com.fasterxml.jackson.core:jackson-databind`
    - `com.anthropic:anthropic-java` (Anthropic Java SDK)
-   - `com.diffplug.spotless` plugin (Google Java Format)
 3. Create `src/main/java/radar/VacancyRadarApplication.java` with `@SpringBootApplication`
 4. Create `src/main/resources/application.properties`:
    - `server.port=8080`
    - `anthropic.api.key=${ANTHROPIC_API_KEY}`
 5. Create `data/` directory with `.gitkeep`
 6. Create `data/profile.json` with default `UserProfile` values
-7. Create `.claude/settings.json` with hooks (spotlessApply, test, bash guard)
-8. Create `.claude/agents/scraper-agent.md`, `enricher-agent.md`, `reporter-agent.md`
+7. Create `.claude/agents/scraper-agent.md`, `enricher-agent.md`, `reporter-agent.md`
 
 ## Acceptance Criteria
-- [ ] `./gradlew build` succeeds
+- [x] `./gradlew build` succeeds
 - [ ] Application starts: `./gradlew bootRun`
-- [ ] `./gradlew spotlessApply` runs without error
 
 ## Boundaries
 - Do NOT add dependencies outside the list above without approval
@@ -58,7 +55,7 @@ VR-001 (scaffold)
 
 ---
 
-# VR-002: Domain Models [#4](https://github.com/MaleyDenis/vacancy-radar/issues/4)
+# [#4 Domain Models](https://github.com/MaleyDenis/vacancy-radar/issues/4)
 
 ## Context
 - Package: `radar.model`
@@ -89,11 +86,11 @@ VR-001 (scaffold)
 - Do NOT add Spring annotations (@Service, @Component) to models
 
 ## Dependencies
-- VR-001: must be completed first
+- depends on #3
 
 ---
 
-# VR-003: File Repository [#5](https://github.com/MaleyDenis/vacancy-radar/issues/5)
+# [#5 File Repository](https://github.com/MaleyDenis/vacancy-radar/issues/5)
 
 ## Context
 - Package: `radar.repository`
@@ -124,11 +121,11 @@ VR-001 (scaffold)
 - Do NOT read/write outside the `data/` directory
 
 ## Dependencies
-- VR-002: models must exist
+- depends on #4
 
 ---
 
-# VR-004: JustJoinConnector [#6](https://github.com/MaleyDenis/vacancy-radar/issues/6)
+# [#6 JustJoinConnector](https://github.com/MaleyDenis/vacancy-radar/issues/6)
 
 ## Context
 - Package: `radar.connector`
@@ -161,12 +158,11 @@ VR-001 (scaffold)
 - Do NOT modify `RawJobOffer` fields beyond what exists
 
 ## Dependencies
-- VR-002: `RawJobOffer` model must exist
-- VR-001: Spring context and Jsoup dependency must exist
+- depends on #4
 
 ---
 
-# VR-005: ScraperService [#7](https://github.com/MaleyDenis/vacancy-radar/issues/7)
+# [#7 ScraperService](https://github.com/MaleyDenis/vacancy-radar/issues/7)
 
 ## Context
 - Package: `radar.service`
@@ -191,12 +187,12 @@ VR-001 (scaffold)
 - Do NOT aggregate analytics
 
 ## Dependencies
-- VR-003: `JsonRepository` must exist
-- VR-004: `JustJoinConnector` must exist
+- depends on #5
+- depends on #6
 
 ---
 
-# VR-006: EnricherService [#8](https://github.com/MaleyDenis/vacancy-radar/issues/8)
+# [#8 EnricherService](https://github.com/MaleyDenis/vacancy-radar/issues/8)
 
 ## Context
 - Package: `radar.service`
@@ -228,12 +224,11 @@ VR-001 (scaffold)
 - Do NOT write to disk
 
 ## Dependencies
-- VR-002: models must exist
-- VR-001: Anthropic Java SDK dependency must exist
+- depends on #4
 
 ---
 
-# VR-007: ReporterService [#9](https://github.com/MaleyDenis/vacancy-radar/issues/9)
+# [#9 ReporterService](https://github.com/MaleyDenis/vacancy-radar/issues/9)
 
 ## Context
 - Package: `radar.service`
@@ -266,12 +261,12 @@ VR-001 (scaffold)
 - Do NOT scrape
 
 ## Dependencies
-- VR-003: `JsonRepository` must exist
-- VR-002: models must exist
+- depends on #5
+- depends on #4
 
 ---
 
-# VR-008: Scan Orchestration [#10](https://github.com/MaleyDenis/vacancy-radar/issues/10)
+# [#10 Scan Orchestration](https://github.com/MaleyDenis/vacancy-radar/issues/10)
 
 ## Context
 - Package: `radar.service`
@@ -307,19 +302,19 @@ VR-001 (scaffold)
 - [ ] `seen-ids.json` updated after successful scan
 
 ## Boundaries
-- Do NOT expose HTTP here — that is VR-009
+- Do NOT expose HTTP here — that is #11
 - Do NOT skip the analytics step even if no offers pass the filter
 - Do NOT use ConcurrentHashMap or polling — emitter is passed directly
 
 ## Dependencies
-- VR-005: `ScraperService` must exist
-- VR-006: `EnricherService` must exist
-- VR-007: `ReporterService` must exist
-- VR-003: `JsonRepository` must exist
+- depends on #7
+- depends on #8
+- depends on #9
+- depends on #5
 
 ---
 
-# VR-009: REST Controllers + SSE [#11](https://github.com/MaleyDenis/vacancy-radar/issues/11)
+# [#11 REST Controllers + SSE](https://github.com/MaleyDenis/vacancy-radar/issues/11)
 
 ## Context
 - Package: `radar.web`
@@ -356,6 +351,6 @@ VR-001 (scaffold)
 - Do NOT implement UI endpoints
 
 ## Dependencies
-- VR-008: `ScanService` must exist
-- VR-007: `ReporterService` must exist
-- VR-003: `JsonRepository` must exist
+- depends on #10
+- depends on #9
+- depends on #5
