@@ -21,7 +21,7 @@ VR-001 (scaffold)
 
 ---
 
-# VR-001: Project Scaffold
+# VR-001: Project Scaffold [#3](https://github.com/MaleyDenis/vacancy-radar/issues/3)
 
 ## Context
 - New project, nothing exists yet
@@ -58,7 +58,7 @@ VR-001 (scaffold)
 
 ---
 
-# VR-002: Domain Models
+# VR-002: Domain Models [#4](https://github.com/MaleyDenis/vacancy-radar/issues/4)
 
 ## Context
 - Package: `radar.model`
@@ -93,7 +93,7 @@ VR-001 (scaffold)
 
 ---
 
-# VR-003: File Repository
+# VR-003: File Repository [#5](https://github.com/MaleyDenis/vacancy-radar/issues/5)
 
 ## Context
 - Package: `radar.repository`
@@ -128,7 +128,7 @@ VR-001 (scaffold)
 
 ---
 
-# VR-004: JustJoinConnector
+# VR-004: JustJoinConnector [#6](https://github.com/MaleyDenis/vacancy-radar/issues/6)
 
 ## Context
 - Package: `radar.connector`
@@ -166,7 +166,7 @@ VR-001 (scaffold)
 
 ---
 
-# VR-005: ScraperService
+# VR-005: ScraperService [#7](https://github.com/MaleyDenis/vacancy-radar/issues/7)
 
 ## Context
 - Package: `radar.service`
@@ -196,7 +196,7 @@ VR-001 (scaffold)
 
 ---
 
-# VR-006: EnricherService
+# VR-006: EnricherService [#8](https://github.com/MaleyDenis/vacancy-radar/issues/8)
 
 ## Context
 - Package: `radar.service`
@@ -233,7 +233,7 @@ VR-001 (scaffold)
 
 ---
 
-# VR-007: ReporterService
+# VR-007: ReporterService [#9](https://github.com/MaleyDenis/vacancy-radar/issues/9)
 
 ## Context
 - Package: `radar.service`
@@ -271,7 +271,7 @@ VR-001 (scaffold)
 
 ---
 
-# VR-008: Scan Orchestration
+# VR-008: Scan Orchestration [#10](https://github.com/MaleyDenis/vacancy-radar/issues/10)
 
 ## Context
 - Package: `radar.service`
@@ -319,7 +319,7 @@ VR-001 (scaffold)
 
 ---
 
-# VR-009: REST Controllers + SSE
+# VR-009: REST Controllers + SSE [#11](https://github.com/MaleyDenis/vacancy-radar/issues/11)
 
 ## Context
 - Package: `radar.web`
