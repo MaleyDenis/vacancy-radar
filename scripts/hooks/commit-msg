@@ -1,23 +1,30 @@
 #!/bin/bash
 MSG=$(cat "$1")
-TYPE=$(echo "$MSG" | grep -oE '^[a-z]+')
+SUBJECT=$(echo "$MSG" | head -1)
+TYPE=$(echo "$SUBJECT" | grep -oE '^[a-z]+')
 
 CHORE_RE='^chore(\([a-z0-9-]+\))?: .+'
-OTHER_RE='^(feat|fix|refactor|docs|style|test)(\([a-z0-9-]+\))?: VC-[0-9]{2,3} .+'
+OTHER_RE='^(feat|fix|refactor|docs|style|test)(\([a-z0-9-]+\))?: VR-[0-9]{2,3} .+'
+
+if [[ ${#SUBJECT} -gt 70 ]]; then
+  echo "❌ Commit subject line too long: ${#SUBJECT} chars (max 70)" >&2
+  echo "   Subject: '$SUBJECT'" >&2
+  exit 1
+fi
 
 if [[ "$TYPE" == "chore" ]]; then
-  if ! [[ "$MSG" =~ $CHORE_RE ]]; then
-    echo "❌ Invalid commit message: '$MSG'" >&2
+  if ! [[ "$SUBJECT" =~ $CHORE_RE ]]; then
+    echo "❌ Invalid commit message: '$SUBJECT'" >&2
     echo "" >&2
     echo "   Expected: chore(scope): description" >&2
     echo "   Example:  chore(config): add pre-commit hooks" >&2
     exit 1
   fi
 else
-  if ! [[ "$MSG" =~ $OTHER_RE ]]; then
-    echo "❌ Invalid commit message: '$MSG'" >&2
+  if ! [[ "$SUBJECT" =~ $OTHER_RE ]]; then
+    echo "❌ Invalid commit message: '$SUBJECT'" >&2
     echo "" >&2
-    echo "   Expected: <type>(scope): VC-00-999 description" >&2
+    echo "   Expected: <type>(scope): VR-00-999 description" >&2
     echo "" >&2
     echo "   Valid types:" >&2
     echo "     feat     — new feature" >&2
@@ -29,8 +36,8 @@ else
     echo "     chore    — build/tools/config (no ticket required)" >&2
     echo "" >&2
     echo "   Examples:" >&2
-    echo "     feat(scraper): VC-123 add job listing parser" >&2
-    echo "     fix(api): VC-12 handle empty response" >&2
+    echo "     feat(scraper): VR-123 add job listing parser" >&2
+    echo "     fix(api): VR-12 handle empty response" >&2
     echo "     chore(config): add pre-commit hooks" >&2
     exit 1
   fi
