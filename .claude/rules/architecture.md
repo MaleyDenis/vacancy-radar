@@ -3,10 +3,10 @@
 ## High-Level Flow
 
 ```
-JustJoin HTML
+JustJoin JSON API (api.justjoin.it/v2/user-panel/offers, categoryId=6, Version: 2)
     │
     ▼
-JustJoinConnector (Jsoup → __NEXT_DATA__ → List<RawJobOffer>)
+JustJoinConnector (HttpClient → Jackson → List<RawJobOffer>, paginated by meta.totalPages)
     │
     ▼
 ScraperService
@@ -27,7 +27,7 @@ ScraperService
 
 | Component | Responsibility |
 |---|---|
-| `JustJoinConnector` | HTTP scraping, `__NEXT_DATA__` parsing, pagination |
+| `JustJoinConnector` | JustJoin JSON API client, Jackson parsing, pagination |
 | `ScraperService` | orchestrates scan, deduplication, coordinates enrichment |
 | `EnricherService` | sends RawJobOffer + UserProfile to Claude Haiku, returns JobReport |
 | `ReporterService` | aggregates Analytics, saves snapshots |

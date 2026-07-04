@@ -13,7 +13,8 @@
 - Java 25
 - Spring Boot 4.0.3
 - Gradle
-- Jsoup (parsing `__NEXT_DATA__` from JustJoin HTML)
+- JustJoin JSON API (`api.justjoin.it/v2/user-panel/offers`, `Version: 2` header, Java = `categoryId=6`)
+- Jsoup (HTML→text for job descriptions when fetched)
 - Jackson (JSON mapping)
 - Anthropic Java SDK (Claude Haiku — model `claude-haiku-4-5-20251001`)
 
