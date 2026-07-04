@@ -1,0 +1,177 @@
+package radar.connector;
+
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import java.io.IOException;
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.time.Duration;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.ThreadLocalRandom;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Component;
+import radar.model.RawJobOffer;
+
+/**
+ * Scrapes Java job offers from justjoin.it.
+ *
+ * <p>Historically justjoin.it embedded offer data in a {@code __NEXT_DATA__} script tag. As of 2026
+ * the site is a React Server Components app and no longer exposes that. Instead we call its public
+ * JSON API ({@code api.justjoin.it/v2/user-panel/offers}), which requires a {@code Version: 2}
+ * header and a {@code categories[]} filter. Java is {@code categoryId=6}.
+ *
+ * <p>The list endpoint does not carry the full job description (that lives only in the page's RSC
+ * payload and has no stable JSON endpoint), so {@link RawJobOffer#description()} is left null here.
+ * Fetching descriptions is deliberately out of scope for this connector — see {@link #DESCRIPTION_NOTE}.
+ */
+@Component
+public class JustJoinConnector {
+
+  static final String DESCRIPTION_NOTE =
+      "Description is not available from the list API; a follow-up task will add per-offer fetching.";
+
+  private static final Logger log = LoggerFactory.getLogger(JustJoinConnector.class);
+
+  private static final String API_BASE = "https://api.justjoin.it/v2/user-panel/offers";
+  private static final int JAVA_CATEGORY_ID = 6;
+  private static final int PER_PAGE = 100;
+  private static final int MAX_PAGES_SAFETY = 500;
+  private static final String USER_AGENT =
+      "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+          + "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36";
+  private static final String SOURCE = "justjoin";
+
+  private final ObjectMapper objectMapper;
+  private final HttpClient httpClient;
+
+  public JustJoinConnector(ObjectMapper objectMapper) {
+    this.objectMapper = objectMapper;
+    this.httpClient =
+        HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(15)).build();
+  }
+
+  /**
+   * Fetches every Java offer across all pages. Rate-limits between requests to stay polite.
+   */
+  public List<RawJobOffer> fetchAll() {
+    List<RawJobOffer> all = new ArrayList<>();
+    int page = 1;
+    int totalPages = 1;
+    while (page <= totalPages && page <= MAX_PAGES_SAFETY) {
+      JsonNode root = fetchPage(page);
+      totalPages = root.path("meta").path("totalPages").asInt(1);
+      List<RawJobOffer> offers = parseOffers(root);
+      all.addAll(offers);
+      log.info("JustJoin page {}/{}: {} offers ({} total)", page, totalPages, offers.size(),
+          all.size());
+      page++;
+      if (page <= totalPages) {
+        sleepPolitely();
+      }
+    }
+    return all;
+  }
+
+  private JsonNode fetchPage(int page) {
+    String url = API_BASE + "?categories%5B%5D=" + JAVA_CATEGORY_ID + "&page=" + page + "&perPage="
+        + PER_PAGE;
+    HttpRequest request = HttpRequest.newBuilder(URI.create(url))
+        .header("User-Agent", USER_AGENT)
+        .header("Accept", "application/json")
+        .header("Referer", "https://justjoin.it/")
+        .header("Version", "2")
+        .timeout(Duration.ofSeconds(30))
+        .GET()
+        .build();
+    try {
+      HttpResponse<String> response =
+          httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+      if (response.statusCode() != 200) {
+        throw new IllegalStateException(
+            "JustJoin API returned HTTP " + response.statusCode() + " for page " + page);
+      }
+      return objectMapper.readTree(response.body());
+    } catch (IOException e) {
+      throw new IllegalStateException("Failed to fetch JustJoin page " + page, e);
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      throw new IllegalStateException("Interrupted fetching JustJoin page " + page, e);
+    }
+  }
+
+  /**
+   * Parses one API page's JSON into raw offers. Package-private so it can be unit-tested with a
+   * fixture, without touching the network.
+   */
+  List<RawJobOffer> parseOffers(JsonNode root) {
+    List<RawJobOffer> offers = new ArrayList<>();
+    for (JsonNode node : root.path("data")) {
+      offers.add(toRawJobOffer(node));
+    }
+    return offers;
+  }
+
+  private RawJobOffer toRawJobOffer(JsonNode n) {
+    String slug = textOrNull(n, "slug");
+    JsonNode salary = n.path("employmentTypes").path(0);
+    return new RawJobOffer(
+        textOrNull(n, "guid"),
+        textOrNull(n, "title"),
+        textOrNull(n, "companyName"),
+        null, // companySize — not present in the list API
+        textOrNull(n, "city"),
+        "remote".equalsIgnoreCase(textOrNull(n, "workplaceType")),
+        textOrNull(n, "publishedAt"),
+        textOrNull(n, "experienceLevel"),
+        null, // description — see DESCRIPTION_NOTE
+        readSkills(n.path("requiredSkills")),
+        intOrNull(salary, "from"),
+        intOrNull(salary, "to"),
+        upperOrNull(salary, "currency"),
+        textOrNull(salary, "type"),
+        slug == null ? null : "https://justjoin.it/job-offer/" + slug,
+        SOURCE);
+  }
+
+  private static List<String> readSkills(JsonNode skillsNode) {
+    List<String> skills = new ArrayList<>();
+    if (skillsNode.isArray()) {
+      for (JsonNode s : skillsNode) {
+        // requiredSkills may be an array of strings or of objects with a "name" field
+        if (s.isTextual()) {
+          skills.add(s.asText());
+        } else if (s.hasNonNull("name")) {
+          skills.add(s.get("name").asText());
+        }
+      }
+    }
+    return skills;
+  }
+
+  private static String textOrNull(JsonNode node, String field) {
+    JsonNode v = node.get(field);
+    return v == null || v.isNull() ? null : v.asText();
+  }
+
+  private static String upperOrNull(JsonNode node, String field) {
+    String v = textOrNull(node, field);
+    return v == null ? null : v.toUpperCase();
+  }
+
+  private static Integer intOrNull(JsonNode node, String field) {
+    JsonNode v = node.get(field);
+    return v == null || v.isNull() || !v.isNumber() ? null : v.asInt();
+  }
+
+  private void sleepPolitely() {
+    try {
+      Thread.sleep(500 + ThreadLocalRandom.current().nextInt(500));
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+    }
+  }
+}
