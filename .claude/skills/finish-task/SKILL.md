@@ -1,11 +1,13 @@
 ---
 name: finish-task
-description: Finish a task: create a branch per naming convention, commit staged changes with the correct message format, push, open a PR, and move the issue to Done in GitHub project. Usage: /finish-task <issue-number>
+description: Finish a task: create a branch per naming convention, commit staged changes with the correct message format, push, open a PR, merge it into main, sync local main, and move the issue to Done in GitHub project. Usage: /finish-task <issue-number>
 user-invocable: true
 allowed-tools: Bash, Read
 ---
 
-Finish task #$ARGUMENTS — create branch, commit, push, open PR, and move to Done in GitHub project.
+Finish task #$ARGUMENTS — create branch, commit, push, open PR, merge it into main, sync local main, and move to Done in GitHub project.
+
+**Full flow:** create branch → do the task → commit → push → open PR → merge into main → checkout main → pull → ready for the next task.
 
 ## Step 1 — Fetch issue
 
@@ -84,7 +86,23 @@ EOF
 - Title format matches commit message style: `<type>(VR-<number>): <short description>`
 - Body should summarize the changes from the commit
 
-## Step 8 — Move issue to Done in GitHub project
+## Step 8 — Merge the PR into main and sync local main
+
+1. Merge the PR (squash → one commit per task on main, and delete the remote branch):
+```
+gh pr merge <pr-number> --squash --delete-branch
+```
+- If the merge is blocked (checks pending, not mergeable, conflicts), do NOT force it — report the blocker to the user and stop before Step 9.
+
+2. Switch back to main and pull the merged commit:
+```
+git checkout main
+git pull --ff-only
+```
+
+The local branch is deleted automatically by `--delete-branch` once you leave it; the working tree is now clean on an up-to-date `main`, ready for the next task.
+
+## Step 9 — Move issue to Done in GitHub project
 
 1. Get the project item ID for issue #$ARGUMENTS:
 ```
@@ -92,21 +110,22 @@ gh api graphql -f query='{ user(login: "MaleyDenis") { projectV2(number: 2) { it
 ```
 Find the node where `content.number == $ARGUMENTS` and capture its `id`.
 
-2. If found, update status to Done:
+2. If found, update status to Done (note: `gh api graphql` takes the mutation via `-f query=`, NOT `-f mutation=`):
 ```
-gh api graphql -f mutation='mutation { updateProjectV2ItemFieldValue(input: { projectId: "PVT_kwHOAIpoic4BRuoj" itemId: "<ITEM_ID>" fieldId: "PVTSSF_lAHOAIpoic4BRuojzg_eKyc" value: { singleSelectOptionId: "98236657" } }) { projectV2Item { id } } }'
+gh api graphql -f query='mutation { updateProjectV2ItemFieldValue(input: { projectId: "PVT_kwHOAIpoic4BRuoj" itemId: "<ITEM_ID>" fieldId: "PVTSSF_lAHOAIpoic4BRuojzg_eKyc" value: { singleSelectOptionId: "98236657" } }) { projectV2Item { id } } }'
 ```
 
 3. If not found in project → warn the user that the issue is not in the project board, but continue.
 
-## Step 9 — Report
+## Step 10 — Report
 
 Print a summary:
 ```
-✓ Branch: <branch-name>
-✓ Commit: <commit message or "no staged changes — commit manually">
+✓ Branch:   <branch-name>
+✓ Commit:   <commit message or "no staged changes — commit manually">
 ✓ Pushed to origin
-✓ PR: <pr url>
+✓ PR:       <pr url> (merged, branch deleted)
+✓ Local:    on main, pulled up to date
 ✓ Issue #$ARGUMENTS moved to Done
   URL: <issue url>
 ```
