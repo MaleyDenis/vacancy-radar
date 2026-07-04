@@ -78,8 +78,8 @@
    - Fields: `type (enum: SCANNING/ENRICHING/SAVING/DONE/ERROR), message, current (Integer), total (Integer), saved (Integer)`
 
 ## Acceptance Criteria
-- [ ] All model classes compile
-- [ ] Jackson can serialize/deserialize each model (unit test with sample JSON)
+- [x] All model classes compile
+- [x] Jackson can serialize/deserialize each model (unit test with sample JSON)
 
 ## Boundaries
 - Do NOT add business logic to models
