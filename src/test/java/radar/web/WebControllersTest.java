@@ -61,9 +61,15 @@ class WebControllersTest {
   }
 
   @Test
-  void postScanStartsAsyncScanAndReturnsEmitter() throws Exception {
+  void postScanStartsAsyncScanWithNoLimit() throws Exception {
     mvc.perform(post("/api/scan")).andExpect(request().asyncStarted());
-    verify(scanService).startScan(any());
+    verify(scanService).startScan(any(), org.mockito.ArgumentMatchers.isNull());
+  }
+
+  @Test
+  void postScanPassesLimitParam() throws Exception {
+    mvc.perform(post("/api/scan").param("limit", "20")).andExpect(request().asyncStarted());
+    verify(scanService).startScan(any(), org.mockito.ArgumentMatchers.eq(20));
   }
 
   @Test

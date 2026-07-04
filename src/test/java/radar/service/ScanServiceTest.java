@@ -83,7 +83,7 @@ class ScanServiceTest {
     });
     when(reporter.buildAnalytics(anyString(), anyList())).thenReturn(analytics);
 
-    scanService.runScan(emitter);
+    scanService.runScan(emitter, null);
 
     // event order: SCANNING, SCANNING, ENRICHING, ENRICHING, SAVING, DONE
     assertThat(emitted).extracting(ScanProgress::type).containsExactly(
@@ -116,7 +116,7 @@ class ScanServiceTest {
     when(enricher.enrichAll(anyList(), any(), any())).thenReturn(List.of(weak));
     when(reporter.buildAnalytics(anyString(), anyList())).thenReturn(analytics);
 
-    scanService.runScan(emitter);
+    scanService.runScan(emitter, null);
 
     ArgumentCaptor<List<JobReport>> jobs = ArgumentCaptor.forClass(List.class);
     verify(repository).saveJobs(anyString(), jobs.capture());
@@ -131,12 +131,37 @@ class ScanServiceTest {
     RuntimeException boom = new RuntimeException("scrape failed");
     when(scraper.scrapeNew()).thenThrow(boom);
 
-    scanService.runScan(emitter);
+    scanService.runScan(emitter, null);
 
     assertThat(emitted).extracting(ScanProgress::type)
         .contains(ScanProgress.Type.ERROR)
         .doesNotContain(ScanProgress.Type.DONE);
     verify(emitter).completeWithError(boom);
     verify(repository, org.mockito.Mockito.never()).saveJobs(anyString(), anyList());
+  }
+
+  @Test
+  void runScanCapsEnrichmentAndSeenIdsToLimit() {
+    RawJobOffer a = offer("a");
+    RawJobOffer b = offer("b");
+    RawJobOffer c = offer("c");
+    Analytics analytics = new Analytics("2026-07-04", 2, java.util.Map.of(), List.of(), null,
+        java.util.Map.of(), 100.0);
+
+    when(repository.readProfile()).thenReturn(profile);
+    when(scraper.scrapeNew()).thenReturn(List.of(a, b, c));
+    ArgumentCaptor<List<RawJobOffer>> enriched = ArgumentCaptor.forClass(List.class);
+    when(enricher.enrichAll(enriched.capture(), any(), any()))
+        .thenReturn(List.of(report(a, 8), report(b, 7)));
+    when(reporter.buildAnalytics(anyString(), anyList())).thenReturn(analytics);
+
+    scanService.runScan(emitter, 2);
+
+    // only the first 2 offers are enriched and marked seen; the third is left for a later run
+    assertThat(enriched.getValue()).containsExactly(a, b);
+    verify(scraper).markAsSeen(List.of("a", "b"));
+    ScanProgress done = emitted.get(emitted.size() - 1);
+    assertThat(done.type()).isEqualTo(ScanProgress.Type.DONE);
+    assertThat(done.total()).isEqualTo(2);
   }
 }
