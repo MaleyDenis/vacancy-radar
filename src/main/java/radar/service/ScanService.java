@@ -35,22 +35,26 @@ public class ScanService {
     this.repository = repository;
   }
 
-  /** Launches the scan asynchronously and returns immediately. */
-  public void startScan(SseEmitter emitter) {
-    CompletableFuture.runAsync(() -> runScan(emitter));
+  /**
+   * Launches the scan asynchronously and returns immediately.
+   *
+   * @param limit optional cap on how many new offers to enrich this run (null = no cap).
+   */
+  public void startScan(SseEmitter emitter, Integer limit) {
+    CompletableFuture.runAsync(() -> runScan(emitter, limit));
   }
 
   /**
    * The scan body. Package-private and synchronous so it can be unit-tested directly; {@link
    * #startScan} wraps it in a background task.
    */
-  void runScan(SseEmitter emitter) {
+  void runScan(SseEmitter emitter, Integer limit) {
     try {
       String date = LocalDate.now().toString();
       UserProfile profile = repository.readProfile();
 
       emit(emitter, new ScanProgress(ScanProgress.Type.SCANNING, "Scanning offers", null, null, null));
-      List<RawJobOffer> newOffers = scraperService.scrapeNew();
+      List<RawJobOffer> newOffers = capToLimit(scraperService.scrapeNew(), limit);
       emit(emitter, new ScanProgress(
           ScanProgress.Type.SCANNING, "Found new offers", 0, newOffers.size(), null));
 
@@ -81,6 +85,17 @@ public class ScanService {
       }
       emitter.completeWithError(e);
     }
+  }
+
+  /**
+   * Caps the offer list to at most {@code limit} entries. Because this runs before enrichment and
+   * {@code markAsSeen}, only the offers actually processed this run get marked seen.
+   */
+  private static List<RawJobOffer> capToLimit(List<RawJobOffer> offers, Integer limit) {
+    if (limit == null || limit < 0 || offers.size() <= limit) {
+      return offers;
+    }
+    return List.copyOf(offers.subList(0, limit));
   }
 
   /** Sends one progress event over SSE. Package-private/overridable so tests can observe the stream. */
