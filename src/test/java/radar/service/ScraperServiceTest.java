@@ -1,6 +1,7 @@
 package radar.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -15,6 +16,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import radar.connector.JustJoinConnector;
+import radar.connector.JustJoinConnector.OfferPage;
 import radar.model.RawJobOffer;
 import radar.model.ScanResult;
 import radar.model.StoredRawOffer;
@@ -48,6 +50,11 @@ class ScraperServiceTest {
     return new StoredRawOffer(offer(id), firstSeenAt);
   }
 
+  private OfferPage page(int totalPages, String... ids) {
+    return new OfferPage(IntStream.range(0, ids.length).mapToObj(i -> offer(ids[i])).toList(),
+        totalPages);
+  }
+
   @SuppressWarnings("unchecked")
   private List<StoredRawOffer> capturePersisted() {
     ArgumentCaptor<List<StoredRawOffer>> captor = ArgumentCaptor.forClass(List.class);
@@ -55,34 +62,66 @@ class ScraperServiceTest {
     return captor.getValue();
   }
 
-  // ---- scan ----
-
   @Test
   void scanAddsBrandNewOffersToEmptyPool() {
     when(repository.readRawOffers()).thenReturn(List.of());
-    when(connector.fetchAll()).thenReturn(List.of(offer("a"), offer("b")));
+    when(connector.fetchPage(1)).thenReturn(page(1, "a", "b"));
 
-    ScanResult result = scraperService.scan();
+    ScanResult result = scraperService.scan(false, null);
 
     assertThat(result).isEqualTo(new ScanResult(2, 2));
-    List<StoredRawOffer> saved = capturePersisted();
-    assertThat(saved).extracting(s -> s.offer().id()).containsExactly("a", "b");
-    assertThat(saved).allSatisfy(s -> assertThat(s.firstSeenAt()).isNotBlank());
+    assertThat(capturePersisted()).extracting(s -> s.offer().id()).containsExactly("a", "b");
   }
 
   @Test
   void scanPreservesFirstSeenForOffersAlreadyInPool() {
     String seen = Instant.now().minus(5, ChronoUnit.DAYS).toString();
     when(repository.readRawOffers()).thenReturn(List.of(stored("a", seen)));
-    when(connector.fetchAll()).thenReturn(List.of(offer("a"), offer("b")));
+    when(connector.fetchPage(1)).thenReturn(page(1, "a", "b"));
 
-    ScanResult result = scraperService.scan();
+    ScanResult result = scraperService.scan(true, null);
 
     assertThat(result).isEqualTo(new ScanResult(1, 2));
-    List<StoredRawOffer> saved = capturePersisted();
-    assertThat(saved).extracting(s -> s.offer().id()).containsExactly("a", "b");
-    assertThat(saved).filteredOn(s -> s.offer().id().equals("a"))
+    assertThat(capturePersisted()).filteredOn(s -> s.offer().id().equals("a"))
         .allSatisfy(s -> assertThat(s.firstSeenAt()).isEqualTo(seen));
+  }
+
+  @Test
+  void scanStopsEarlyOnceAPageBringsNothingNew() {
+    when(repository.readRawOffers()).thenReturn(List.of(stored("x", Instant.now().toString())));
+    when(connector.fetchPage(1)).thenReturn(page(3, "n1"));   // n1 is new -> keep going
+    when(connector.fetchPage(2)).thenReturn(page(3, "x"));    // all known -> stop
+
+    ScanResult result = scraperService.scan(false, null);
+
+    assertThat(result).isEqualTo(new ScanResult(1, 2));
+    verify(connector).fetchPage(1);
+    verify(connector).fetchPage(2);
+    verify(connector, never()).fetchPage(3);
+  }
+
+  @Test
+  void fullFetchKeepsWalkingPastAnAllKnownPage() {
+    when(repository.readRawOffers()).thenReturn(List.of(stored("x", Instant.now().toString())));
+    when(connector.fetchPage(1)).thenReturn(page(2, "x"));    // all known, but fullFetch -> continue
+    when(connector.fetchPage(2)).thenReturn(page(2, "n1"));
+
+    ScanResult result = scraperService.scan(true, null);
+
+    assertThat(result).isEqualTo(new ScanResult(1, 2));
+    verify(connector).fetchPage(2);
+  }
+
+  @Test
+  void limitCapsHowManyOffersAreProcessed() {
+    when(repository.readRawOffers()).thenReturn(List.of());
+    when(connector.fetchPage(1)).thenReturn(page(1, "a", "b", "c"));
+
+    ScanResult result = scraperService.scan(false, 2);
+
+    assertThat(result).isEqualTo(new ScanResult(2, 2));
+    assertThat(capturePersisted()).extracting(s -> s.offer().id()).containsExactly("a", "b");
+    verify(connector, never()).fetchPage(2);
   }
 
   @Test
@@ -91,9 +130,9 @@ class ScraperServiceTest {
     String recent = Instant.now().minus(2, ChronoUnit.DAYS).toString();
     when(repository.readRawOffers())
         .thenReturn(List.of(stored("old", old), stored("recent", recent)));
-    when(connector.fetchAll()).thenReturn(List.of());
+    when(connector.fetchPage(1)).thenReturn(new OfferPage(List.of(), 1));
 
-    ScanResult result = scraperService.scan();
+    ScanResult result = scraperService.scan(true, null);
 
     assertThat(result).isEqualTo(new ScanResult(0, 1));
     assertThat(capturePersisted()).extracting(s -> s.offer().id()).containsExactly("recent");

@@ -54,19 +54,26 @@ public class JustJoinConnector {
         HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(15)).build();
   }
 
+  /** One page of results: the parsed offers plus the total page count reported by the API. */
+  public record OfferPage(List<RawJobOffer> offers, int totalPages) {
+  }
+
+  /** Upper bound on how many pages any caller will walk, as a runaway guard. */
+  public static final int MAX_PAGES = MAX_PAGES_SAFETY;
+
   /**
-   * Fetches every Java offer across all pages. Rate-limits between requests to stay polite.
+   * Fetches every Java offer across all pages, newest first. Rate-limits between requests to stay
+   * polite.
    */
   public List<RawJobOffer> fetchAll() {
     List<RawJobOffer> all = new ArrayList<>();
     int page = 1;
     int totalPages = 1;
     while (page <= totalPages && page <= MAX_PAGES_SAFETY) {
-      JsonNode root = fetchPage(page);
-      totalPages = root.path("meta").path("totalPages").asInt(1);
-      List<RawJobOffer> offers = parseOffers(root);
-      all.addAll(offers);
-      log.info("JustJoin page {}/{}: {} offers ({} total)", page, totalPages, offers.size(),
+      OfferPage p = fetchPage(page);
+      totalPages = p.totalPages();
+      all.addAll(p.offers());
+      log.info("JustJoin page {}/{}: {} offers ({} total)", page, totalPages, p.offers().size(),
           all.size());
       page++;
       if (page <= totalPages) {
@@ -76,9 +83,19 @@ public class JustJoinConnector {
     return all;
   }
 
-  private JsonNode fetchPage(int page) {
+  /**
+   * Fetches a single page of offers (newest first). Lets callers paginate lazily — e.g. an
+   * incremental scan that stops once it reaches already-known offers.
+   */
+  public OfferPage fetchPage(int page) {
+    JsonNode root = fetchPageJson(page);
+    int totalPages = root.path("meta").path("totalPages").asInt(1);
+    return new OfferPage(parseOffers(root), totalPages);
+  }
+
+  private JsonNode fetchPageJson(int page) {
     String url = API_BASE + "?categories%5B%5D=" + JAVA_CATEGORY_ID + "&page=" + page + "&perPage="
-        + PER_PAGE;
+        + PER_PAGE + "&sortBy=published&orderBy=DESC";
     HttpRequest request = HttpRequest.newBuilder(URI.create(url))
         .header("User-Agent", USER_AGENT)
         .header("Accept", "application/json")

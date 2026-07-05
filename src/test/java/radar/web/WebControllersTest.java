@@ -61,15 +61,25 @@ class WebControllersTest {
   }
 
   @Test
-  void postScanRunsSynchronouslyAndReturnsResult() throws Exception {
-    when(scraperService.scan()).thenReturn(new ScanResult(5, 10));
+  void postScanRunsSynchronouslyWithIncrementalDefaults() throws Exception {
+    when(scraperService.scan(false, null)).thenReturn(new ScanResult(5, 10));
 
     mvc.perform(post("/api/scan"))
         .andExpect(status().isOk())
         .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
         .andExpect(jsonPath("$.added").value(5))
         .andExpect(jsonPath("$.total").value(10));
-    verify(scraperService).scan();
+    verify(scraperService).scan(false, null);
+  }
+
+  @Test
+  void postScanPassesFullFetchAndLimitParams() throws Exception {
+    when(scraperService.scan(true, 20)).thenReturn(new ScanResult(20, 964));
+
+    mvc.perform(post("/api/scan").param("fullFetch", "true").param("limit", "20"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.added").value(20));
+    verify(scraperService).scan(true, 20);
   }
 
   @Test
