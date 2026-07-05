@@ -4,6 +4,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
@@ -55,7 +56,7 @@ class WebControllersTest {
 
   private JobReport report(String id, int score) {
     var offer = new RawJobOffer(id, "Java Dev", "Acme", null, "Kraków", true, "2026-07-04",
-        "senior", null, List.of("Java"), 18000, 26000, "PLN", "b2b", "url", "justjoin");
+        "senior", null, List.of("Java"), 18000, 26000, "PLN", "b2b", "url", "justjoin", null);
     return new JobReport(offer, List.of("Java"), List.of(), "product", "senior", List.of(),
         List.of(), "focus", score, new SalaryRange(18000, 26000, "PLN"));
   }
@@ -104,6 +105,16 @@ class WebControllersTest {
         .andExpect(status().isOk())
         .andExpect(jsonPath("$[0].rawJobOffer.id").value("x"));
     verify(repository).loadJobs("2026-07-01");
+  }
+
+  @Test
+  void deleteJobsReturnsRemovedCount() throws Exception {
+    when(repository.deleteAllJobs()).thenReturn(3);
+
+    mvc.perform(delete("/api/jobs"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.deleted").value(3));
+    verify(repository).deleteAllJobs();
   }
 
   @Test

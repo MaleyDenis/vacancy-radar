@@ -65,7 +65,7 @@ class JsonRepositoryTest {
     var offer = new RawJobOffer(
         "jj-1", "Java Dev", "Acme", "50", "Kraków", true, "2026-07-04", "mid",
         null, List.of("Java"), 12000, 18000, "PLN", "b2b",
-        "https://justjoin.it/job-offer/jj-1", "justjoin");
+        "https://justjoin.it/job-offer/jj-1", "justjoin", null);
     var report = new JobReport(
         offer, List.of("Java", "SQL"), List.of("Kafka"), "product", "mid",
         List.of("on-call"), List.of("remote"), "system design", 8,
@@ -78,6 +78,26 @@ class JsonRepositoryTest {
   @Test
   void loadJobsReturnsEmptyWhenMissing() {
     assertThat(repo.loadJobs("2026-01-01")).isEmpty();
+  }
+
+  @Test
+  void deleteAllJobsRemovesEverySnapshotsJobsFile() {
+    var report = new JobReport(
+        new RawJobOffer("jj-1", "Java Dev", "Acme", null, "Kraków", true, "2026-07-04", "mid",
+            null, List.of("Java"), 12000, 18000, "PLN", "b2b", "url", "justjoin", null),
+        List.of("Java"), List.of(), "product", "mid", List.of(), List.of(), "focus", 8,
+        new SalaryRange(12000, 18000, "PLN"));
+    repo.saveJobs("2026-07-04", List.of(report));
+    repo.saveJobs("2026-07-05", List.of(report));
+    // a snapshot with only analytics (no jobs.json) must not be counted
+    repo.saveAnalytics("2026-07-06",
+        new Analytics("2026-07-06", 0, Map.of(), List.of(), null, Map.of(), 0.0));
+
+    var deleted = repo.deleteAllJobs();
+
+    assertThat(deleted).isEqualTo(2);
+    assertThat(repo.loadJobs("2026-07-04")).isEmpty();
+    assertThat(repo.loadJobs("2026-07-05")).isEmpty();
   }
 
   @Test

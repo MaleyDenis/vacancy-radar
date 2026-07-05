@@ -151,7 +151,8 @@ public class JustJoinConnector {
         upperOrNull(salary, "currency"),
         textOrNull(salary, "type"),
         slug == null ? null : "https://justjoin.it/job-offer/" + slug,
-        SOURCE);
+        SOURCE,
+        null); // domain — filled by the details step, not the list API
   }
 
   private static List<String> readSkills(JsonNode skillsNode) {
