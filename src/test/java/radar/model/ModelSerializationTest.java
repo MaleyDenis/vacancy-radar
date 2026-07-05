@@ -29,7 +29,7 @@ class ModelSerializationTest {
   void rawJobOfferRoundTrips() throws Exception {
     var offer = new RawJobOffer(
         "jj-123", "Senior Java Dev", "Acme", "50-100", "Warsaw", true,
-        "2026-07-04", "senior", "Build things", List.of("Java", "Spring"),
+        "2026-07-04", "senior", "Build things",
         18000, 26000, "PLN", "B2B", "https://justjoin.it/job/jj-123", "justjoin", null);
     assertRoundTrip(offer, RawJobOffer.class);
   }
@@ -46,7 +46,7 @@ class ModelSerializationTest {
   void jobReportRoundTrips() throws Exception {
     var offer = new RawJobOffer(
         "jj-1", "Java Dev", "Acme", "50", "Kraków", false, "2026-07-04", "mid",
-        "desc", List.of("Java"), 12000, 18000, "PLN", "B2B", "url", "justjoin", null);
+        "desc", 12000, 18000, "PLN", "B2B", "url", "justjoin", null);
     var report = new JobReport(
         offer, List.of("Java", "SQL"), List.of("Kafka"), "product", "mid",
         List.of("on-call"), List.of("remote"), "system design", 8,
@@ -86,7 +86,7 @@ class ModelSerializationTest {
         null, List.of("Java"), List.of(), "product", "mid", List.of(), List.of(),
         "focus", 7, new SalaryRange(10000, 20000, "PLN"));
     var offer = new RawJobOffer(
-        "jj-2", "t", "c", null, null, null, null, null, null, null, null, null,
+        "jj-2", "t", "c", null, null, null, null, null, null, null, null,
         null, null, null, null, null);
     var attached = report.withRawJobOffer(offer);
     assertThat(attached.rawJobOffer()).isSameAs(offer);

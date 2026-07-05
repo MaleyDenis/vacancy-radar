@@ -1,13 +1,14 @@
 package radar.model;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import java.util.List;
 
 /**
  * A raw job offer as scraped from a source connector (e.g. JustJoin), before enrichment.
  *
  * <p>{@code description} and {@code domain} come from the offer's own page (the details step),
  * not the listing API — they are {@code null} on a freshly-scraped offer and filled in later.
+ * Skills are intentionally not carried here: the listing's skill list is unreliable, so skills are
+ * extracted by Claude from the description during enrichment (see {@code JobReport.keySkills}).
  */
 @JsonIgnoreProperties(ignoreUnknown = true)
 public record RawJobOffer(
@@ -20,7 +21,6 @@ public record RawJobOffer(
     String publishedAt,
     String experienceLevel,
     String description,
-    List<String> skills,
     Integer salaryMin,
     Integer salaryMax,
     String currency,
@@ -36,7 +36,7 @@ public record RawJobOffer(
    */
   public RawJobOffer withDetails(String description, String domain) {
     return new RawJobOffer(id, title, companyName, companySize, location, remote, publishedAt,
-        experienceLevel, description, skills, salaryMin, salaryMax, currency, contractType,
+        experienceLevel, description, salaryMin, salaryMax, currency, contractType,
         applyUrl, sourceConnector, domain);
   }
 }

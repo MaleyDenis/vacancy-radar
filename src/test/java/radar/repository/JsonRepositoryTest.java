@@ -53,7 +53,7 @@ class JsonRepositoryTest {
   void jobsRoundTrip() {
     var offer = new RawJobOffer(
         "jj-1", "Java Dev", "Acme", "50", "Kraków", true, "2026-07-04", "mid",
-        null, List.of("Java"), 12000, 18000, "PLN", "b2b",
+        null, 12000, 18000, "PLN", "b2b",
         "https://justjoin.it/job-offer/jj-1", "justjoin", null);
     var report = new JobReport(
         offer, List.of("Java", "SQL"), List.of("Kafka"), "product", "mid",
@@ -73,7 +73,7 @@ class JsonRepositoryTest {
   void deleteAllJobsRemovesEverySnapshotsJobsFile() {
     var report = new JobReport(
         new RawJobOffer("jj-1", "Java Dev", "Acme", null, "Kraków", true, "2026-07-04", "mid",
-            null, List.of("Java"), 12000, 18000, "PLN", "b2b", "url", "justjoin", null),
+            null, 12000, 18000, "PLN", "b2b", "url", "justjoin", null),
         List.of("Java"), List.of(), "product", "mid", List.of(), List.of(), "focus", 8,
         new SalaryRange(12000, 18000, "PLN"));
     repo.saveJobs("2026-07-04", List.of(report));
