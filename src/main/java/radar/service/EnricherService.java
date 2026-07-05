@@ -92,9 +92,6 @@ public class EnricherService {
     append(sb, "Remote", offer.remote() == null ? null : offer.remote().toString());
     append(sb, "Experience level", offer.experienceLevel());
     append(sb, "Contract type", offer.contractType());
-    if (offer.skills() != null && !offer.skills().isEmpty()) {
-      append(sb, "Listed skills", String.join(", ", offer.skills()));
-    }
     if (offer.salaryMin() != null || offer.salaryMax() != null) {
       append(sb, "Salary", offer.salaryMin() + " - " + offer.salaryMax() + " " + offer.currency());
     }

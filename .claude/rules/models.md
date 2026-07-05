@@ -1,9 +1,10 @@
 # Key Models
 
 ## RawJobOffer
-`id, title, companyName, companySize, location, remote, publishedAt, experienceLevel, description, skills, salaryMin, salaryMax, currency, contractType, applyUrl, sourceConnector, domain`
+`id, title, companyName, companySize, location, remote, publishedAt, experienceLevel, description, salaryMin, salaryMax, currency, contractType, applyUrl, sourceConnector, domain`
 
 - `description` and `domain` come from the offer's own page (details step), not the listing API — `null` until fetched. `RawJobOffer.withDetails(description, domain)` returns an enriched copy.
+- No `skills` field: the listing's skill list is unreliable, so skills are extracted by Claude from the description at enrichment (→ `JobReport.keySkills`).
 
 ## StoredRawOffer (element of `raw-offers.json`)
 `offer (RawJobOffer), firstSeenAt, detailsFetchedAt`

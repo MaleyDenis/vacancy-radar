@@ -173,7 +173,6 @@ public class JustJoinConnector {
         textOrNull(n, "publishedAt"),
         textOrNull(n, "experienceLevel"),
         null, // description — see DESCRIPTION_NOTE
-        readSkills(n.path("requiredSkills")),
         intOrNull(salary, "from"),
         intOrNull(salary, "to"),
         upperOrNull(salary, "currency"),
@@ -181,21 +180,6 @@ public class JustJoinConnector {
         slug == null ? null : "https://justjoin.it/job-offer/" + slug,
         SOURCE,
         null); // domain — filled by the details step, not the list API
-  }
-
-  private static List<String> readSkills(JsonNode skillsNode) {
-    var skills = new ArrayList<String>();
-    if (skillsNode.isArray()) {
-      for (var s : skillsNode) {
-        // requiredSkills may be an array of strings or of objects with a "name" field
-        if (s.isTextual()) {
-          skills.add(s.asText());
-        } else if (s.hasNonNull("name")) {
-          skills.add(s.get("name").asText());
-        }
-      }
-    }
-    return skills;
   }
 
   private static String textOrNull(JsonNode node, String field) {

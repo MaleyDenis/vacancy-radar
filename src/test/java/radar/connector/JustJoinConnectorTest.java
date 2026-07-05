@@ -54,7 +54,6 @@ class JustJoinConnectorTest {
     assertThat(o.remote()).isTrue();
     assertThat(o.experienceLevel()).isEqualTo("senior");
     assertThat(o.publishedAt()).isEqualTo("2026-06-10T16:39:31.585Z");
-    assertThat(o.skills()).containsExactly("Java", "Spring Boot", "AWS");
     assertThat(o.salaryMin()).isEqualTo(18000);
     assertThat(o.salaryMax()).isEqualTo(26000);
     assertThat(o.currency()).isEqualTo("PLN");
@@ -88,29 +87,10 @@ class JustJoinConnectorTest {
 
     var o = connector.parseOffers(page).get(0);
     assertThat(o.remote()).isFalse();
-    assertThat(o.skills()).isEmpty();
     assertThat(o.salaryMin()).isNull();
     assertThat(o.salaryMax()).isNull();
     assertThat(o.currency()).isNull();
     assertThat(o.contractType()).isNull();
-  }
-
-  @Test
-  void readsSkillsGivenAsObjects() throws Exception {
-    var page = json("""
-        {
-          "data": [
-            {
-              "guid": "g", "slug": "s", "title": "t", "companyName": "c",
-              "requiredSkills": [{"name": "Java", "level": 4}, {"name": "Kafka", "level": 2}],
-              "employmentTypes": []
-            }
-          ]
-        }
-        """);
-
-    var o = connector.parseOffers(page).get(0);
-    assertThat(o.skills()).containsExactly("Java", "Kafka");
   }
 
   @Test
