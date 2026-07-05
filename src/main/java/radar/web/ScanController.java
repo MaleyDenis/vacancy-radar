@@ -3,34 +3,38 @@ package radar.web;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
-import radar.model.ScanResult;
+import radar.model.ScanResponse;
+import radar.service.OfferDetailsService;
 import radar.service.ScraperService;
 
 /**
- * Triggers a scrape. Scraping is fast (no enrichment, no Claude), so this endpoint runs
- * synchronously and returns the {@link ScanResult} directly. Enrichment/evaluation is a separate
- * endpoint.
+ * Runs a scan: scrape the listing into the raw-offers pool, then fetch page details for offers that
+ * don't have them yet. No Claude here — enrichment/evaluation is a separate step. Synchronous; use
+ * {@code limit} to bound heavy runs.
  */
 @RestController
 public class ScanController {
 
   private final ScraperService scraperService;
+  private final OfferDetailsService offerDetailsService;
 
-  public ScanController(ScraperService scraperService) {
+  public ScanController(ScraperService scraperService, OfferDetailsService offerDetailsService) {
     this.scraperService = scraperService;
+    this.offerDetailsService = offerDetailsService;
   }
 
   /**
-   * Fetches current offers into the raw-offers pool and returns how many were added / the total.
-   *
-   * @param fullFetch walk every page to refresh the whole pool; default {@code false} stops early
-   *                  once a page brings nothing new (cheap incremental scan)
-   * @param limit     cap on how many offers to process this run (newest first); omit for no cap
+   * @param fullFetch walk every listing page to refresh the whole pool; default {@code false} stops
+   *                  early once a page brings nothing new
+   * @param limit     caps both the scrape (newest N) and the details fetch (N pending) this run;
+   *                  omit for no cap
    */
   @PostMapping("/api/scan")
-  public ScanResult scan(
+  public ScanResponse scan(
       @RequestParam(defaultValue = "false") boolean fullFetch,
       @RequestParam(required = false) Integer limit) {
-    return scraperService.scan(fullFetch, limit);
+    var scan = scraperService.scan(fullFetch, limit);
+    var details = offerDetailsService.fetchMissing(limit);
+    return ScanResponse.of(scan, details);
   }
 }
