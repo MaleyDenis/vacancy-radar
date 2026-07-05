@@ -18,7 +18,9 @@
 `currentSkills, experienceYears, preferredType, preferredRemote, salaryMin, currency, contractType, locations, minMatchScore`
 
 ## JobReport
-`rawJobOffer, keySkills, niceToHave, projectType, realSeniority, redFlags, greenFlags, interviewFocus, matchScore (1-10), salary`
+`rawJobOffer, skills, responsibilities, projectDescription, requirements, realSeniority, matchScore (1-10)`
+
+- `skills`: all technical skills Claude found in the offer text. `responsibilities`/`projectDescription`: Claude's own-words summary. `requirements`: list. Salary/domain live on `rawJobOffer`, not duplicated here.
 
 ## Analytics
-`date, totalScanned, skillFrequency, topCompanies, salaryDistribution, projectTypeBreakdown, remotePercentage`
+`date, totalScanned, skillFrequency, topCompanies, salaryDistribution, remotePercentage`

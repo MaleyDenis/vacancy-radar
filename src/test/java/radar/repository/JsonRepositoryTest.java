@@ -56,9 +56,8 @@ class JsonRepositoryTest {
         null, 12000, 18000, "PLN", "b2b",
         "https://justjoin.it/job-offer/jj-1", "justjoin", null);
     var report = new JobReport(
-        offer, List.of("Java", "SQL"), List.of("Kafka"), "product", "mid",
-        List.of("on-call"), List.of("remote"), "system design", 8,
-        new SalaryRange(12000, 18000, "PLN"));
+        offer, List.of("Java", "SQL"), "Build services.", "A platform.",
+        List.of("5+ years Java"), "mid", 8);
 
     repo.saveJobs("2026-07-04", List.of(report));
     assertThat(repo.loadJobs("2026-07-04")).containsExactly(report);
@@ -74,13 +73,12 @@ class JsonRepositoryTest {
     var report = new JobReport(
         new RawJobOffer("jj-1", "Java Dev", "Acme", null, "Kraków", true, "2026-07-04", "mid",
             null, 12000, 18000, "PLN", "b2b", "url", "justjoin", null),
-        List.of("Java"), List.of(), "product", "mid", List.of(), List.of(), "focus", 8,
-        new SalaryRange(12000, 18000, "PLN"));
+        List.of("Java"), "resp", "proj", List.of(), "mid", 8);
     repo.saveJobs("2026-07-04", List.of(report));
     repo.saveJobs("2026-07-05", List.of(report));
     // a snapshot with only analytics (no jobs.json) must not be counted
     repo.saveAnalytics("2026-07-06",
-        new Analytics("2026-07-06", 0, Map.of(), List.of(), null, Map.of(), 0.0));
+        new Analytics("2026-07-06", 0, Map.of(), List.of(), null, 0.0));
 
     var deleted = repo.deleteAllJobs();
 
@@ -95,7 +93,7 @@ class JsonRepositoryTest {
     repo.saveRawOffers(List.of());
     repo.saveJobs("2026-07-04", List.of());
     repo.saveAnalytics("2026-07-05",
-        new Analytics("2026-07-05", 0, Map.of(), List.of(), null, Map.of(), 0.0));
+        new Analytics("2026-07-05", 0, Map.of(), List.of(), null, 0.0));
     var gitkeep = tmp.resolve("data").resolve(".gitkeep");
     Files.createFile(gitkeep);
 
@@ -113,7 +111,7 @@ class JsonRepositoryTest {
   void analyticsRoundTrip() {
     var analytics = new Analytics(
         "2026-07-04", 42, Map.of("Java", 30, "Spring", 20), List.of("Acme"),
-        new SalaryRange(10000, 30000, "PLN"), Map.of("product", 0.6), 66.7);
+        new SalaryRange(10000, 30000, "PLN"), 66.7);
 
     repo.saveAnalytics("2026-07-04", analytics);
     assertThat(repo.loadAnalytics("2026-07-04")).isEqualTo(analytics);
@@ -122,16 +120,16 @@ class JsonRepositoryTest {
   @Test
   void saveCreatesDateDirectory() {
     repo.saveAnalytics("2026-07-04",
-        new Analytics("2026-07-04", 1, Map.of(), List.of(), null, Map.of(), 0.0));
+        new Analytics("2026-07-04", 1, Map.of(), List.of(), null, 0.0));
     assertThat(Files.isDirectory(tmp.resolve("data").resolve("2026-07-04"))).isTrue();
   }
 
   @Test
   void listDatesReturnsOnlyDateDirectoriesSorted() throws Exception {
     repo.saveAnalytics("2026-07-06",
-        new Analytics("2026-07-06", 0, Map.of(), List.of(), null, Map.of(), 0.0));
+        new Analytics("2026-07-06", 0, Map.of(), List.of(), null, 0.0));
     repo.saveAnalytics("2026-07-04",
-        new Analytics("2026-07-04", 0, Map.of(), List.of(), null, Map.of(), 0.0));
+        new Analytics("2026-07-04", 0, Map.of(), List.of(), null, 0.0));
     // noise that must be ignored
     Files.createDirectories(tmp.resolve("data").resolve("not-a-date"));
     repo.writeProfile(new UserProfile(List.of(), 0, null, false, 0, "PLN", null, List.of(), 0));

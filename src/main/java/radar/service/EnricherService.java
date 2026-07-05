@@ -104,8 +104,8 @@ public class EnricherService {
   /** Maps the model's result onto a JobReport, clamping the score to the valid 1-10 range. */
   JobReport toReport(EnrichmentResult r, RawJobOffer offer) {
     var score = Math.max(MIN_SCORE, Math.min(MAX_SCORE, r.matchScore()));
-    return new JobReport(offer, r.keySkills(), r.niceToHave(), r.projectType(), r.realSeniority(),
-        r.redFlags(), r.greenFlags(), r.interviewFocus(), score, r.salary());
+    return new JobReport(offer, r.skills(), r.responsibilities(), r.projectDescription(),
+        r.requirements(), r.realSeniority(), score);
   }
 
   private static void append(StringBuilder sb, String label, String value) {

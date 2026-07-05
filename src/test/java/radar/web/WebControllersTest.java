@@ -22,7 +22,6 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import radar.model.DetailsResult;
 import radar.model.JobReport;
 import radar.model.RawJobOffer;
-import radar.model.SalaryRange;
 import radar.model.ScanResult;
 import radar.model.UserProfile;
 import radar.repository.JsonRepository;
@@ -62,8 +61,7 @@ class WebControllersTest {
   private JobReport report(String id, int score) {
     var offer = new RawJobOffer(id, "Java Dev", "Acme", null, "Kraków", true, "2026-07-04",
         "senior", null, 18000, 26000, "PLN", "b2b", "url", "justjoin", null);
-    return new JobReport(offer, List.of("Java"), List.of(), "product", "senior", List.of(),
-        List.of(), "focus", score, new SalaryRange(18000, 26000, "PLN"));
+    return new JobReport(offer, List.of("Java"), "resp", "proj", List.of(), "senior", score);
   }
 
   @Test

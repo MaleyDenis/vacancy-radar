@@ -5,10 +5,10 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
 import radar.model.Analytics;
 import radar.model.JobReport;
+import radar.model.RawJobOffer;
 import radar.model.SalaryRange;
 import radar.repository.JsonRepository;
 
@@ -36,7 +36,6 @@ public class ReporterService {
         skillFrequency(allReports),
         topCompanies(allReports),
         salaryDistribution(allReports),
-        projectTypeBreakdown(allReports, total),
         remotePercentage(allReports, total));
   }
 
@@ -63,8 +62,8 @@ public class ReporterService {
   private Map<String, Integer> skillFrequency(List<JobReport> reports) {
     var counts = new HashMap<String, Integer>();
     for (var report : reports) {
-      if (report.keySkills() != null) {
-        for (var skill : report.keySkills()) {
+      if (report.skills() != null) {
+        for (var skill : report.skills()) {
           counts.merge(skill, 1, Integer::sum);
         }
       }
@@ -89,36 +88,21 @@ public class ReporterService {
 
   private SalaryRange salaryDistribution(List<JobReport> reports) {
     var mins = reports.stream()
-        .map(JobReport::salary)
-        .filter(s -> s != null && s.min() != null)
-        .map(SalaryRange::min)
+        .map(JobReport::rawJobOffer)
+        .filter(o -> o != null && o.salaryMin() != null)
+        .map(RawJobOffer::salaryMin)
         .sorted()
         .toList();
     if (mins.isEmpty()) {
       return new SalaryRange(null, null, null);
     }
     var currency = reports.stream()
-        .map(JobReport::salary)
-        .filter(s -> s != null && s.currency() != null)
-        .map(SalaryRange::currency)
+        .map(JobReport::rawJobOffer)
+        .filter(o -> o != null && o.currency() != null)
+        .map(RawJobOffer::currency)
         .findFirst()
         .orElse(null);
     return new SalaryRange(mins.get(0), mins.get(mins.size() - 1), currency);
-  }
-
-  private Map<String, Double> projectTypeBreakdown(List<JobReport> reports, int total) {
-    if (total == 0) {
-      return new LinkedHashMap<>();
-    }
-    var counts = reports.stream()
-        .map(JobReport::projectType)
-        .filter(t -> t != null && !t.isBlank())
-        .collect(Collectors.groupingBy(t -> t, Collectors.counting()));
-    var breakdown = new LinkedHashMap<String, Double>();
-    counts.entrySet().stream()
-        .sorted(Map.Entry.<String, Long>comparingByValue().reversed())
-        .forEach(e -> breakdown.put(e.getKey(), e.getValue() * 100.0 / total));
-    return breakdown;
   }
 
   private double remotePercentage(List<JobReport> reports, int total) {

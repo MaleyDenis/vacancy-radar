@@ -10,15 +10,12 @@ import java.util.List;
 @JsonIgnoreProperties(ignoreUnknown = true)
 public record JobReport(
     RawJobOffer rawJobOffer,
-    List<String> keySkills,
-    List<String> niceToHave,
-    String projectType,
+    List<String> skills,
+    String responsibilities,
+    String projectDescription,
+    List<String> requirements,
     String realSeniority,
-    List<String> redFlags,
-    List<String> greenFlags,
-    String interviewFocus,
-    int matchScore,
-    SalaryRange salary
+    int matchScore
 ) {
 
   /**
@@ -26,7 +23,7 @@ public record JobReport(
    * fields without the original offer, so the enricher stitches it back on afterwards.
    */
   public JobReport withRawJobOffer(RawJobOffer offer) {
-    return new JobReport(offer, keySkills, niceToHave, projectType, realSeniority,
-        redFlags, greenFlags, interviewFocus, matchScore, salary);
+    return new JobReport(offer, skills, responsibilities, projectDescription, requirements,
+        realSeniority, matchScore);
   }
 }
