@@ -9,7 +9,6 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.request;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.util.List;
@@ -22,10 +21,11 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import radar.model.JobReport;
 import radar.model.RawJobOffer;
 import radar.model.SalaryRange;
+import radar.model.ScanResult;
 import radar.model.UserProfile;
 import radar.repository.JsonRepository;
 import radar.service.ReporterService;
-import radar.service.ScanService;
+import radar.service.ScraperService;
 
 /**
  * Standalone MockMvc tests for the REST layer — no Spring context, so no dependency on the web test
@@ -34,7 +34,7 @@ import radar.service.ScanService;
 class WebControllersTest {
 
   private JsonRepository repository;
-  private ScanService scanService;
+  private ScraperService scraperService;
   private ReporterService reporterService;
   private MockMvc mvc;
 
@@ -44,10 +44,10 @@ class WebControllersTest {
   @BeforeEach
   void setUp() {
     repository = mock(JsonRepository.class);
-    scanService = mock(ScanService.class);
+    scraperService = mock(ScraperService.class);
     reporterService = mock(ReporterService.class);
     mvc = MockMvcBuilders.standaloneSetup(
-        new ScanController(scanService),
+        new ScanController(scraperService),
         new JobController(repository),
         new AnalyticsController(reporterService),
         new ProfileController(repository)).build();
@@ -61,15 +61,15 @@ class WebControllersTest {
   }
 
   @Test
-  void postScanStartsAsyncScanWithNoLimit() throws Exception {
-    mvc.perform(post("/api/scan")).andExpect(request().asyncStarted());
-    verify(scanService).startScan(any(), org.mockito.ArgumentMatchers.isNull());
-  }
+  void postScanRunsSynchronouslyAndReturnsResult() throws Exception {
+    when(scraperService.scan()).thenReturn(new ScanResult(5, 10));
 
-  @Test
-  void postScanPassesLimitParam() throws Exception {
-    mvc.perform(post("/api/scan").param("limit", "20")).andExpect(request().asyncStarted());
-    verify(scanService).startScan(any(), org.mockito.ArgumentMatchers.eq(20));
+    mvc.perform(post("/api/scan"))
+        .andExpect(status().isOk())
+        .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
+        .andExpect(jsonPath("$.added").value(5))
+        .andExpect(jsonPath("$.total").value(10));
+    verify(scraperService).scan();
   }
 
   @Test

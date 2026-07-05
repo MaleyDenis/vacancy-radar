@@ -16,6 +16,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import radar.model.Analytics;
 import radar.model.JobReport;
+import radar.model.StoredRawOffer;
 import radar.model.UserProfile;
 
 /**
@@ -25,6 +26,7 @@ import radar.model.UserProfile;
  * <p>Layout:
  * <pre>
  *   {dataDir}/profile.json
+ *   {dataDir}/raw-offers.json    (pool of scraped offers, profile-independent)
  *   {dataDir}/seen-ids.json
  *   {dataDir}/{YYYY-MM-DD}/jobs.json
  *   {dataDir}/{YYYY-MM-DD}/analytics.json
@@ -37,6 +39,7 @@ import radar.model.UserProfile;
 public class JsonRepository {
 
   private static final String PROFILE_FILE = "profile.json";
+  private static final String RAW_OFFERS_FILE = "raw-offers.json";
   private static final String SEEN_IDS_FILE = "seen-ids.json";
   private static final String JOBS_FILE = "jobs.json";
   private static final String ANALYTICS_FILE = "analytics.json";
@@ -60,6 +63,30 @@ public class JsonRepository {
 
   public void writeProfile(UserProfile profile) {
     write(dataDir.resolve(PROFILE_FILE), profile);
+  }
+
+  // ---- raw offers ----
+
+  /** Returns the scraped-offer pool, or an empty list if it doesn't exist yet. */
+  public List<StoredRawOffer> readRawOffers() {
+    lock.readLock().lock();
+    try {
+      Path file = dataDir.resolve(RAW_OFFERS_FILE);
+      if (!Files.exists(file)) {
+        return new ArrayList<>();
+      }
+      return objectMapper.readValue(Files.readAllBytes(file),
+          new TypeReference<List<StoredRawOffer>>() {});
+    } catch (IOException e) {
+      throw new UncheckedIOException("Failed to read " + RAW_OFFERS_FILE, e);
+    } finally {
+      lock.readLock().unlock();
+    }
+  }
+
+  /** Overwrites the scraped-offer pool with {@code offers}. */
+  public void saveRawOffers(List<StoredRawOffer> offers) {
+    write(dataDir.resolve(RAW_OFFERS_FILE), offers);
   }
 
   // ---- seen ids ----
