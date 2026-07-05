@@ -50,17 +50,6 @@ class JsonRepositoryTest {
   }
 
   @Test
-  void seenIdsStartEmptyAndDeduplicateAcrossAppends() {
-    assertThat(repo.readSeenIds()).isEmpty();
-
-    repo.appendSeenIds(List.of("a", "b", "c"));
-    repo.appendSeenIds(List.of("b", "c", "d")); // b, c already present
-    repo.appendSeenIds(List.of("a", "e"));      // a already present
-
-    assertThat(repo.readSeenIds()).containsExactly("a", "b", "c", "d", "e");
-  }
-
-  @Test
   void jobsRoundTrip() {
     var offer = new RawJobOffer(
         "jj-1", "Java Dev", "Acme", "50", "Kraków", true, "2026-07-04", "mid",
@@ -98,6 +87,26 @@ class JsonRepositoryTest {
     assertThat(deleted).isEqualTo(2);
     assertThat(repo.loadJobs("2026-07-04")).isEmpty();
     assertThat(repo.loadJobs("2026-07-05")).isEmpty();
+  }
+
+  @Test
+  void deleteAllDataRemovesEverythingExceptProfileAndDotfiles() throws Exception {
+    repo.writeProfile(new UserProfile(List.of(), 0, null, false, 0, "PLN", null, List.of(), 0));
+    repo.saveRawOffers(List.of());
+    repo.saveJobs("2026-07-04", List.of());
+    repo.saveAnalytics("2026-07-05",
+        new Analytics("2026-07-05", 0, Map.of(), List.of(), null, Map.of(), 0.0));
+    var gitkeep = tmp.resolve("data").resolve(".gitkeep");
+    Files.createFile(gitkeep);
+
+    // top-level entries besides profile.json and .gitkeep: raw-offers.json + two date dirs
+    var removed = repo.deleteAllData();
+
+    assertThat(removed).isEqualTo(3);
+    assertThat(repo.readProfile()).isNotNull();
+    assertThat(Files.exists(gitkeep)).isTrue(); // dotfiles are preserved
+    assertThat(repo.readRawOffers()).isEmpty();
+    assertThat(repo.listDates()).isEmpty();
   }
 
   @Test

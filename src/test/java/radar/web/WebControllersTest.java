@@ -51,7 +51,8 @@ class WebControllersTest {
         new ScanController(scraperService),
         new JobController(repository),
         new AnalyticsController(reporterService),
-        new ProfileController(repository)).build();
+        new ProfileController(repository),
+        new DataController(repository)).build();
   }
 
   private JobReport report(String id, int score) {
@@ -105,6 +106,16 @@ class WebControllersTest {
         .andExpect(status().isOk())
         .andExpect(jsonPath("$[0].rawJobOffer.id").value("x"));
     verify(repository).loadJobs("2026-07-01");
+  }
+
+  @Test
+  void deleteDataReturnsRemovedCount() throws Exception {
+    when(repository.deleteAllData()).thenReturn(4);
+
+    mvc.perform(delete("/api/data"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.removed").value(4));
+    verify(repository).deleteAllData();
   }
 
   @Test

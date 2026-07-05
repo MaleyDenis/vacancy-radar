@@ -7,7 +7,6 @@ import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.regex.Pattern;
@@ -26,7 +25,6 @@ import radar.model.UserProfile;
  * <pre>
  *   {dataDir}/profile.json
  *   {dataDir}/raw-offers.json    (pool of scraped offers, profile-independent)
- *   {dataDir}/seen-ids.json
  *   {dataDir}/{YYYY-MM-DD}/jobs.json
  *   {dataDir}/{YYYY-MM-DD}/analytics.json
  * </pre>
@@ -39,7 +37,6 @@ public class JsonRepository {
 
   private static final String PROFILE_FILE = "profile.json";
   private static final String RAW_OFFERS_FILE = "raw-offers.json";
-  private static final String SEEN_IDS_FILE = "seen-ids.json";
   private static final String JOBS_FILE = "jobs.json";
   private static final String ANALYTICS_FILE = "analytics.json";
   private static final Pattern DATE_DIR = Pattern.compile("\\d{4}-\\d{2}-\\d{2}");
@@ -88,36 +85,6 @@ public class JsonRepository {
     write(dataDir.resolve(RAW_OFFERS_FILE), offers);
   }
 
-  // ---- seen ids ----
-
-  /** Returns the deduplication list, or an empty list if it doesn't exist yet. */
-  public List<String> readSeenIds() {
-    lock.readLock().lock();
-    try {
-      var file = dataDir.resolve(SEEN_IDS_FILE);
-      if (!Files.exists(file)) {
-        return new ArrayList<>();
-      }
-      return objectMapper.readValue(Files.readAllBytes(file), new TypeReference<List<String>>() {});
-    } catch (IOException e) {
-      throw new UncheckedIOException("Failed to read " + SEEN_IDS_FILE, e);
-    } finally {
-      lock.readLock().unlock();
-    }
-  }
-
-  /** Merges {@code newIds} into the existing list, dropping duplicates, and persists the result. */
-  public void appendSeenIds(List<String> newIds) {
-    lock.writeLock().lock();
-    try {
-      var merged = new LinkedHashSet<>(readSeenIdsUnlocked());
-      merged.addAll(newIds);
-      writeUnlocked(dataDir.resolve(SEEN_IDS_FILE), new ArrayList<>(merged));
-    } finally {
-      lock.writeLock().unlock();
-    }
-  }
-
   // ---- jobs ----
 
   public void saveJobs(String date, List<JobReport> jobs) {
@@ -159,6 +126,47 @@ public class JsonRepository {
     return deleted;
   }
 
+  /**
+   * Wipes all data — raw offers and every date snapshot (jobs + analytics) — keeping only
+   * {@code profile.json}. Returns how many top-level entries were removed.
+   */
+  public int deleteAllData() {
+    lock.writeLock().lock();
+    try {
+      if (!Files.isDirectory(dataDir)) {
+        return 0;
+      }
+      var removed = 0;
+      try (var entries = Files.list(dataDir)) {
+        for (var entry : entries.toList()) {
+          var name = entry.getFileName().toString();
+          // keep the profile and any dotfile scaffolding (e.g. .gitkeep)
+          if (name.equals(PROFILE_FILE) || name.startsWith(".")) {
+            continue;
+          }
+          deleteRecursively(entry);
+          removed++;
+        }
+      }
+      return removed;
+    } catch (IOException e) {
+      throw new UncheckedIOException("Failed to delete data", e);
+    } finally {
+      lock.writeLock().unlock();
+    }
+  }
+
+  private static void deleteRecursively(Path path) throws IOException {
+    if (Files.isDirectory(path)) {
+      try (var children = Files.list(path)) {
+        for (var child : children.toList()) {
+          deleteRecursively(child);
+        }
+      }
+    }
+    Files.deleteIfExists(path);
+  }
+
   // ---- analytics ----
 
   public void saveAnalytics(String date, Analytics analytics) {
@@ -194,18 +202,6 @@ public class JsonRepository {
   }
 
   // ---- internals ----
-
-  private List<String> readSeenIdsUnlocked() throws RuntimeException {
-    var file = dataDir.resolve(SEEN_IDS_FILE);
-    if (!Files.exists(file)) {
-      return new ArrayList<>();
-    }
-    try {
-      return objectMapper.readValue(Files.readAllBytes(file), new TypeReference<List<String>>() {});
-    } catch (IOException e) {
-      throw new UncheckedIOException("Failed to read " + SEEN_IDS_FILE, e);
-    }
-  }
 
   private Path dateDir(String date) {
     return dataDir.resolve(date);
