@@ -2,17 +2,14 @@ package radar.service;
 
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
-import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
-import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import radar.connector.JustJoinConnector;
-import radar.model.RawJobOffer;
 import radar.model.ScanResult;
 import radar.model.StoredRawOffer;
 import radar.repository.JsonRepository;
@@ -145,25 +142,5 @@ public class ScraperService {
     } catch (RuntimeException e) {
       return null;
     }
-  }
-
-  /** Returns only offers whose id has not been seen before. Does not persist anything. */
-  @Deprecated
-  public List<RawJobOffer> scrapeNew() {
-    var all = connector.fetchAll();
-    var seen = new HashSet<>(repository.readSeenIds());
-    var fresh = new ArrayList<RawJobOffer>();
-    for (var offer : all) {
-      if (!seen.contains(offer.id())) {
-        fresh.add(offer);
-      }
-    }
-    return fresh;
-  }
-
-  /** Records the given offer ids as processed so they are skipped on the next scan. */
-  @Deprecated
-  public void markAsSeen(List<String> ids) {
-    repository.appendSeenIds(ids);
   }
 }

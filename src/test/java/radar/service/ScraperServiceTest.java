@@ -138,24 +138,4 @@ class ScraperServiceTest {
     assertThat(capturePersisted()).extracting(s -> s.offer().id()).containsExactly("recent");
   }
 
-  // ---- legacy scrapeNew (kept until evaluation is split out) ----
-
-  @Test
-  void scrapeNewFiltersOutSeenOffers() {
-    List<RawJobOffer> all = IntStream.rangeClosed(1, 10).mapToObj(i -> offer("id-" + i)).toList();
-    when(connector.fetchAll()).thenReturn(all);
-    when(repository.readSeenIds()).thenReturn(List.of("id-2", "id-5", "id-9"));
-
-    List<RawJobOffer> result = scraperService.scrapeNew();
-
-    assertThat(result).hasSize(7);
-    assertThat(result).extracting(RawJobOffer::id)
-        .containsExactly("id-1", "id-3", "id-4", "id-6", "id-7", "id-8", "id-10");
-  }
-
-  @Test
-  void markAsSeenDelegatesToRepository() {
-    scraperService.markAsSeen(List.of("x", "y"));
-    verify(repository).appendSeenIds(List.of("x", "y"));
-  }
 }
