@@ -5,7 +5,6 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import radar.model.JobReport;
-import radar.model.UserProfile;
 import radar.repository.JsonRepository;
 
 /**
@@ -23,19 +22,19 @@ public class JobController {
 
   @GetMapping("/api/jobs")
   public List<JobReport> jobs(@RequestParam(required = false) String date) {
-    String target = date != null ? date : latestDate();
+    var target = date != null ? date : latestDate();
     if (target == null) {
       return List.of();
     }
-    UserProfile profile = repository.readProfile();
-    int minScore = profile.minMatchScore() == null ? 0 : profile.minMatchScore();
+    var profile = repository.readProfile();
+    var minScore = profile.minMatchScore() == null ? 0 : profile.minMatchScore();
     return repository.loadJobs(target).stream()
         .filter(report -> report.matchScore() >= minScore)
         .toList();
   }
 
   private String latestDate() {
-    List<String> dates = repository.listDates(); // ascending
+    var dates = repository.listDates(); // ascending
     return dates.isEmpty() ? null : dates.get(dates.size() - 1);
   }
 }

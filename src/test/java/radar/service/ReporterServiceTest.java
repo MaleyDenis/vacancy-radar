@@ -27,7 +27,7 @@ class ReporterServiceTest {
 
   private JobReport report(String company, boolean remote, String projectType, Integer salaryMin,
       List<String> keySkills) {
-    RawJobOffer offer = new RawJobOffer("id-" + company + salaryMin, "Java Dev", company, null,
+    var offer = new RawJobOffer("id-" + company + salaryMin, "Java Dev", company, null,
         "Kraków", remote, "2026-07-04", "senior", null, keySkills, salaryMin,
         salaryMin == null ? null : salaryMin + 5000, "PLN", "b2b", "url", "justjoin");
     return new JobReport(offer, keySkills, List.of(), projectType, "senior", List.of(), List.of(),
@@ -36,14 +36,14 @@ class ReporterServiceTest {
 
   @Test
   void skillFrequencyCountsAndSortsDescending() {
-    List<JobReport> reports = List.of(
+    var reports = List.of(
         report("A", true, "product", 10000, List.of("Java", "Spring")),
         report("B", true, "product", 12000, List.of("Java", "AWS")),
         report("C", false, "outsourcing", 11000, List.of("Java", "Spring")),
         report("D", true, "product", 13000, List.of("Java")),
         report("E", false, "product", 9000, List.of("SQL")));
 
-    Analytics analytics = reporter.buildAnalytics("2026-07-04", reports);
+    var analytics = reporter.buildAnalytics("2026-07-04", reports);
 
     assertThat(analytics.totalScanned()).isEqualTo(5);
     assertThat(analytics.skillFrequency())
@@ -58,27 +58,27 @@ class ReporterServiceTest {
 
   @Test
   void remotePercentageIsBetweenZeroAndHundred() {
-    List<JobReport> reports = List.of(
+    var reports = List.of(
         report("A", true, "product", 10000, List.of("Java")),
         report("B", true, "product", 12000, List.of("Java")),
         report("C", false, "product", 11000, List.of("Java")),
         report("D", false, "product", 13000, List.of("Java")));
 
-    Analytics analytics = reporter.buildAnalytics("2026-07-04", reports);
+    var analytics = reporter.buildAnalytics("2026-07-04", reports);
 
     assertThat(analytics.remotePercentage()).isBetween(0.0, 100.0).isEqualTo(50.0);
   }
 
   @Test
   void topCompaniesRankedByOfferCount() {
-    List<JobReport> reports = List.of(
+    var reports = List.of(
         report("Acme", true, "product", 10000, List.of("Java")),
         report("Acme", true, "product", 12000, List.of("Java")),
         report("Acme", true, "product", 12000, List.of("Java")),
         report("Globex", false, "product", 11000, List.of("Java")),
         report("Initech", false, "product", 9000, List.of("Java")));
 
-    Analytics analytics = reporter.buildAnalytics("2026-07-04", reports);
+    var analytics = reporter.buildAnalytics("2026-07-04", reports);
 
     assertThat(analytics.topCompanies()).first().isEqualTo("Acme");
     assertThat(analytics.topCompanies()).containsExactlyInAnyOrder("Acme", "Globex", "Initech");
@@ -86,12 +86,12 @@ class ReporterServiceTest {
 
   @Test
   void salaryDistributionUsesMinAndMaxOfSalaryMins() {
-    List<JobReport> reports = List.of(
+    var reports = List.of(
         report("A", true, "product", 9000, List.of("Java")),
         report("B", true, "product", 18000, List.of("Java")),
         report("C", false, "product", 12000, List.of("Java")));
 
-    SalaryRange dist = reporter.buildAnalytics("2026-07-04", reports).salaryDistribution();
+    var dist = reporter.buildAnalytics("2026-07-04", reports).salaryDistribution();
 
     assertThat(dist.min()).isEqualTo(9000);
     assertThat(dist.max()).isEqualTo(18000);
@@ -100,13 +100,13 @@ class ReporterServiceTest {
 
   @Test
   void projectTypeBreakdownSumsToAround100Percent() {
-    List<JobReport> reports = List.of(
+    var reports = List.of(
         report("A", true, "product", 10000, List.of("Java")),
         report("B", true, "product", 12000, List.of("Java")),
         report("C", false, "outsourcing", 11000, List.of("Java")),
         report("D", true, "product", 13000, List.of("Java")));
 
-    Map<String, Double> breakdown = reporter.buildAnalytics("2026-07-04", reports)
+    var breakdown = reporter.buildAnalytics("2026-07-04", reports)
         .projectTypeBreakdown();
 
     assertThat(breakdown.get("product")).isEqualTo(75.0);
@@ -120,7 +120,7 @@ class ReporterServiceTest {
     when(repository.loadAnalytics("2026-07-04")).thenReturn(analytics(Map.of("Java", 3, "Spring", 2)));
     when(repository.loadAnalytics("2026-07-05")).thenReturn(analytics(Map.of("Java", 5, "AWS", 1)));
 
-    Map<String, Integer> trends = reporter.computeTrends();
+    var trends = reporter.computeTrends();
 
     assertThat(trends).isNotEmpty();
     assertThat(trends).containsExactly(

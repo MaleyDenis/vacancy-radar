@@ -2,8 +2,6 @@ package radar.service;
 
 import com.anthropic.client.AnthropicClient;
 import com.anthropic.models.messages.MessageCreateParams;
-import com.anthropic.models.messages.StructuredMessage;
-import com.anthropic.models.messages.StructuredMessageCreateParams;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.ArrayList;
@@ -41,7 +39,7 @@ public class EnricherService {
 
   /** Enriches a single offer against the user's profile. */
   public JobReport enrich(RawJobOffer offer, UserProfile profile) {
-    EnrichmentResult result = requestEnrichment(buildPrompt(offer, profile));
+    var result = requestEnrichment(buildPrompt(offer, profile));
     return toReport(result, offer);
   }
 
@@ -51,10 +49,10 @@ public class EnricherService {
    */
   public List<JobReport> enrichAll(List<RawJobOffer> offers, UserProfile profile,
       Consumer<ScanProgress> progressCallback) {
-    List<JobReport> reports = new ArrayList<>();
-    int total = offers.size();
-    for (int i = 0; i < total; i++) {
-      RawJobOffer offer = offers.get(i);
+    var reports = new ArrayList<JobReport>();
+    var total = offers.size();
+    for (var i = 0; i < total; i++) {
+      var offer = offers.get(i);
       reports.add(enrich(offer, profile));
       progressCallback.accept(new ScanProgress(
           ScanProgress.Type.ENRICHING, "Enriched " + offer.title(), i + 1, total, null));
@@ -67,13 +65,13 @@ public class EnricherService {
    * overridable so tests can exercise the surrounding logic without hitting the network.
    */
   EnrichmentResult requestEnrichment(String prompt) {
-    StructuredMessageCreateParams<EnrichmentResult> params = MessageCreateParams.builder()
+    var params = MessageCreateParams.builder()
         .model(MODEL)
         .maxTokens(MAX_TOKENS)
         .outputConfig(EnrichmentResult.class)
         .addUserMessage(prompt)
         .build();
-    StructuredMessage<EnrichmentResult> message = client.messages().create(params);
+    var message = client.messages().create(params);
     return message.content().stream()
         .flatMap(block -> block.text().stream())
         .map(text -> text.text())
@@ -83,7 +81,7 @@ public class EnricherService {
 
   /** Builds the plain-text prompt. Package-private for testing (asserts no HTML leaks in). */
   String buildPrompt(RawJobOffer offer, UserProfile profile) {
-    StringBuilder sb = new StringBuilder();
+    var sb = new StringBuilder();
     sb.append("You are a career advisor. Analyse the following job offer for this candidate ")
         .append("and score how well it matches their profile on a scale of 1 to 10.\n\n");
     sb.append("=== CANDIDATE PROFILE (JSON) ===\n").append(writeJson(profile)).append("\n\n");
@@ -108,7 +106,7 @@ public class EnricherService {
 
   /** Maps the model's result onto a JobReport, clamping the score to the valid 1-10 range. */
   JobReport toReport(EnrichmentResult r, RawJobOffer offer) {
-    int score = Math.max(MIN_SCORE, Math.min(MAX_SCORE, r.matchScore()));
+    var score = Math.max(MIN_SCORE, Math.min(MAX_SCORE, r.matchScore()));
     return new JobReport(offer, r.keySkills(), r.niceToHave(), r.projectType(), r.realSeniority(),
         r.redFlags(), r.greenFlags(), r.interviewFocus(), score, r.salary());
   }

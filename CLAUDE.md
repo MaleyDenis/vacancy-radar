@@ -48,3 +48,10 @@ radar.web         — REST controllers
 - Do NOT implement Phase 2 features (UI, GoWork, NoFluffJobs, Pracuj, LinkedIn)
 - Do NOT use database — JSON files only
 - Do NOT send HTML to Claude API
+
+---
+
+## Code Style
+
+- Use `var` for every local variable where the compiler allows it (Java 25).
+  See `.claude/rules/code-style.md`.

@@ -37,7 +37,7 @@ class JsonRepositoryTest {
 
   @Test
   void profileRoundTrips() {
-    UserProfile profile = new UserProfile(
+    var profile = new UserProfile(
         List.of("Java", "Spring"), 3, "B2B", true, 15000, "PLN", "B2B",
         List.of("Warsaw", "Remote"), 6);
     repo.writeProfile(profile);
@@ -62,11 +62,11 @@ class JsonRepositoryTest {
 
   @Test
   void jobsRoundTrip() {
-    RawJobOffer offer = new RawJobOffer(
+    var offer = new RawJobOffer(
         "jj-1", "Java Dev", "Acme", "50", "Kraków", true, "2026-07-04", "mid",
         null, List.of("Java"), 12000, 18000, "PLN", "b2b",
         "https://justjoin.it/job-offer/jj-1", "justjoin");
-    JobReport report = new JobReport(
+    var report = new JobReport(
         offer, List.of("Java", "SQL"), List.of("Kafka"), "product", "mid",
         List.of("on-call"), List.of("remote"), "system design", 8,
         new SalaryRange(12000, 18000, "PLN"));
@@ -82,7 +82,7 @@ class JsonRepositoryTest {
 
   @Test
   void analyticsRoundTrip() {
-    Analytics analytics = new Analytics(
+    var analytics = new Analytics(
         "2026-07-04", 42, Map.of("Java", 30, "Spring", 20), List.of("Acme"),
         new SalaryRange(10000, 30000, "PLN"), Map.of("product", 0.6), 66.7);
 

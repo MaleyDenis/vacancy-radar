@@ -6,8 +6,7 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.concurrent.ThreadLocalRandom;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -19,9 +18,10 @@ import radar.model.StoredRawOffer;
 import radar.repository.JsonRepository;
 
 /**
- * Orchestrates scraping. {@link #scan()} fetches every current offer from the connector, merges new
- * ones into the {@code raw-offers.json} pool (deduplicating by id — the pool itself is the source of
- * truth, no separate seen-ids list), and drops offers older than the configured retention window.
+ * Orchestrates scraping. {@link #scan(boolean, Integer)} fetches offers from the connector
+ * newest-first, merges new ones into the {@code raw-offers.json} pool (deduplicating by id — the pool
+ * itself is the source of truth, no separate seen-ids list), and drops offers older than the
+ * configured retention window.
  *
  * <p>This step is profile-independent and never calls Claude — enrichment happens later, reading the
  * pool this method fills.
@@ -53,33 +53,33 @@ public class ScraperService {
    *                  = no cap.
    */
   public ScanResult scan(boolean fullFetch, Integer limit) {
-    String now = Instant.now().toString();
+    var now = Instant.now().toString();
 
     // Existing pool, keyed by id. knownIds is a snapshot: an offer is "new" only if absent here.
-    Map<String, StoredRawOffer> pool = new LinkedHashMap<>();
-    for (StoredRawOffer stored : repository.readRawOffers()) {
+    var pool = new LinkedHashMap<String, StoredRawOffer>();
+    for (var stored : repository.readRawOffers()) {
       pool.put(stored.offer().id(), stored);
     }
-    Set<String> knownIds = new HashSet<>(pool.keySet());
+    var knownIds = new HashSet<>(pool.keySet());
 
-    int added = 0;
-    int processed = 0;
-    int page = 1;
-    int totalPages = 1;
-    boolean limitReached = false;
+    var added = 0;
+    var processed = 0;
+    var page = 1;
+    var totalPages = 1;
+    var limitReached = false;
 
     while (page <= totalPages && page <= JustJoinConnector.MAX_PAGES && !limitReached) {
-      JustJoinConnector.OfferPage p = connector.fetchPage(page);
+      var p = connector.fetchPage(page);
       totalPages = p.totalPages();
 
-      int newOnPage = 0;
-      for (RawJobOffer offer : p.offers()) {
+      var newOnPage = 0;
+      for (var offer : p.offers()) {
         if (limit != null && processed >= limit) {
           limitReached = true;
           break;
         }
-        StoredRawOffer existing = pool.get(offer.id());
-        String firstSeen = existing == null ? now : existing.firstSeenAt();
+        var existing = pool.get(offer.id());
+        var firstSeen = existing == null ? now : existing.firstSeenAt();
         pool.put(offer.id(), new StoredRawOffer(offer, firstSeen));
         if (!knownIds.contains(offer.id())) {
           added++;
@@ -99,8 +99,8 @@ public class ScraperService {
       }
     }
 
-    Instant cutoff = Instant.now().minus(retentionDays, ChronoUnit.DAYS);
-    List<StoredRawOffer> merged = pool.values().stream()
+    var cutoff = Instant.now().minus(retentionDays, ChronoUnit.DAYS);
+    var merged = pool.values().stream()
         .filter(stored -> !isExpired(stored, cutoff))
         .toList();
 
@@ -112,7 +112,7 @@ public class ScraperService {
 
   private static void sleepPolitely() {
     try {
-      Thread.sleep(500 + java.util.concurrent.ThreadLocalRandom.current().nextInt(500));
+      Thread.sleep(500 + ThreadLocalRandom.current().nextInt(500));
     } catch (InterruptedException e) {
       Thread.currentThread().interrupt();
     }
@@ -124,7 +124,7 @@ public class ScraperService {
    * is kept (we never drop an offer we can't date).
    */
   private static boolean isExpired(StoredRawOffer stored, Instant cutoff) {
-    Instant reference = parseInstant(stored.offer().publishedAt());
+    var reference = parseInstant(stored.offer().publishedAt());
     if (reference == null) {
       reference = parseInstant(stored.firstSeenAt());
     }
@@ -145,10 +145,10 @@ public class ScraperService {
   /** Returns only offers whose id has not been seen before. Does not persist anything. */
   @Deprecated
   public List<RawJobOffer> scrapeNew() {
-    List<RawJobOffer> all = connector.fetchAll();
-    Set<String> seen = new HashSet<>(repository.readSeenIds());
-    List<RawJobOffer> fresh = new ArrayList<>();
-    for (RawJobOffer offer : all) {
+    var all = connector.fetchAll();
+    var seen = new HashSet<>(repository.readSeenIds());
+    var fresh = new ArrayList<RawJobOffer>();
+    for (var offer : all) {
       if (!seen.contains(offer.id())) {
         fresh.add(offer);
       }

@@ -7,11 +7,8 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import org.springframework.stereotype.Service;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
-import radar.model.Analytics;
-import radar.model.JobReport;
 import radar.model.RawJobOffer;
 import radar.model.ScanProgress;
-import radar.model.UserProfile;
 import radar.repository.JsonRepository;
 
 /**
@@ -50,20 +47,20 @@ public class ScanService {
    */
   void runScan(SseEmitter emitter, Integer limit) {
     try {
-      String date = LocalDate.now().toString();
-      UserProfile profile = repository.readProfile();
+      var date = LocalDate.now().toString();
+      var profile = repository.readProfile();
 
       emit(emitter, new ScanProgress(ScanProgress.Type.SCANNING, "Scanning offers", null, null, null));
-      List<RawJobOffer> newOffers = capToLimit(scraperService.scrapeNew(), limit);
+      var newOffers = capToLimit(scraperService.scrapeNew(), limit);
       emit(emitter, new ScanProgress(
           ScanProgress.Type.SCANNING, "Found new offers", 0, newOffers.size(), null));
 
-      List<JobReport> allReports =
+      var allReports =
           enricherService.enrichAll(newOffers, profile, progress -> emit(emitter, progress));
 
-      Analytics analytics = reporterService.buildAnalytics(date, allReports);
-      int minScore = profile.minMatchScore() == null ? 0 : profile.minMatchScore();
-      List<JobReport> filtered = allReports.stream()
+      var analytics = reporterService.buildAnalytics(date, allReports);
+      var minScore = profile.minMatchScore() == null ? 0 : profile.minMatchScore();
+      var filtered = allReports.stream()
           .filter(report -> report.matchScore() >= minScore)
           .toList();
 

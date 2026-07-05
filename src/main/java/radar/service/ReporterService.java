@@ -29,7 +29,7 @@ public class ReporterService {
 
   /** Builds the analytics snapshot for a date from every enriched report (no score filtering). */
   public Analytics buildAnalytics(String date, List<JobReport> allReports) {
-    int total = allReports.size();
+    var total = allReports.size();
     return new Analytics(
         date,
         total,
@@ -45,8 +45,8 @@ public class ReporterService {
    * total frequency descending.
    */
   public Map<String, Integer> computeTrends() {
-    Map<String, Integer> merged = new HashMap<>();
-    for (String date : repository.listDates()) {
+    var merged = new HashMap<String, Integer>();
+    for (var date : repository.listDates()) {
       Analytics analytics;
       try {
         analytics = repository.loadAnalytics(date);
@@ -61,10 +61,10 @@ public class ReporterService {
   }
 
   private Map<String, Integer> skillFrequency(List<JobReport> reports) {
-    Map<String, Integer> counts = new HashMap<>();
-    for (JobReport report : reports) {
+    var counts = new HashMap<String, Integer>();
+    for (var report : reports) {
       if (report.keySkills() != null) {
-        for (String skill : report.keySkills()) {
+        for (var skill : report.keySkills()) {
           counts.merge(skill, 1, Integer::sum);
         }
       }
@@ -73,9 +73,9 @@ public class ReporterService {
   }
 
   private List<String> topCompanies(List<JobReport> reports) {
-    Map<String, Integer> counts = new HashMap<>();
-    for (JobReport report : reports) {
-      String company = report.rawJobOffer() == null ? null : report.rawJobOffer().companyName();
+    var counts = new HashMap<String, Integer>();
+    for (var report : reports) {
+      var company = report.rawJobOffer() == null ? null : report.rawJobOffer().companyName();
       if (company != null && !company.isBlank()) {
         counts.merge(company, 1, Integer::sum);
       }
@@ -88,7 +88,7 @@ public class ReporterService {
   }
 
   private SalaryRange salaryDistribution(List<JobReport> reports) {
-    List<Integer> mins = reports.stream()
+    var mins = reports.stream()
         .map(JobReport::salary)
         .filter(s -> s != null && s.min() != null)
         .map(SalaryRange::min)
@@ -97,7 +97,7 @@ public class ReporterService {
     if (mins.isEmpty()) {
       return new SalaryRange(null, null, null);
     }
-    String currency = reports.stream()
+    var currency = reports.stream()
         .map(JobReport::salary)
         .filter(s -> s != null && s.currency() != null)
         .map(SalaryRange::currency)
@@ -110,11 +110,11 @@ public class ReporterService {
     if (total == 0) {
       return new LinkedHashMap<>();
     }
-    Map<String, Long> counts = reports.stream()
+    var counts = reports.stream()
         .map(JobReport::projectType)
         .filter(t -> t != null && !t.isBlank())
         .collect(Collectors.groupingBy(t -> t, Collectors.counting()));
-    LinkedHashMap<String, Double> breakdown = new LinkedHashMap<>();
+    var breakdown = new LinkedHashMap<String, Double>();
     counts.entrySet().stream()
         .sorted(Map.Entry.<String, Long>comparingByValue().reversed())
         .forEach(e -> breakdown.put(e.getKey(), e.getValue() * 100.0 / total));
@@ -125,7 +125,7 @@ public class ReporterService {
     if (total == 0) {
       return 0.0;
     }
-    long remote = reports.stream()
+    var remote = reports.stream()
         .map(JobReport::rawJobOffer)
         .filter(o -> o != null && Boolean.TRUE.equals(o.remote()))
         .count();
@@ -133,7 +133,7 @@ public class ReporterService {
   }
 
   private static Map<String, Integer> sortByValueDesc(Map<String, Integer> counts) {
-    LinkedHashMap<String, Integer> sorted = new LinkedHashMap<>();
+    var sorted = new LinkedHashMap<String, Integer>();
     counts.entrySet().stream()
         .sorted(Comparator.<Map.Entry<String, Integer>>comparingInt(Map.Entry::getValue).reversed()
             .thenComparing(Map.Entry::getKey))
