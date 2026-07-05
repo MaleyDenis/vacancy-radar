@@ -56,7 +56,7 @@ class ScanServiceTest {
 
   private RawJobOffer offer(String id) {
     return new RawJobOffer(id, "Java Dev", "Acme", null, "Kraków", true, "2026-07-04", "senior",
-        null, List.of("Java"), 18000, 26000, "PLN", "b2b", "url", "justjoin");
+        null, List.of("Java"), 18000, 26000, "PLN", "b2b", "url", "justjoin", null);
   }
 
   private JobReport report(RawJobOffer offer, int score) {

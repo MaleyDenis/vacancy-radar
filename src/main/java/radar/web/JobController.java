@@ -1,6 +1,8 @@
 package radar.web;
 
 import java.util.List;
+import java.util.Map;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -31,6 +33,12 @@ public class JobController {
     return repository.loadJobs(target).stream()
         .filter(report -> report.matchScore() >= minScore)
         .toList();
+  }
+
+  /** Deletes all saved job reports across every snapshot. Returns how many files were removed. */
+  @DeleteMapping("/api/jobs")
+  public Map<String, Integer> deleteAll() {
+    return Map.of("deleted", repository.deleteAllJobs());
   }
 
   private String latestDate() {

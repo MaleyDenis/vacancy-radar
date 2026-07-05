@@ -79,11 +79,16 @@ public class ScraperService {
           break;
         }
         var existing = pool.get(offer.id());
-        var firstSeen = existing == null ? now : existing.firstSeenAt();
-        pool.put(offer.id(), new StoredRawOffer(offer, firstSeen));
-        if (!knownIds.contains(offer.id())) {
+        if (existing == null) {
+          pool.put(offer.id(), StoredRawOffer.fresh(offer, now));
           added++;
           newOnPage++;
+        } else {
+          // Refresh list fields (salary/title may change) but keep already-fetched page details
+          // and their timestamps — the list API never carries description/domain.
+          var refreshed = offer.withDetails(existing.offer().description(), existing.offer().domain());
+          pool.put(offer.id(),
+              new StoredRawOffer(refreshed, existing.firstSeenAt(), existing.detailsFetchedAt()));
         }
         processed++;
       }

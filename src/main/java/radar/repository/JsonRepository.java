@@ -141,6 +141,24 @@ public class JsonRepository {
     }
   }
 
+  /** Deletes {@code jobs.json} from every date snapshot. Returns how many files were removed. */
+  public int deleteAllJobs() {
+    var deleted = 0;
+    for (var date : listDates()) {
+      lock.writeLock().lock();
+      try {
+        if (Files.deleteIfExists(dateDir(date).resolve(JOBS_FILE))) {
+          deleted++;
+        }
+      } catch (IOException e) {
+        throw new UncheckedIOException("Failed to delete jobs for " + date, e);
+      } finally {
+        lock.writeLock().unlock();
+      }
+    }
+    return deleted;
+  }
+
   // ---- analytics ----
 
   public void saveAnalytics(String date, Analytics analytics) {

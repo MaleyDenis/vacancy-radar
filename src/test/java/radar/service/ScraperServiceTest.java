@@ -43,11 +43,11 @@ class ScraperServiceTest {
   private RawJobOffer offer(String id) {
     return new RawJobOffer(id, "Java Dev", "Acme", null, "Kraków", true, "2026-07-04", "mid",
         null, List.of("Java"), null, null, null, "b2b", "https://justjoin.it/job-offer/" + id,
-        "justjoin");
+        "justjoin", null);
   }
 
   private StoredRawOffer stored(String id, String firstSeenAt) {
-    return new StoredRawOffer(offer(id), firstSeenAt);
+    return new StoredRawOffer(offer(id), firstSeenAt, null);
   }
 
   private OfferPage page(int totalPages, String... ids) {
