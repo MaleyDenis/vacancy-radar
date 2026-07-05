@@ -4,9 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import java.util.List;
 import org.junit.jupiter.api.Test;
-import radar.model.RawJobOffer;
 
 /**
  * Unit tests for the JSON-API parsing (no network). Fixtures mirror the shape of
@@ -23,7 +21,7 @@ class JustJoinConnectorTest {
 
   @Test
   void mapsAFullyPopulatedOffer() throws Exception {
-    JsonNode page = json("""
+    var page = json("""
         {
           "meta": {"page": 1, "totalPages": 1},
           "data": [
@@ -45,10 +43,10 @@ class JustJoinConnectorTest {
         }
         """);
 
-    List<RawJobOffer> offers = connector.parseOffers(page);
+    var offers = connector.parseOffers(page);
 
     assertThat(offers).hasSize(1);
-    RawJobOffer o = offers.get(0);
+    var o = offers.get(0);
     assertThat(o.id()).isEqualTo("abc-123");
     assertThat(o.title()).isEqualTo("Senior Java Developer");
     assertThat(o.companyName()).isEqualTo("Acme");
@@ -69,7 +67,7 @@ class JustJoinConnectorTest {
 
   @Test
   void handlesMissingSkillsSalaryAndNonRemote() throws Exception {
-    JsonNode page = json("""
+    var page = json("""
         {
           "meta": {"page": 1, "totalPages": 1},
           "data": [
@@ -88,7 +86,7 @@ class JustJoinConnectorTest {
         }
         """);
 
-    RawJobOffer o = connector.parseOffers(page).get(0);
+    var o = connector.parseOffers(page).get(0);
     assertThat(o.remote()).isFalse();
     assertThat(o.skills()).isEmpty();
     assertThat(o.salaryMin()).isNull();
@@ -99,7 +97,7 @@ class JustJoinConnectorTest {
 
   @Test
   void readsSkillsGivenAsObjects() throws Exception {
-    JsonNode page = json("""
+    var page = json("""
         {
           "data": [
             {
@@ -111,7 +109,7 @@ class JustJoinConnectorTest {
         }
         """);
 
-    RawJobOffer o = connector.parseOffers(page).get(0);
+    var o = connector.parseOffers(page).get(0);
     assertThat(o.skills()).containsExactly("Java", "Kafka");
   }
 

@@ -8,7 +8,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.ArrayList;
 import java.util.List;
 import org.junit.jupiter.api.Test;
-import radar.model.JobReport;
 import radar.model.RawJobOffer;
 import radar.model.ScanProgress;
 import radar.model.SalaryRange;
@@ -47,7 +46,7 @@ class EnricherServiceTest {
 
   @Test
   void validJsonProducesJobReportWithOfferAttached() {
-    String json = """
+    var json = """
         {
           "keySkills": ["Java", "Spring Boot"],
           "niceToHave": ["Kafka"],
@@ -60,9 +59,9 @@ class EnricherServiceTest {
           "salary": {"min": 18000, "max": 26000, "currency": "PLN"}
         }
         """;
-    RawJobOffer o = offer("jj-1", "Senior Java Dev");
+    var o = offer("jj-1", "Senior Java Dev");
 
-    JobReport report = withCannedJson(json).enrich(o, profile);
+    var report = withCannedJson(json).enrich(o, profile);
 
     assertThat(report.rawJobOffer()).isSameAs(o);
     assertThat(report.keySkills()).containsExactly("Java", "Spring Boot");
@@ -78,11 +77,11 @@ class EnricherServiceTest {
 
   @Test
   void matchScoreIsClampedIntoOneToTenRange() {
-    EnricherService svc = new EnricherService(mock(AnthropicClient.class), mapper);
-    RawJobOffer o = offer("jj-1", "Java Dev");
+    var svc = new EnricherService(mock(AnthropicClient.class), mapper);
+    var o = offer("jj-1", "Java Dev");
 
-    EnrichmentResult tooHigh = result(15);
-    EnrichmentResult tooLow = result(0);
+    var tooHigh = result(15);
+    var tooLow = result(0);
 
     assertThat(svc.toReport(tooHigh, o).matchScore()).isEqualTo(10);
     assertThat(svc.toReport(tooLow, o).matchScore()).isEqualTo(1);
@@ -91,16 +90,16 @@ class EnricherServiceTest {
 
   @Test
   void enrichAllEmitsOneEnrichingProgressPerOffer() {
-    String json = """
+    var json = """
         {"keySkills":[],"niceToHave":[],"projectType":"product","realSeniority":"mid",
          "redFlags":[],"greenFlags":[],"interviewFocus":"basics","matchScore":5,
          "salary":{"min":10000,"max":15000,"currency":"PLN"}}
         """;
-    EnricherService svc = withCannedJson(json);
-    List<RawJobOffer> offers = List.of(offer("a", "A"), offer("b", "B"), offer("c", "C"));
-    List<ScanProgress> events = new ArrayList<>();
+    var svc = withCannedJson(json);
+    var offers = List.of(offer("a", "A"), offer("b", "B"), offer("c", "C"));
+    var events = new ArrayList<ScanProgress>();
 
-    List<JobReport> reports = svc.enrichAll(offers, profile, events::add);
+    var reports = svc.enrichAll(offers, profile, events::add);
 
     assertThat(reports).hasSize(3);
     assertThat(events).hasSize(3);
@@ -111,10 +110,10 @@ class EnricherServiceTest {
 
   @Test
   void promptContainsProfileAndOfferAndNoHtml() {
-    EnricherService svc = new EnricherService(mock(AnthropicClient.class), mapper);
-    RawJobOffer o = offer("jj-1", "Senior Java Dev");
+    var svc = new EnricherService(mock(AnthropicClient.class), mapper);
+    var o = offer("jj-1", "Senior Java Dev");
 
-    String prompt = svc.buildPrompt(o, profile);
+    var prompt = svc.buildPrompt(o, profile);
 
     assertThat(prompt).contains("Senior Java Dev").contains("Acme").contains("Kraków");
     assertThat(prompt).contains("Spring Boot"); // from profile JSON

@@ -11,7 +11,6 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.regex.Pattern;
-import java.util.stream.Stream;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import radar.model.Analytics;
@@ -71,7 +70,7 @@ public class JsonRepository {
   public List<StoredRawOffer> readRawOffers() {
     lock.readLock().lock();
     try {
-      Path file = dataDir.resolve(RAW_OFFERS_FILE);
+      var file = dataDir.resolve(RAW_OFFERS_FILE);
       if (!Files.exists(file)) {
         return new ArrayList<>();
       }
@@ -95,7 +94,7 @@ public class JsonRepository {
   public List<String> readSeenIds() {
     lock.readLock().lock();
     try {
-      Path file = dataDir.resolve(SEEN_IDS_FILE);
+      var file = dataDir.resolve(SEEN_IDS_FILE);
       if (!Files.exists(file)) {
         return new ArrayList<>();
       }
@@ -111,7 +110,7 @@ public class JsonRepository {
   public void appendSeenIds(List<String> newIds) {
     lock.writeLock().lock();
     try {
-      LinkedHashSet<String> merged = new LinkedHashSet<>(readSeenIdsUnlocked());
+      var merged = new LinkedHashSet<>(readSeenIdsUnlocked());
       merged.addAll(newIds);
       writeUnlocked(dataDir.resolve(SEEN_IDS_FILE), new ArrayList<>(merged));
     } finally {
@@ -129,7 +128,7 @@ public class JsonRepository {
   public List<JobReport> loadJobs(String date) {
     lock.readLock().lock();
     try {
-      Path file = dateDir(date).resolve(JOBS_FILE);
+      var file = dateDir(date).resolve(JOBS_FILE);
       if (!Files.exists(file)) {
         return new ArrayList<>();
       }
@@ -161,7 +160,7 @@ public class JsonRepository {
       if (!Files.isDirectory(dataDir)) {
         return new ArrayList<>();
       }
-      try (Stream<Path> entries = Files.list(dataDir)) {
+      try (var entries = Files.list(dataDir)) {
         return entries
             .filter(Files::isDirectory)
             .map(p -> p.getFileName().toString())
@@ -179,7 +178,7 @@ public class JsonRepository {
   // ---- internals ----
 
   private List<String> readSeenIdsUnlocked() throws RuntimeException {
-    Path file = dataDir.resolve(SEEN_IDS_FILE);
+    var file = dataDir.resolve(SEEN_IDS_FILE);
     if (!Files.exists(file)) {
       return new ArrayList<>();
     }
@@ -220,7 +219,7 @@ public class JsonRepository {
   private void writeUnlocked(Path file, Object value) {
     try {
       ensureDir(file.getParent());
-      byte[] bytes = objectMapper.writerWithDefaultPrettyPrinter().writeValueAsBytes(value);
+      var bytes = objectMapper.writerWithDefaultPrettyPrinter().writeValueAsBytes(value);
       Files.write(file, bytes);
     } catch (IOException e) {
       throw new UncheckedIOException("Failed to write " + file, e);

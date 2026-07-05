@@ -66,11 +66,11 @@ public class JustJoinConnector {
    * polite.
    */
   public List<RawJobOffer> fetchAll() {
-    List<RawJobOffer> all = new ArrayList<>();
-    int page = 1;
-    int totalPages = 1;
+    var all = new ArrayList<RawJobOffer>();
+    var page = 1;
+    var totalPages = 1;
     while (page <= totalPages && page <= MAX_PAGES_SAFETY) {
-      OfferPage p = fetchPage(page);
+      var p = fetchPage(page);
       totalPages = p.totalPages();
       all.addAll(p.offers());
       log.info("JustJoin page {}/{}: {} offers ({} total)", page, totalPages, p.offers().size(),
@@ -88,15 +88,15 @@ public class JustJoinConnector {
    * incremental scan that stops once it reaches already-known offers.
    */
   public OfferPage fetchPage(int page) {
-    JsonNode root = fetchPageJson(page);
-    int totalPages = root.path("meta").path("totalPages").asInt(1);
+    var root = fetchPageJson(page);
+    var totalPages = root.path("meta").path("totalPages").asInt(1);
     return new OfferPage(parseOffers(root), totalPages);
   }
 
   private JsonNode fetchPageJson(int page) {
-    String url = API_BASE + "?categories%5B%5D=" + JAVA_CATEGORY_ID + "&page=" + page + "&perPage="
+    var url = API_BASE + "?categories%5B%5D=" + JAVA_CATEGORY_ID + "&page=" + page + "&perPage="
         + PER_PAGE + "&sortBy=published&orderBy=DESC";
-    HttpRequest request = HttpRequest.newBuilder(URI.create(url))
+    var request = HttpRequest.newBuilder(URI.create(url))
         .header("User-Agent", USER_AGENT)
         .header("Accept", "application/json")
         .header("Referer", "https://justjoin.it/")
@@ -105,7 +105,7 @@ public class JustJoinConnector {
         .GET()
         .build();
     try {
-      HttpResponse<String> response =
+      var response =
           httpClient.send(request, HttpResponse.BodyHandlers.ofString());
       if (response.statusCode() != 200) {
         throw new IllegalStateException(
@@ -125,16 +125,16 @@ public class JustJoinConnector {
    * fixture, without touching the network.
    */
   List<RawJobOffer> parseOffers(JsonNode root) {
-    List<RawJobOffer> offers = new ArrayList<>();
-    for (JsonNode node : root.path("data")) {
+    var offers = new ArrayList<RawJobOffer>();
+    for (var node : root.path("data")) {
       offers.add(toRawJobOffer(node));
     }
     return offers;
   }
 
   private RawJobOffer toRawJobOffer(JsonNode n) {
-    String slug = textOrNull(n, "slug");
-    JsonNode salary = n.path("employmentTypes").path(0);
+    var slug = textOrNull(n, "slug");
+    var salary = n.path("employmentTypes").path(0);
     return new RawJobOffer(
         textOrNull(n, "guid"),
         textOrNull(n, "title"),
@@ -155,9 +155,9 @@ public class JustJoinConnector {
   }
 
   private static List<String> readSkills(JsonNode skillsNode) {
-    List<String> skills = new ArrayList<>();
+    var skills = new ArrayList<String>();
     if (skillsNode.isArray()) {
-      for (JsonNode s : skillsNode) {
+      for (var s : skillsNode) {
         // requiredSkills may be an array of strings or of objects with a "name" field
         if (s.isTextual()) {
           skills.add(s.asText());
@@ -170,17 +170,17 @@ public class JustJoinConnector {
   }
 
   private static String textOrNull(JsonNode node, String field) {
-    JsonNode v = node.get(field);
+    var v = node.get(field);
     return v == null || v.isNull() ? null : v.asText();
   }
 
   private static String upperOrNull(JsonNode node, String field) {
-    String v = textOrNull(node, field);
+    var v = textOrNull(node, field);
     return v == null ? null : v.toUpperCase();
   }
 
   private static Integer intOrNull(JsonNode node, String field) {
-    JsonNode v = node.get(field);
+    var v = node.get(field);
     return v == null || v.isNull() || !v.isNumber() ? null : v.asInt();
   }
 
