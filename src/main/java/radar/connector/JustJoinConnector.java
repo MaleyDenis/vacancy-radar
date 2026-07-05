@@ -93,6 +93,34 @@ public class JustJoinConnector {
     return new OfferPage(parseOffers(root), totalPages);
   }
 
+  /**
+   * Fetches the raw HTML of a single offer's page (e.g. {@code applyUrl}). The offer detail — full
+   * description and company domain — lives in a JSON-LD block on this page; parsing is done elsewhere
+   * ({@code OfferDetailsParser}). Never sends any of this to Claude.
+   */
+  public String fetchOfferPageHtml(String url) {
+    var request = HttpRequest.newBuilder(URI.create(url))
+        .header("User-Agent", USER_AGENT)
+        .header("Accept", "text/html")
+        .header("Referer", "https://justjoin.it/")
+        .timeout(Duration.ofSeconds(30))
+        .GET()
+        .build();
+    try {
+      var response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+      if (response.statusCode() != 200) {
+        throw new IllegalStateException(
+            "Offer page returned HTTP " + response.statusCode() + " for " + url);
+      }
+      return response.body();
+    } catch (IOException e) {
+      throw new IllegalStateException("Failed to fetch offer page " + url, e);
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      throw new IllegalStateException("Interrupted fetching offer page " + url, e);
+    }
+  }
+
   private JsonNode fetchPageJson(int page) {
     var url = API_BASE + "?categories%5B%5D=" + JAVA_CATEGORY_ID + "&page=" + page + "&perPage="
         + PER_PAGE + "&sortBy=published&orderBy=DESC";
