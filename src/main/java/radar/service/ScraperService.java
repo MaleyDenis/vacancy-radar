@@ -43,28 +43,59 @@ public class ScraperService {
   }
 
   /**
-   * Fetches current offers, merges brand-new ones into the pool (preserving each existing offer's
-   * {@code firstSeenAt}), prunes offers past the retention window, and persists the result.
+   * Walks the connector newest-first, merging brand-new offers into the pool (preserving each
+   * existing offer's {@code firstSeenAt}), prunes offers past the retention window, and persists.
+   *
+   * @param fullFetch when {@code false} (default), stops paginating as soon as a whole page holds no
+   *                  offer that wasn't already in the pool — cheap incremental scans. When
+   *                  {@code true}, walks every page to refresh the entire pool.
+   * @param limit     optional cap on how many offers to process this run (newest first); {@code null}
+   *                  = no cap.
    */
-  public ScanResult scan() {
+  public ScanResult scan(boolean fullFetch, Integer limit) {
     String now = Instant.now().toString();
-    List<RawJobOffer> fetched = connector.fetchAll();
 
-    // Key existing pool by id so we can preserve firstSeenAt and refresh the offer payload.
+    // Existing pool, keyed by id. knownIds is a snapshot: an offer is "new" only if absent here.
     Map<String, StoredRawOffer> pool = new LinkedHashMap<>();
     for (StoredRawOffer stored : repository.readRawOffers()) {
       pool.put(stored.offer().id(), stored);
     }
+    Set<String> knownIds = new HashSet<>(pool.keySet());
 
     int added = 0;
-    for (RawJobOffer offer : fetched) {
-      StoredRawOffer existing = pool.get(offer.id());
-      if (existing == null) {
-        pool.put(offer.id(), new StoredRawOffer(offer, now));
-        added++;
-      } else {
-        // Same offer seen again: refresh its fields (salary/title may change) but keep firstSeenAt.
-        pool.put(offer.id(), new StoredRawOffer(offer, existing.firstSeenAt()));
+    int processed = 0;
+    int page = 1;
+    int totalPages = 1;
+    boolean limitReached = false;
+
+    while (page <= totalPages && page <= JustJoinConnector.MAX_PAGES && !limitReached) {
+      JustJoinConnector.OfferPage p = connector.fetchPage(page);
+      totalPages = p.totalPages();
+
+      int newOnPage = 0;
+      for (RawJobOffer offer : p.offers()) {
+        if (limit != null && processed >= limit) {
+          limitReached = true;
+          break;
+        }
+        StoredRawOffer existing = pool.get(offer.id());
+        String firstSeen = existing == null ? now : existing.firstSeenAt();
+        pool.put(offer.id(), new StoredRawOffer(offer, firstSeen));
+        if (!knownIds.contains(offer.id())) {
+          added++;
+          newOnPage++;
+        }
+        processed++;
+      }
+      log.info("Scan page {}/{}: {} offers, {} new", page, totalPages, p.offers().size(), newOnPage);
+
+      // Incremental stop: once a full page brought nothing new, older pages hold only known offers.
+      if (!fullFetch && !limitReached && newOnPage == 0) {
+        break;
+      }
+      page++;
+      if (page <= totalPages && !limitReached) {
+        sleepPolitely();
       }
     }
 
@@ -74,9 +105,17 @@ public class ScraperService {
         .toList();
 
     repository.saveRawOffers(merged);
-    log.info("Scan: fetched {}, added {}, pool size {} (retention {}d)",
-        fetched.size(), added, merged.size(), retentionDays);
+    log.info("Scan done: added {}, pool size {} (fullFetch={}, limit={}, retention {}d)",
+        added, merged.size(), fullFetch, limit, retentionDays);
     return new ScanResult(added, merged.size());
+  }
+
+  private static void sleepPolitely() {
+    try {
+      Thread.sleep(500 + java.util.concurrent.ThreadLocalRandom.current().nextInt(500));
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+    }
   }
 
   /**
