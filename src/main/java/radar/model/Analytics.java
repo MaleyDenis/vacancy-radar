@@ -15,7 +15,6 @@ public record Analytics(
     Map<String, Integer> skillFrequency,
     List<String> topCompanies,
     SalaryRange salaryDistribution,
-    Map<String, Double> projectTypeBreakdown,
     double remotePercentage
 ) {
 }

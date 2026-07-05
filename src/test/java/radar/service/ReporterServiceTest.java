@@ -13,7 +13,6 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import radar.model.Analytics;
 import radar.model.JobReport;
 import radar.model.RawJobOffer;
-import radar.model.SalaryRange;
 import radar.repository.JsonRepository;
 
 @ExtendWith(MockitoExtension.class)
@@ -30,8 +29,7 @@ class ReporterServiceTest {
     var offer = new RawJobOffer("id-" + company + salaryMin, "Java Dev", company, null,
         "Kraków", remote, "2026-07-04", "senior", null, salaryMin,
         salaryMin == null ? null : salaryMin + 5000, "PLN", "b2b", "url", "justjoin", null);
-    return new JobReport(offer, keySkills, List.of(), projectType, "senior", List.of(), List.of(),
-        "focus", 7, new SalaryRange(salaryMin, salaryMin == null ? null : salaryMin + 5000, "PLN"));
+    return new JobReport(offer, keySkills, "resp", "proj", List.of(), "senior", 7);
   }
 
   @Test
@@ -99,22 +97,6 @@ class ReporterServiceTest {
   }
 
   @Test
-  void projectTypeBreakdownSumsToAround100Percent() {
-    var reports = List.of(
-        report("A", true, "product", 10000, List.of("Java")),
-        report("B", true, "product", 12000, List.of("Java")),
-        report("C", false, "outsourcing", 11000, List.of("Java")),
-        report("D", true, "product", 13000, List.of("Java")));
-
-    var breakdown = reporter.buildAnalytics("2026-07-04", reports)
-        .projectTypeBreakdown();
-
-    assertThat(breakdown.get("product")).isEqualTo(75.0);
-    assertThat(breakdown.get("outsourcing")).isEqualTo(25.0);
-    assertThat(breakdown.values().stream().mapToDouble(Double::doubleValue).sum()).isEqualTo(100.0);
-  }
-
-  @Test
   void computeTrendsMergesSkillFrequencyAcrossSnapshots() {
     when(repository.listDates()).thenReturn(List.of("2026-07-04", "2026-07-05"));
     when(repository.loadAnalytics("2026-07-04")).thenReturn(analytics(Map.of("Java", 3, "Spring", 2)));
@@ -140,6 +122,6 @@ class ReporterServiceTest {
   }
 
   private Analytics analytics(Map<String, Integer> skills) {
-    return new Analytics("2026-07-04", 0, skills, List.of(), null, Map.of(), 0.0);
+    return new Analytics("2026-07-04", 0, skills, List.of(), null, 0.0);
   }
 }

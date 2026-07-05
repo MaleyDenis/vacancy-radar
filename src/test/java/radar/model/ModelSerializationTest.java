@@ -48,9 +48,8 @@ class ModelSerializationTest {
         "jj-1", "Java Dev", "Acme", "50", "Kraków", false, "2026-07-04", "mid",
         "desc", 12000, 18000, "PLN", "B2B", "url", "justjoin", null);
     var report = new JobReport(
-        offer, List.of("Java", "SQL"), List.of("Kafka"), "product", "mid",
-        List.of("on-call"), List.of("remote"), "system design", 8,
-        new SalaryRange(12000, 18000, "PLN"));
+        offer, List.of("Java", "SQL"), "Build services.", "A payments platform.",
+        List.of("5+ years Java"), "mid", 8);
     assertRoundTrip(report, JobReport.class);
   }
 
@@ -58,8 +57,7 @@ class ModelSerializationTest {
   void analyticsRoundTrips() throws Exception {
     var analytics = new Analytics(
         "2026-07-04", 42, Map.of("Java", 30, "Spring", 20), List.of("Acme", "Globex"),
-        new SalaryRange(10000, 30000, "PLN"), Map.of("product", 0.6, "outsourcing", 0.4),
-        66.7);
+        new SalaryRange(10000, 30000, "PLN"), 66.7);
     assertRoundTrip(analytics, Analytics.class);
   }
 
@@ -83,8 +81,7 @@ class ModelSerializationTest {
   @Test
   void withRawJobOfferAttachesOffer() {
     var report = new JobReport(
-        null, List.of("Java"), List.of(), "product", "mid", List.of(), List.of(),
-        "focus", 7, new SalaryRange(10000, 20000, "PLN"));
+        null, List.of("Java"), "resp", "proj", List.of(), "mid", 7);
     var offer = new RawJobOffer(
         "jj-2", "t", "c", null, null, null, null, null, null, null, null,
         null, null, null, null, null);

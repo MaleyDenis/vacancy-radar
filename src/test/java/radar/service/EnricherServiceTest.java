@@ -10,7 +10,6 @@ import java.util.List;
 import org.junit.jupiter.api.Test;
 import radar.model.RawJobOffer;
 import radar.model.ScanProgress;
-import radar.model.SalaryRange;
 import radar.model.UserProfile;
 
 class EnricherServiceTest {
@@ -48,15 +47,12 @@ class EnricherServiceTest {
   void validJsonProducesJobReportWithOfferAttached() {
     var json = """
         {
-          "keySkills": ["Java", "Spring Boot"],
-          "niceToHave": ["Kafka"],
-          "projectType": "product",
+          "skills": ["Java", "Spring Boot", "Kafka"],
+          "responsibilities": "Build backend services.",
+          "projectDescription": "A payments platform.",
+          "requirements": ["5+ years Java", "Spring"],
           "realSeniority": "senior",
-          "redFlags": ["on-call"],
-          "greenFlags": ["remote", "clear stack"],
-          "interviewFocus": "system design",
-          "matchScore": 8,
-          "salary": {"min": 18000, "max": 26000, "currency": "PLN"}
+          "matchScore": 8
         }
         """;
     var o = offer("jj-1", "Senior Java Dev");
@@ -64,15 +60,12 @@ class EnricherServiceTest {
     var report = withCannedJson(json).enrich(o, profile);
 
     assertThat(report.rawJobOffer()).isSameAs(o);
-    assertThat(report.keySkills()).containsExactly("Java", "Spring Boot");
-    assertThat(report.niceToHave()).containsExactly("Kafka");
-    assertThat(report.projectType()).isEqualTo("product");
+    assertThat(report.skills()).containsExactly("Java", "Spring Boot", "Kafka");
+    assertThat(report.responsibilities()).isEqualTo("Build backend services.");
+    assertThat(report.projectDescription()).isEqualTo("A payments platform.");
+    assertThat(report.requirements()).containsExactly("5+ years Java", "Spring");
     assertThat(report.realSeniority()).isEqualTo("senior");
-    assertThat(report.redFlags()).containsExactly("on-call");
-    assertThat(report.greenFlags()).containsExactly("remote", "clear stack");
-    assertThat(report.interviewFocus()).isEqualTo("system design");
     assertThat(report.matchScore()).isEqualTo(8);
-    assertThat(report.salary()).isEqualTo(new SalaryRange(18000, 26000, "PLN"));
   }
 
   @Test
@@ -91,9 +84,8 @@ class EnricherServiceTest {
   @Test
   void enrichAllEmitsOneEnrichingProgressPerOffer() {
     var json = """
-        {"keySkills":[],"niceToHave":[],"projectType":"product","realSeniority":"mid",
-         "redFlags":[],"greenFlags":[],"interviewFocus":"basics","matchScore":5,
-         "salary":{"min":10000,"max":15000,"currency":"PLN"}}
+        {"skills":[],"responsibilities":"r","projectDescription":"p","requirements":[],
+         "realSeniority":"mid","matchScore":5}
         """;
     var svc = withCannedJson(json);
     var offers = List.of(offer("a", "A"), offer("b", "B"), offer("c", "C"));
@@ -122,7 +114,6 @@ class EnricherServiceTest {
   }
 
   private EnrichmentResult result(int score) {
-    return new EnrichmentResult(List.of("Java"), List.of(), "product", "mid", List.of(), List.of(),
-        "focus", score, new SalaryRange(10000, 20000, "PLN"));
+    return new EnrichmentResult(List.of("Java"), "resp", "proj", List.of(), "mid", score);
   }
 }
