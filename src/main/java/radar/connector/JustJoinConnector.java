@@ -13,6 +13,7 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import radar.model.RawJobOffer;
 
@@ -43,9 +44,17 @@ public class JustJoinConnector {
 
   private final ObjectMapper objectMapper;
   private final HttpClient httpClient;
+  private final String experienceLevels;
 
-  public JustJoinConnector(ObjectMapper objectMapper) {
+  /**
+   * @param experienceLevels comma-separated JustJoin experience slugs for the listing filter
+   *     ({@code intern, junior, mid, senior, team-leader-manager, c-level}); blank = all levels
+   */
+  public JustJoinConnector(
+      ObjectMapper objectMapper,
+      @Value("${radar.justjoin.experience-levels:}") String experienceLevels) {
     this.objectMapper = objectMapper;
+    this.experienceLevels = experienceLevels == null ? "" : experienceLevels.replace(" ", "");
     this.httpClient =
         HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(15)).build();
   }
@@ -62,10 +71,17 @@ public class JustJoinConnector {
 
   /** Fetches one listing page (1-based), newest first. */
   public OfferPage fetchPage(int page) {
-    var html = get(LISTING_URL + "?page=" + page, "listing page " + page);
+    var html = get(listingUrl(page), "listing page " + page);
     var offers = parseOffers(html);
-    var hasNext = !offers.isEmpty() && html.contains("java?page=" + (page + 1) + "\"");
+    var hasNext = !offers.isEmpty() && html.contains("page=" + (page + 1) + "\"");
     return new OfferPage(offers, hasNext);
+  }
+
+  /** Listing URL for a page, with the experience filter when configured. */
+  String listingUrl(int page) {
+    return experienceLevels.isEmpty()
+        ? LISTING_URL + "?page=" + page
+        : LISTING_URL + "?experience-levels=" + experienceLevels + "&page=" + page;
   }
 
   /**
