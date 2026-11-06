@@ -1,131 +1,43 @@
 ---
 name: finish-task
-description: Finish a task: create a branch per naming convention, commit staged changes with the correct message format, push, open a PR, merge it into main, sync local main, and move the issue to Done in GitHub project. Usage: /finish-task <issue-number>
+description: Finish a task: create a branch, commit, push, open a PR, squash-merge it into main with a clean subject, and sync local main. Optional GitHub issue number closes the issue and moves it to Done. Usage: /finish-task [issue-number]
 user-invocable: true
 allowed-tools: Bash, Read
 ---
 
-Finish task #$ARGUMENTS — create branch, commit, push, open PR, merge it into main, sync local main, and move to Done in GitHub project.
+Finish the current task. **Full flow:** branch → commit → push → PR → squash-merge → checkout main → pull.
 
-**Full flow:** create branch → do the task → commit → push → open PR → merge into main → checkout main → pull → ready for the next task.
+## Conventions (enforced by `scripts/hooks/`)
 
-## Step 1 — Fetch issue
+- **Commit / PR title / squash subject:** `<type>(<scope>): <description>`
+  - types: `feat fix refactor docs style test chore`
+  - scope required, lowercase; description lowercase, imperative, no trailing period, ≤ 70 chars total
+  - **No ticket numbers (`VR-NN`), no PR numbers (`(#NN)`)**
+  - Example: `feat(scan): add evaluate step`
+- **Branch:** `<type>/<short-slug>` — e.g. `feat/evaluate-step`
+- **No Claude attribution** anywhere — no `Co-Authored-By`, no "Generated with Claude Code".
 
-Run:
-```
-gh issue view $ARGUMENTS --repo MaleyDenis/vacancy-radar --json number,title,labels,url
-```
+## Steps
 
-Extract: `number`, `title`, `url`, and the first label name (if any).
-
-## Step 2 — Determine branch type
-
-Map the issue label to branch type using this table:
-
-| Label      | Branch type |
-|---|---|
-| feature    | feat        |
-| bug        | fix         |
-| refactor   | refactor    |
-| docs       | docs        |
-| style      | style       |
-| test       | test        |
-| chore      | chore       |
-| (no label) | feat        |
-
-## Step 3 — Build branch name
-
-1. Slugify the issue title: lowercase, replace spaces and special chars with `-`, strip leading/trailing `-`.
-   - Example: "Add job listing parser" → `add-job-listing-parser`
-2. For non-chore types: `<type>/VR-<number>-<slug>`
-   - Example: `feat/VR-16-add-job-listing-parser`
-3. For chore: `chore/<slug>` (no ticket number)
-   - Example: `chore/setup-hooks`
-
-## Step 4 — Create or switch to branch
-
-Run `git branch --show-current` to check current branch.
-
-- If already on the correct branch → skip creation.
-- If not → run `git checkout -b <branch-name>`.
-
-## Step 5 — Commit staged changes (if any)
-
-Run `git status --short` to check for staged changes.
-
-If there are staged changes, commit using the correct message format:
-
-- **Non-chore:** `<type>(<scope>): VR-<number> <short description>`
-  - Scope = component name derived from staged files (e.g. `scraper`, `enricher`, `api`)
-  - Example: `feat(scraper): VR-16 add job listing parser`
-- **Chore:** `chore(<scope>): <short description>`
-  - Example: `chore(config): add pre-commit hooks`
-
-If there are no staged changes, skip this step and inform the user.
-
-## Step 6 — Push branch to remote
-
-```
-git push -u origin <branch-name>
-```
-
-## Step 7 — Create Pull Request
-
-```
-gh pr create --title "<type>(VR-<number>): <issue title>" --body "$(cat <<'EOF'
-## Summary
-- <bullet points summarizing what was done>
-
-Closes #<number>
-
-🤖 Generated with [Claude Code](https://claude.com/claude-code)
-EOF
-)" --base main
-```
-
-- Title format matches commit message style: `<type>(VR-<number>): <short description>`
-- Body should summarize the changes from the commit
-
-## Step 8 — Merge the PR into main and sync local main
-
-1. Merge the PR (squash → one commit per task on main, and delete the remote branch):
-```
-gh pr merge <pr-number> --squash --delete-branch
-```
-- If the merge is blocked (checks pending, not mergeable, conflicts), do NOT force it — report the blocker to the user and stop before Step 9.
-
-2. Switch back to main and pull the merged commit:
-```
-git checkout main
-git pull --ff-only
-```
-
-The local branch is deleted automatically by `--delete-branch` once you leave it; the working tree is now clean on an up-to-date `main`, ready for the next task.
-
-## Step 9 — Move issue to Done in GitHub project
-
-1. Get the project item ID for issue #$ARGUMENTS:
-```
-gh api graphql -f query='{ user(login: "MaleyDenis") { projectV2(number: 2) { items(first: 100) { nodes { id content { ... on Issue { number } } } } } } }'
-```
-Find the node where `content.number == $ARGUMENTS` and capture its `id`.
-
-2. If found, update status to Done (note: `gh api graphql` takes the mutation via `-f query=`, NOT `-f mutation=`):
-```
-gh api graphql -f query='mutation { updateProjectV2ItemFieldValue(input: { projectId: "PVT_kwHOAIpoic4BRuoj" itemId: "<ITEM_ID>" fieldId: "PVTSSF_lAHOAIpoic4BRuojzg_eKyc" value: { singleSelectOptionId: "98236657" } }) { projectV2Item { id } } }'
-```
-
-3. If not found in project → warn the user that the issue is not in the project board, but continue.
-
-## Step 10 — Report
-
-Print a summary:
-```
-✓ Branch:   <branch-name>
-✓ Commit:   <commit message or "no staged changes — commit manually">
-✓ Pushed to origin
-✓ PR:       <pr url> (merged, branch deleted)
-✓ Local:    on main, pulled up to date
-✓ Issue #$ARGUMENTS moved to Done
-  URL: <issue url>
-```
+1. **Branch.** If on `main`, `git checkout -b <type>/<slug>`.
+2. **Commit.** `git add` the task's files, `git commit -m "<type>(<scope>): <description>"`. One commit per task.
+3. **Push.** `git push -u origin <branch>`.
+4. **PR.**
+   ```
+   gh pr create --base main --title "<same subject as commit>" --body "## Summary
+   - <bullets>"
+   ```
+   If an issue number was given, add `Closes #<n>` to the body.
+5. **Merge** — always pass `--subject` so GitHub does NOT append `(#NN)`, and an empty body:
+   ```
+   gh pr merge <pr> --squash --delete-branch --subject "<same subject>" --body ""
+   ```
+   If blocked (checks, conflicts) — report and stop, never force.
+6. **Sync.** `git checkout main && git pull --ff-only`.
+7. **Issue (only if a number was given).** Move it to Done on the project board:
+   ```
+   gh api graphql -f query='{ user(login: "MaleyDenis") { projectV2(number: 2) { items(first: 100) { nodes { id content { ... on Issue { number } } } } } } }'
+   gh api graphql -f query='mutation { updateProjectV2ItemFieldValue(input: { projectId: "PVT_kwHOAIpoic4BRuoj" itemId: "<ITEM_ID>" fieldId: "PVTSSF_lAHOAIpoic4BRuojzg_eKyc" value: { singleSelectOptionId: "98236657" } }) { projectV2Item { id } } }'
+   ```
+   (`gh api graphql` takes mutations via `-f query=`, not `-f mutation=`.)
+8. **Report:** branch, commit subject, PR url (merged), local main up to date.

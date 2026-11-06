@@ -1,46 +1,36 @@
 #!/bin/bash
-MSG=$(cat "$1")
-SUBJECT=$(echo "$MSG" | head -1)
-TYPE=$(echo "$SUBJECT" | grep -oE '^[a-z]+')
+# Conventional Commits: <type>(<scope>): <description>
+# No ticket numbers, no PR numbers, no trailing period, max 70 chars.
+SUBJECT=$(head -1 "$1")
 
-CHORE_RE='^chore(\([a-z0-9-]+\))?: .+'
-OTHER_RE='^(feat|fix|refactor|docs|style|test)(\([a-z0-9-]+\))?: VR-[0-9]{1,3} .+'
-
-if [[ ${#SUBJECT} -gt 70 ]]; then
-  echo "❌ Commit subject line too long: ${#SUBJECT} chars (max 70)" >&2
-  echo "   Subject: '$SUBJECT'" >&2
-  exit 1
+# Let git's own merge/revert/fixup messages through.
+if [[ "$SUBJECT" =~ ^(Merge|Revert|fixup!|squash!) ]]; then
+  exit 0
 fi
 
-if [[ "$TYPE" == "chore" ]]; then
-  if ! [[ "$SUBJECT" =~ $CHORE_RE ]]; then
-    echo "❌ Invalid commit message: '$SUBJECT'" >&2
-    echo "" >&2
-    echo "   Expected: chore(scope): description" >&2
-    echo "   Example:  chore(config): add pre-commit hooks" >&2
-    exit 1
-  fi
-else
-  if ! [[ "$SUBJECT" =~ $OTHER_RE ]]; then
-    echo "❌ Invalid commit message: '$SUBJECT'" >&2
-    echo "" >&2
-    echo "   Expected: <type>(scope): VR-00-999 description" >&2
-    echo "" >&2
-    echo "   Valid types:" >&2
-    echo "     feat     — new feature" >&2
-    echo "     fix      — bug fix" >&2
-    echo "     refactor — code restructuring" >&2
-    echo "     docs     — documentation" >&2
-    echo "     style    — formatting" >&2
-    echo "     test     — tests" >&2
-    echo "     chore    — build/tools/config (no ticket required)" >&2
-    echo "" >&2
-    echo "   Examples:" >&2
-    echo "     feat(scraper): VR-123 add job listing parser" >&2
-    echo "     fix(api): VR-12 handle empty response" >&2
-    echo "     chore(config): add pre-commit hooks" >&2
-    exit 1
-  fi
+PATTERN='^(feat|fix|refactor|docs|style|test|chore)\([a-z0-9-]+\): [a-z0-9].*[^.]$'
+
+fail() {
+  echo "❌ $1" >&2
+  echo "   Subject: '$SUBJECT'" >&2
+  echo "" >&2
+  echo "   Expected: <type>(<scope>): <description>" >&2
+  echo "   Types:    feat fix refactor docs style test chore" >&2
+  echo "   Example:  feat(scan): add evaluate step" >&2
+  exit 1
+}
+
+if [[ ${#SUBJECT} -gt 70 ]]; then
+  fail "Subject too long: ${#SUBJECT} chars (max 70)"
+fi
+if [[ "$SUBJECT" =~ \(#[0-9]+\)$ ]]; then
+  fail "No PR number at the end"
+fi
+if [[ "$SUBJECT" =~ VR-[0-9]+ ]]; then
+  fail "No ticket numbers"
+fi
+if ! [[ "$SUBJECT" =~ $PATTERN ]]; then
+  fail "Invalid commit message"
 fi
 
 exit 0

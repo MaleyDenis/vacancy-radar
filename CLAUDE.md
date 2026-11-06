@@ -53,6 +53,18 @@ radar.web         — REST controllers
 
 ---
 
+## Git Conventions
+
+- Commit / PR title: `<type>(<scope>): <description>` — e.g. `feat(scan): add evaluate step`
+  - types: `feat fix refactor docs style test chore`; lowercase, imperative, no trailing period, ≤ 70 chars
+  - NO ticket numbers (`VR-NN`), NO PR numbers (`(#NN)`)
+- Branch: `<type>/<short-slug>` — e.g. `feat/evaluate-step`. Never commit to `main`.
+- Merge: `gh pr merge <pr> --squash --delete-branch --subject "<subject>" --body ""` —
+  `--subject` is required, otherwise GitHub appends `(#NN)`.
+- Enforced by `scripts/hooks/` (install: `scripts/install-hooks.sh`). Flow: `/finish-task`.
+
+---
+
 ## Code Style
 
 - Use `var` for every local variable where the compiler allows it (Java 25).
