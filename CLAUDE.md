@@ -59,8 +59,8 @@ radar.web         — REST controllers
   - types: `feat fix refactor docs style test chore`; lowercase, imperative, no trailing period, ≤ 70 chars
   - NO ticket numbers (`VR-NN`), NO PR numbers (`(#NN)`)
 - Branch: `<type>/<short-slug>` — e.g. `feat/evaluate-step`. Never commit to `main`.
-- Merge: `gh pr merge <pr> --squash --delete-branch --subject "<subject>" --body ""` —
-  `--subject` is required, otherwise GitHub appends `(#NN)`.
+- Merge: `gh pr merge <pr> --rebase --delete-branch`. Repo allows **rebase only** (squash disabled —
+  it appends `(#NN)`), so each branch commit lands on main as-is: one clean commit per branch.
 - Enforced by `scripts/hooks/` (install: `scripts/install-hooks.sh`). Flow: `/finish-task`.
 
 ---
