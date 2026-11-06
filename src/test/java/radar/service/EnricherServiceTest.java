@@ -22,7 +22,7 @@ class EnricherServiceTest {
 
   private RawJobOffer offer(String id, String title) {
     return new RawJobOffer(id, title, "Acme", null, "Kraków", true, "2026-07-04", "senior",
-        null, 18000, 26000, "PLN", "b2b",
+        null, 18000, 26000, "PLN", "month", false, "b2b",
         "https://justjoin.it/job-offer/" + id, "justjoin", null);
   }
 

@@ -64,7 +64,7 @@ class WebControllersTest {
 
   private JobReport report(String id, int score) {
     var offer = new RawJobOffer(id, "Java Dev", "Acme", null, "Kraków", true, "2026-07-04",
-        "senior", null, 18000, 26000, "PLN", "b2b", "url", "justjoin", null);
+        "senior", null, 18000, 26000, "PLN", "month", false, "b2b", "url", "justjoin", null);
     return new JobReport(offer, List.of("Java"), "resp", "proj", List.of(), "senior", score);
   }
 

@@ -45,7 +45,7 @@ class OfferDetailsServiceTest {
 
   private RawJobOffer offer(String id) {
     return new RawJobOffer(id, "Java Dev", "Acme", null, "Kraków", true, "2026-07-04", "mid",
-        null, null, null, null, "b2b", "https://justjoin.it/job-offer/" + id,
+        null, null, null, null, null, null, "b2b", "https://justjoin.it/job-offer/" + id,
         "justjoin", null);
   }
 

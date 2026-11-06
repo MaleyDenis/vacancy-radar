@@ -7,6 +7,9 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
  *
  * <p>{@code description} and {@code domain} come from the offer's own page (the details step),
  * not the listing API — they are {@code null} on a freshly-scraped offer and filled in later.
+ * Salary is the offer's original (non-converted) amount; {@code salaryUnit} is the period it is
+ * quoted per ({@code hour}, {@code day}, {@code month}, {@code year}) and {@code salaryGross} whether it
+ * is gross ({@code true}) or net ({@code false}).
  * Skills are intentionally not carried here: the listing's skill list is unreliable, so skills are
  * extracted by Claude from the description during enrichment (see {@code JobReport.keySkills}).
  */
@@ -24,6 +27,8 @@ public record RawJobOffer(
     Integer salaryMin,
     Integer salaryMax,
     String currency,
+    String salaryUnit,
+    Boolean salaryGross,
     String contractType,
     String applyUrl,
     String sourceConnector,
@@ -36,7 +41,7 @@ public record RawJobOffer(
    */
   public RawJobOffer withDetails(String description, String domain) {
     return new RawJobOffer(id, title, companyName, companySize, location, remote, publishedAt,
-        experienceLevel, description, salaryMin, salaryMax, currency, contractType,
-        applyUrl, sourceConnector, domain);
+        experienceLevel, description, salaryMin, salaryMax, currency, salaryUnit, salaryGross,
+        contractType, applyUrl, sourceConnector, domain);
   }
 }
