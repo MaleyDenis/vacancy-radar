@@ -93,7 +93,10 @@ public class EnricherService {
     append(sb, "Experience level", offer.experienceLevel());
     append(sb, "Contract type", offer.contractType());
     if (offer.salaryMin() != null || offer.salaryMax() != null) {
-      append(sb, "Salary", offer.salaryMin() + " - " + offer.salaryMax() + " " + offer.currency());
+      var gross = offer.salaryGross() == null ? "" : offer.salaryGross() ? " gross" : " net";
+      var unit = offer.salaryUnit() == null ? "" : " per " + offer.salaryUnit();
+      append(sb, "Salary",
+          offer.salaryMin() + " - " + offer.salaryMax() + " " + offer.currency() + gross + unit);
     }
     if (offer.description() != null && !offer.description().isBlank()) {
       append(sb, "Description", offer.description());

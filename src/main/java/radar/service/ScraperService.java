@@ -2,7 +2,6 @@ package radar.service;
 
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
-import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.concurrent.ThreadLocalRandom;
 import org.slf4j.Logger;
@@ -52,22 +51,21 @@ public class ScraperService {
   public ScanResult scan(boolean fullFetch, Integer limit) {
     var now = Instant.now().toString();
 
-    // Existing pool, keyed by id. knownIds is a snapshot: an offer is "new" only if absent here.
+    // Existing pool, keyed by id: an offer is "new" only if absent here.
     var pool = new LinkedHashMap<String, StoredRawOffer>();
     for (var stored : repository.readRawOffers()) {
       pool.put(stored.offer().id(), stored);
     }
-    var knownIds = new HashSet<>(pool.keySet());
 
     var added = 0;
     var processed = 0;
     var page = 1;
-    var totalPages = 1;
+    var hasNext = true;
     var limitReached = false;
 
-    while (page <= totalPages && page <= JustJoinConnector.MAX_PAGES && !limitReached) {
+    while (hasNext && page <= JustJoinConnector.MAX_PAGES && !limitReached) {
       var p = connector.fetchPage(page);
-      totalPages = p.totalPages();
+      hasNext = p.hasNext();
 
       var newOnPage = 0;
       for (var offer : p.offers()) {
@@ -83,14 +81,14 @@ public class ScraperService {
         }
         processed++;
       }
-      log.info("Scan page {}/{}: {} offers, {} new", page, totalPages, p.offers().size(), newOnPage);
+      log.info("Scan page {}: {} offers, {} new", page, p.offers().size(), newOnPage);
 
       // Incremental stop: once a full page brought nothing new, older pages hold only known offers.
       if (!fullFetch && !limitReached && newOnPage == 0) {
         break;
       }
       page++;
-      if (page <= totalPages && !limitReached) {
+      if (hasNext && !limitReached) {
         sleepPolitely();
       }
     }

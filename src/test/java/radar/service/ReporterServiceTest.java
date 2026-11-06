@@ -28,7 +28,7 @@ class ReporterServiceTest {
       List<String> keySkills) {
     var offer = new RawJobOffer("id-" + company + salaryMin, "Java Dev", company, null,
         "Kraków", remote, "2026-07-04", "senior", null, salaryMin,
-        salaryMin == null ? null : salaryMin + 5000, "PLN", "b2b", "url", "justjoin", null);
+        salaryMin == null ? null : salaryMin + 5000, "PLN", "month", false, "b2b", "url", "justjoin", null);
     return new JobReport(offer, keySkills, "resp", "proj", List.of(), "senior", 7);
   }
 

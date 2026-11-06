@@ -51,7 +51,7 @@ class EvaluationServiceTest {
 
   private RawJobOffer offer(String id) {
     return new RawJobOffer(id, "Java Dev", "Acme", null, "Kraków", true, "2026-07-04", "mid",
-        "desc", null, null, "PLN", "b2b", "url", "justjoin", null);
+        "desc", null, null, "PLN", "month", false, "b2b", "url", "justjoin", null);
   }
 
   private JobReport report(String id, int score) {

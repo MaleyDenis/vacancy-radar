@@ -7,17 +7,24 @@ paths:
 
 ## JustJoinConnector Rules
 
-- Data source is the JSON API, NOT `__NEXT_DATA__` (that script tag no longer exists — the site
-  is a React Server Components app as of 2026).
-- HTTP GET `https://api.justjoin.it/v2/user-panel/offers?categories[]=6&page=N&perPage=100`
-- **Required** header `Version: 2` (otherwise HTTP 404). Java = `categoryId=6`.
-- Jackson maps the JSON `data[]` → `List<RawJobOffer>`; paginate via `meta.totalPages`
-- Rate limiting: 500–1000ms between requests
-- Required headers: `User-Agent`, `Referer`, `Accept: application/json`, `Version: 2`
-- Use JDK `HttpClient` for the API (Jsoup only for HTML→text if a description is ever fetched)
-- No Selenium
-- `description` is not in the list API (only in the page RSC payload) → left null; per-offer
-  description fetching is a separate follow-up task
+- The old JSON API `api.justjoin.it/v2/user-panel/offers` is dead (HTTP 503) — do NOT use it.
+- Source: server-rendered listing `https://justjoin.it/job-offers/all-locations/java?page=N`
+  (50 offers/page, newest first by `publishedAt`, ~18 pages).
+- Offers are JSON objects inside Next.js flight chunks `self.__next_f.push([1,"..."])`:
+  concatenate the decoded chunks, read every object starting with `{"applyUrl":` that has a `guid`,
+  dedupe by `guid`.
+- Last page: no `?page=N+1` link in the HTML → `OfferPage.hasNext = false`.
+- Salary: take the `employmentTypes[]` entry with `currencySource == "original"` — the others are
+  currency conversions (GBP/USD/EUR/CHF), often listed first. Map `unit` → `salaryUnit`,
+  `gross` → `salaryGross`.
+- `applyUrl` in the data is always null → build `https://justjoin.it/job-offer/{slug}`.
+- Honest `User-Agent: vacancy-radar/1.0 (+repo url)` — never impersonate a browser, never bypass
+  bot protection. If the site starts blocking, stop and report.
+- Rate limiting: 500–1000ms between requests.
+- JDK `HttpClient` + Jackson for the listing; Jsoup for the offer page's JSON-LD (`OfferDetailsParser`).
+- No Selenium.
+- `description` / `domain` are not in the listing → filled by the details step from the offer page's
+  `JobPosting` JSON-LD (`domain` = host of `hiringOrganization.sameAs`).
 
 ## Adding New Connectors (Phase 2)
 

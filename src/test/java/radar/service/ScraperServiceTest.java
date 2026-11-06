@@ -42,7 +42,7 @@ class ScraperServiceTest {
 
   private RawJobOffer offer(String id) {
     return new RawJobOffer(id, "Java Dev", "Acme", null, "Kraków", true, "2026-07-04", "mid",
-        null, null, null, null, "b2b", "https://justjoin.it/job-offer/" + id,
+        null, null, null, null, null, null, "b2b", "https://justjoin.it/job-offer/" + id,
         "justjoin", null);
   }
 
@@ -50,9 +50,9 @@ class ScraperServiceTest {
     return new StoredRawOffer(offer(id), firstSeenAt, null, null);
   }
 
-  private OfferPage page(int totalPages, String... ids) {
+  private OfferPage page(boolean hasNext, String... ids) {
     return new OfferPage(IntStream.range(0, ids.length).mapToObj(i -> offer(ids[i])).toList(),
-        totalPages);
+        hasNext);
   }
 
   @SuppressWarnings("unchecked")
@@ -65,7 +65,7 @@ class ScraperServiceTest {
   @Test
   void scanAddsBrandNewOffersToEmptyPool() {
     when(repository.readRawOffers()).thenReturn(List.of());
-    when(connector.fetchPage(1)).thenReturn(page(1, "a", "b"));
+    when(connector.fetchPage(1)).thenReturn(page(false, "a", "b"));
 
     ScanResult result = scraperService.scan(false, null);
 
@@ -77,7 +77,7 @@ class ScraperServiceTest {
   void scanPreservesFirstSeenForOffersAlreadyInPool() {
     String seen = Instant.now().minus(5, ChronoUnit.DAYS).toString();
     when(repository.readRawOffers()).thenReturn(List.of(stored("a", seen)));
-    when(connector.fetchPage(1)).thenReturn(page(1, "a", "b"));
+    when(connector.fetchPage(1)).thenReturn(page(false, "a", "b"));
 
     ScanResult result = scraperService.scan(true, null);
 
@@ -89,8 +89,8 @@ class ScraperServiceTest {
   @Test
   void scanStopsEarlyOnceAPageBringsNothingNew() {
     when(repository.readRawOffers()).thenReturn(List.of(stored("x", Instant.now().toString())));
-    when(connector.fetchPage(1)).thenReturn(page(3, "n1"));   // n1 is new -> keep going
-    when(connector.fetchPage(2)).thenReturn(page(3, "x"));    // all known -> stop
+    when(connector.fetchPage(1)).thenReturn(page(true, "n1"));   // n1 is new -> keep going
+    when(connector.fetchPage(2)).thenReturn(page(true, "x"));    // all known -> stop
 
     ScanResult result = scraperService.scan(false, null);
 
@@ -103,8 +103,8 @@ class ScraperServiceTest {
   @Test
   void fullFetchKeepsWalkingPastAnAllKnownPage() {
     when(repository.readRawOffers()).thenReturn(List.of(stored("x", Instant.now().toString())));
-    when(connector.fetchPage(1)).thenReturn(page(2, "x"));    // all known, but fullFetch -> continue
-    when(connector.fetchPage(2)).thenReturn(page(2, "n1"));
+    when(connector.fetchPage(1)).thenReturn(page(true, "x"));    // all known, but fullFetch -> continue
+    when(connector.fetchPage(2)).thenReturn(page(false, "n1"));
 
     ScanResult result = scraperService.scan(true, null);
 
@@ -115,7 +115,7 @@ class ScraperServiceTest {
   @Test
   void limitCapsHowManyOffersAreProcessed() {
     when(repository.readRawOffers()).thenReturn(List.of());
-    when(connector.fetchPage(1)).thenReturn(page(1, "a", "b", "c"));
+    when(connector.fetchPage(1)).thenReturn(page(false, "a", "b", "c"));
 
     ScanResult result = scraperService.scan(false, 2);
 
@@ -130,7 +130,7 @@ class ScraperServiceTest {
     String recent = Instant.now().minus(2, ChronoUnit.DAYS).toString();
     when(repository.readRawOffers())
         .thenReturn(List.of(stored("old", old), stored("recent", recent)));
-    when(connector.fetchPage(1)).thenReturn(new OfferPage(List.of(), 1));
+    when(connector.fetchPage(1)).thenReturn(new OfferPage(List.of(), false));
 
     ScanResult result = scraperService.scan(true, null);
 

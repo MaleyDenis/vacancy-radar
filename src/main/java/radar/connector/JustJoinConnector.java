@@ -1,7 +1,9 @@
 package radar.connector;
 
+import com.fasterxml.jackson.core.JsonToken;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.MissingNode;
 import java.io.IOException;
 import java.net.URI;
 import java.net.http.HttpClient;
@@ -9,41 +11,35 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.concurrent.ThreadLocalRandom;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 import radar.model.RawJobOffer;
 
 /**
  * Scrapes Java job offers from justjoin.it.
  *
- * <p>Historically justjoin.it embedded offer data in a {@code __NEXT_DATA__} script tag. As of 2026
- * the site is a React Server Components app and no longer exposes that. Instead we call its public
- * JSON API ({@code api.justjoin.it/v2/user-panel/offers}), which requires a {@code Version: 2}
- * header and a {@code categories[]} filter. Java is {@code categoryId=6}.
+ * <p>The old JSON API ({@code api.justjoin.it/v2/user-panel/offers}) is gone (HTTP 503). The listing
+ * page {@code justjoin.it/job-offers/all-locations/java?page=N} is server-rendered by Next.js and
+ * embeds the same offer objects in its React Server Components payload
+ * ({@code self.__next_f.push([1,"..."])} script chunks). We concatenate those chunks and pick every
+ * JSON object that carries a {@code guid}. 50 offers per page, newest first by {@code publishedAt}.
  *
- * <p>The list endpoint does not carry the full job description (that lives only in the page's RSC
- * payload and has no stable JSON endpoint), so {@link RawJobOffer#description()} is left null here.
- * Fetching descriptions is deliberately out of scope for this connector — see {@link #DESCRIPTION_NOTE}.
+ * <p>The listing has no description — the details step fetches it from the offer page's JSON-LD.
  */
 @Component
 public class JustJoinConnector {
 
-  static final String DESCRIPTION_NOTE =
-      "Description is not available from the list API; a follow-up task will add per-offer fetching.";
-
-  private static final Logger log = LoggerFactory.getLogger(JustJoinConnector.class);
-
-  private static final String API_BASE = "https://api.justjoin.it/v2/user-panel/offers";
-  private static final int JAVA_CATEGORY_ID = 6;
-  private static final int PER_PAGE = 100;
-  private static final int MAX_PAGES_SAFETY = 500;
-  private static final String USER_AGENT =
-      "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
-          + "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36";
+  private static final String LISTING_URL = "https://justjoin.it/job-offers/all-locations/java";
+  private static final String OFFER_URL = "https://justjoin.it/job-offer/";
+  private static final int MAX_PAGES_SAFETY = 100;
+  static final String USER_AGENT =
+      "vacancy-radar/1.0 (+https://github.com/MaleyDenis/vacancy-radar)";
   private static final String SOURCE = "justjoin";
+
+  /** Prefix of a Next.js flight chunk {@code self.__next_f.push([1,"<json string>"])}. */
+  private static final String FLIGHT_CHUNK = "self.__next_f.push([1,";
+  private static final String OFFER_START = "{\"applyUrl\":";
 
   private final ObjectMapper objectMapper;
   private final HttpClient httpClient;
@@ -54,43 +50,22 @@ public class JustJoinConnector {
         HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(15)).build();
   }
 
-  /** One page of results: the parsed offers plus the total page count reported by the API. */
-  public record OfferPage(List<RawJobOffer> offers, int totalPages) {
+  /**
+   * One listing page: the parsed offers, and whether the page links to the next one (the last page
+   * has no {@code ?page=N+1} link).
+   */
+  public record OfferPage(List<RawJobOffer> offers, boolean hasNext) {
   }
 
   /** Upper bound on how many pages any caller will walk, as a runaway guard. */
   public static final int MAX_PAGES = MAX_PAGES_SAFETY;
 
-  /**
-   * Fetches every Java offer across all pages, newest first. Rate-limits between requests to stay
-   * polite.
-   */
-  public List<RawJobOffer> fetchAll() {
-    var all = new ArrayList<RawJobOffer>();
-    var page = 1;
-    var totalPages = 1;
-    while (page <= totalPages && page <= MAX_PAGES_SAFETY) {
-      var p = fetchPage(page);
-      totalPages = p.totalPages();
-      all.addAll(p.offers());
-      log.info("JustJoin page {}/{}: {} offers ({} total)", page, totalPages, p.offers().size(),
-          all.size());
-      page++;
-      if (page <= totalPages) {
-        sleepPolitely();
-      }
-    }
-    return all;
-  }
-
-  /**
-   * Fetches a single page of offers (newest first). Lets callers paginate lazily — e.g. an
-   * incremental scan that stops once it reaches already-known offers.
-   */
+  /** Fetches one listing page (1-based), newest first. */
   public OfferPage fetchPage(int page) {
-    var root = fetchPageJson(page);
-    var totalPages = root.path("meta").path("totalPages").asInt(1);
-    return new OfferPage(parseOffers(root), totalPages);
+    var html = get(LISTING_URL + "?page=" + page, "listing page " + page);
+    var offers = parseOffers(html);
+    var hasNext = !offers.isEmpty() && html.contains("java?page=" + (page + 1) + "\"");
+    return new OfferPage(offers, hasNext);
   }
 
   /**
@@ -99,10 +74,13 @@ public class JustJoinConnector {
    * ({@code OfferDetailsParser}). Never sends any of this to Claude.
    */
   public String fetchOfferPageHtml(String url) {
+    return get(url, "offer page " + url);
+  }
+
+  private String get(String url, String what) {
     var request = HttpRequest.newBuilder(URI.create(url))
         .header("User-Agent", USER_AGENT)
         .header("Accept", "text/html")
-        .header("Referer", "https://justjoin.it/")
         .timeout(Duration.ofSeconds(30))
         .GET()
         .build();
@@ -110,76 +88,105 @@ public class JustJoinConnector {
       var response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
       if (response.statusCode() != 200) {
         throw new IllegalStateException(
-            "Offer page returned HTTP " + response.statusCode() + " for " + url);
+            "JustJoin returned HTTP " + response.statusCode() + " for " + what);
       }
       return response.body();
     } catch (IOException e) {
-      throw new IllegalStateException("Failed to fetch offer page " + url, e);
+      throw new IllegalStateException("Failed to fetch " + what, e);
     } catch (InterruptedException e) {
       Thread.currentThread().interrupt();
-      throw new IllegalStateException("Interrupted fetching offer page " + url, e);
-    }
-  }
-
-  private JsonNode fetchPageJson(int page) {
-    var url = API_BASE + "?categories%5B%5D=" + JAVA_CATEGORY_ID + "&page=" + page + "&perPage="
-        + PER_PAGE + "&sortBy=published&orderBy=DESC";
-    var request = HttpRequest.newBuilder(URI.create(url))
-        .header("User-Agent", USER_AGENT)
-        .header("Accept", "application/json")
-        .header("Referer", "https://justjoin.it/")
-        .header("Version", "2")
-        .timeout(Duration.ofSeconds(30))
-        .GET()
-        .build();
-    try {
-      var response =
-          httpClient.send(request, HttpResponse.BodyHandlers.ofString());
-      if (response.statusCode() != 200) {
-        throw new IllegalStateException(
-            "JustJoin API returned HTTP " + response.statusCode() + " for page " + page);
-      }
-      return objectMapper.readTree(response.body());
-    } catch (IOException e) {
-      throw new IllegalStateException("Failed to fetch JustJoin page " + page, e);
-    } catch (InterruptedException e) {
-      Thread.currentThread().interrupt();
-      throw new IllegalStateException("Interrupted fetching JustJoin page " + page, e);
+      throw new IllegalStateException("Interrupted fetching " + what, e);
     }
   }
 
   /**
-   * Parses one API page's JSON into raw offers. Package-private so it can be unit-tested with a
-   * fixture, without touching the network.
+   * Extracts offers from a listing page's HTML. Package-private so it can be unit-tested with a
+   * fixture, without touching the network. Deduplicates by {@code guid}, keeping page order.
    */
-  List<RawJobOffer> parseOffers(JsonNode root) {
-    var offers = new ArrayList<RawJobOffer>();
-    for (var node : root.path("data")) {
-      offers.add(toRawJobOffer(node));
+  List<RawJobOffer> parseOffers(String html) {
+    var flight = flightPayload(html);
+    var chars = flight.toCharArray();
+    var byGuid = new LinkedHashMap<String, RawJobOffer>();
+    var from = 0;
+    while ((from = flight.indexOf(OFFER_START, from)) >= 0) {
+      var node = readObjectAt(chars, from);
+      from += OFFER_START.length();
+      if (node != null && node.hasNonNull("guid")) {
+        byGuid.putIfAbsent(node.get("guid").asText(), toRawJobOffer(node));
+      }
     }
-    return offers;
+    return new ArrayList<>(byGuid.values());
+  }
+
+  /**
+   * Concatenates all Next.js flight chunks into one decoded string. Each chunk's string literal is
+   * read with Jackson's streaming parser (a regex over ~1 MB literals overflows the stack).
+   */
+  private String flightPayload(String html) {
+    var chars = html.toCharArray();
+    var sb = new StringBuilder();
+    var from = 0;
+    while ((from = html.indexOf(FLIGHT_CHUNK, from)) >= 0) {
+      from += FLIGHT_CHUNK.length();
+      try (var parser = objectMapper.getFactory()
+          .createParser(chars, from, chars.length - from)) {
+        if (parser.nextToken() == JsonToken.VALUE_STRING) {
+          sb.append(parser.getText());
+        }
+      } catch (IOException e) {
+        // a malformed chunk only loses the offers inside it
+      }
+    }
+    return sb.toString();
+  }
+
+  /** Reads the single JSON object starting at {@code start}, or null if it isn't valid JSON. */
+  private JsonNode readObjectAt(char[] chars, int start) {
+    try (var parser = objectMapper.getFactory().createParser(chars, start, chars.length - start)) {
+      return objectMapper.readTree(parser);
+    } catch (IOException e) {
+      return null;
+    }
   }
 
   private RawJobOffer toRawJobOffer(JsonNode n) {
     var slug = textOrNull(n, "slug");
-    var salary = n.path("employmentTypes").path(0);
+    var employment = originalEmployment(n.path("employmentTypes"));
+    // Undisclosed salary (from/to both null): amount, currency, unit and gross are all null.
+    var salary = employment.hasNonNull("from") || employment.hasNonNull("to")
+        ? employment : MissingNode.getInstance();
     return new RawJobOffer(
         textOrNull(n, "guid"),
         textOrNull(n, "title"),
         textOrNull(n, "companyName"),
-        null, // companySize — not present in the list API
+        null, // companySize — not present in the listing
         textOrNull(n, "city"),
         "remote".equalsIgnoreCase(textOrNull(n, "workplaceType")),
         textOrNull(n, "publishedAt"),
         textOrNull(n, "experienceLevel"),
-        null, // description — see DESCRIPTION_NOTE
+        null, // description — filled by the details step
         intOrNull(salary, "from"),
         intOrNull(salary, "to"),
         upperOrNull(salary, "currency"),
-        textOrNull(salary, "type"),
-        slug == null ? null : "https://justjoin.it/job-offer/" + slug,
+        textOrNull(salary, "unit"),
+        boolOrNull(salary, "gross"),
+        textOrNull(employment, "type"), // contract type is known even without a salary
+        slug == null ? null : OFFER_URL + slug,
         SOURCE,
-        null); // domain — filled by the details step, not the list API
+        null); // domain — filled by the details step
+  }
+
+  /**
+   * Picks the employment type quoted in its original currency. The listing also carries converted
+   * copies (GBP/USD/EUR/CHF, {@code currencySource: "conversion"}) — often first in the array.
+   */
+  private static JsonNode originalEmployment(JsonNode types) {
+    for (var t : types) {
+      if ("original".equals(t.path("currencySource").asText())) {
+        return t;
+      }
+    }
+    return types.path(0);
   }
 
   private static String textOrNull(JsonNode node, String field) {
@@ -197,11 +204,8 @@ public class JustJoinConnector {
     return v == null || v.isNull() || !v.isNumber() ? null : v.asInt();
   }
 
-  private void sleepPolitely() {
-    try {
-      Thread.sleep(500 + ThreadLocalRandom.current().nextInt(500));
-    } catch (InterruptedException e) {
-      Thread.currentThread().interrupt();
-    }
+  private static Boolean boolOrNull(JsonNode node, String field) {
+    var v = node.get(field);
+    return v == null || !v.isBoolean() ? null : v.asBoolean();
   }
 }
