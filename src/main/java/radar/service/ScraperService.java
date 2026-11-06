@@ -75,17 +75,11 @@ public class ScraperService {
           limitReached = true;
           break;
         }
-        var existing = pool.get(offer.id());
-        if (existing == null) {
+        // Known offers are left untouched — only brand-new ones enter the pool.
+        if (!pool.containsKey(offer.id())) {
           pool.put(offer.id(), StoredRawOffer.fresh(offer, now));
           added++;
           newOnPage++;
-        } else {
-          // Refresh list fields (salary/title may change) but keep already-fetched page details
-          // and their timestamps — the list API never carries description/domain.
-          var refreshed = offer.withDetails(existing.offer().description(), existing.offer().domain());
-          pool.put(offer.id(), new StoredRawOffer(refreshed, existing.firstSeenAt(),
-              existing.detailsFetchedAt(), existing.evaluatedProfileHash()));
         }
         processed++;
       }
