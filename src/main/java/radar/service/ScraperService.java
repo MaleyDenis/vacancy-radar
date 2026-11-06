@@ -84,8 +84,8 @@ public class ScraperService {
           // Refresh list fields (salary/title may change) but keep already-fetched page details
           // and their timestamps — the list API never carries description/domain.
           var refreshed = offer.withDetails(existing.offer().description(), existing.offer().domain());
-          pool.put(offer.id(),
-              new StoredRawOffer(refreshed, existing.firstSeenAt(), existing.detailsFetchedAt()));
+          pool.put(offer.id(), new StoredRawOffer(refreshed, existing.firstSeenAt(),
+              existing.detailsFetchedAt(), existing.evaluatedProfileHash()));
         }
         processed++;
       }

@@ -4,14 +4,13 @@ import java.util.List;
 import java.util.Map;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import radar.model.JobReport;
 import radar.repository.JsonRepository;
 
 /**
- * Serves saved job reports, filtered by the current profile's {@code minMatchScore}. Defaults to the
- * most recent snapshot when no date is given.
+ * Serves evaluated job reports, filtered by the current profile's {@code minMatchScore}. All reports
+ * live in a single {@code jobs.json}; the endpoint filters on read.
  */
 @RestController
 public class JobController {
@@ -23,26 +22,22 @@ public class JobController {
   }
 
   @GetMapping("/api/jobs")
-  public List<JobReport> jobs(@RequestParam(required = false) String date) {
-    var target = date != null ? date : latestDate();
-    if (target == null) {
-      return List.of();
-    }
+  public List<JobReport> jobs() {
     var profile = repository.readProfile();
     var minScore = profile.minMatchScore() == null ? 0 : profile.minMatchScore();
-    return repository.loadJobs(target).stream()
+    return repository.loadJobs().stream()
         .filter(report -> report.matchScore() >= minScore)
         .toList();
   }
 
-  /** Deletes all saved job reports across every snapshot. Returns how many files were removed. */
+  /**
+   * Forgets all evaluations: deletes {@code jobs.json} and clears the per-offer evaluation marks so
+   * the next scan re-scores. Returns {@code {"deleted": N}} (files removed).
+   */
   @DeleteMapping("/api/jobs")
   public Map<String, Integer> deleteAll() {
-    return Map.of("deleted", repository.deleteAllJobs());
-  }
-
-  private String latestDate() {
-    var dates = repository.listDates(); // ascending
-    return dates.isEmpty() ? null : dates.get(dates.size() - 1);
+    var deleted = repository.deleteAllJobs();
+    repository.clearEvaluationMarks();
+    return Map.of("deleted", deleted);
   }
 }

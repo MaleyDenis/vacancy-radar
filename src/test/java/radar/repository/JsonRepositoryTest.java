@@ -59,39 +59,33 @@ class JsonRepositoryTest {
         offer, List.of("Java", "SQL"), "Build services.", "A platform.",
         List.of("5+ years Java"), "mid", 8);
 
-    repo.saveJobs("2026-07-04", List.of(report));
-    assertThat(repo.loadJobs("2026-07-04")).containsExactly(report);
+    repo.saveJobs(List.of(report));
+    assertThat(repo.loadJobs()).containsExactly(report);
   }
 
   @Test
   void loadJobsReturnsEmptyWhenMissing() {
-    assertThat(repo.loadJobs("2026-01-01")).isEmpty();
+    assertThat(repo.loadJobs()).isEmpty();
   }
 
   @Test
-  void deleteAllJobsRemovesEverySnapshotsJobsFile() {
+  void deleteAllJobsRemovesJobsFile() {
     var report = new JobReport(
         new RawJobOffer("jj-1", "Java Dev", "Acme", null, "Kraków", true, "2026-07-04", "mid",
             null, 12000, 18000, "PLN", "b2b", "url", "justjoin", null),
         List.of("Java"), "resp", "proj", List.of(), "mid", 8);
-    repo.saveJobs("2026-07-04", List.of(report));
-    repo.saveJobs("2026-07-05", List.of(report));
-    // a snapshot with only analytics (no jobs.json) must not be counted
-    repo.saveAnalytics("2026-07-06",
-        new Analytics("2026-07-06", 0, Map.of(), List.of(), null, 0.0));
+    repo.saveJobs(List.of(report));
 
-    var deleted = repo.deleteAllJobs();
-
-    assertThat(deleted).isEqualTo(2);
-    assertThat(repo.loadJobs("2026-07-04")).isEmpty();
-    assertThat(repo.loadJobs("2026-07-05")).isEmpty();
+    assertThat(repo.deleteAllJobs()).isEqualTo(1);
+    assertThat(repo.loadJobs()).isEmpty();
+    assertThat(repo.deleteAllJobs()).isEqualTo(0); // nothing left to delete
   }
 
   @Test
   void deleteAllDataRemovesEverythingExceptProfileAndDotfiles() throws Exception {
     repo.writeProfile(new UserProfile(List.of(), 0, null, false, 0, "PLN", null, List.of(), 0));
     repo.saveRawOffers(List.of());
-    repo.saveJobs("2026-07-04", List.of());
+    repo.saveJobs(List.of());
     repo.saveAnalytics("2026-07-05",
         new Analytics("2026-07-05", 0, Map.of(), List.of(), null, 0.0));
     var gitkeep = tmp.resolve("data").resolve(".gitkeep");

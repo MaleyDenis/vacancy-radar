@@ -85,45 +85,47 @@ public class JsonRepository {
     write(dataDir.resolve(RAW_OFFERS_FILE), offers);
   }
 
-  // ---- jobs ----
-
-  public void saveJobs(String date, List<JobReport> jobs) {
-    write(dateDir(date).resolve(JOBS_FILE), jobs);
+  /** Clears every offer's {@code evaluatedProfileHash} so the next scan re-scores them. */
+  public void clearEvaluationMarks() {
+    saveRawOffers(readRawOffers().stream()
+        .map(offer -> offer.withEvaluatedProfileHash(null))
+        .toList());
   }
 
-  /** Returns the saved reports for a date, or an empty list if none were saved. */
-  public List<JobReport> loadJobs(String date) {
+  // ---- jobs (all evaluated reports for the current profile) ----
+
+  /** Overwrites {@code jobs.json} with all evaluated reports. */
+  public void saveJobs(List<JobReport> jobs) {
+    write(dataDir.resolve(JOBS_FILE), jobs);
+  }
+
+  /** Returns all saved reports, or an empty list if none exist yet. */
+  public List<JobReport> loadJobs() {
     lock.readLock().lock();
     try {
-      var file = dateDir(date).resolve(JOBS_FILE);
+      var file = dataDir.resolve(JOBS_FILE);
       if (!Files.exists(file)) {
         return new ArrayList<>();
       }
       return objectMapper.readValue(Files.readAllBytes(file),
           new TypeReference<List<JobReport>>() {});
     } catch (IOException e) {
-      throw new UncheckedIOException("Failed to read jobs for " + date, e);
+      throw new UncheckedIOException("Failed to read " + JOBS_FILE, e);
     } finally {
       lock.readLock().unlock();
     }
   }
 
-  /** Deletes {@code jobs.json} from every date snapshot. Returns how many files were removed. */
+  /** Deletes {@code jobs.json}. Returns how many files were removed (0 or 1). */
   public int deleteAllJobs() {
-    var deleted = 0;
-    for (var date : listDates()) {
-      lock.writeLock().lock();
-      try {
-        if (Files.deleteIfExists(dateDir(date).resolve(JOBS_FILE))) {
-          deleted++;
-        }
-      } catch (IOException e) {
-        throw new UncheckedIOException("Failed to delete jobs for " + date, e);
-      } finally {
-        lock.writeLock().unlock();
-      }
+    lock.writeLock().lock();
+    try {
+      return Files.deleteIfExists(dataDir.resolve(JOBS_FILE)) ? 1 : 0;
+    } catch (IOException e) {
+      throw new UncheckedIOException("Failed to delete " + JOBS_FILE, e);
+    } finally {
+      lock.writeLock().unlock();
     }
-    return deleted;
   }
 
   /**
