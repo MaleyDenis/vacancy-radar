@@ -13,6 +13,9 @@ paths:
 - Offers are JSON objects inside Next.js flight chunks `self.__next_f.push([1,"..."])`:
   concatenate the decoded chunks, read every object starting with `{"applyUrl":` that has a `guid`,
   dedupe by `guid`.
+- Experience filter: `radar.justjoin.experience-levels` (default `senior,team-leader-manager`) →
+  `?experience-levels=senior,team-leader-manager&page=N`. Slugs: intern, junior, mid, senior,
+  team-leader-manager, c-level. Empty = all levels.
 - Last page: no `?page=N+1` link in the HTML → `OfferPage.hasNext = false`.
 - Salary: take the `employmentTypes[]` entry with `currencySource == "original"` — the others are
   currency conversions (GBP/USD/EUR/CHF), often listed first. Map `unit` → `salaryUnit`,

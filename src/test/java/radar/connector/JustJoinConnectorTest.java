@@ -12,7 +12,7 @@ import org.junit.jupiter.api.Test;
 class JustJoinConnectorTest {
 
   private final ObjectMapper mapper = new ObjectMapper();
-  private final JustJoinConnector connector = new JustJoinConnector(mapper);
+  private final JustJoinConnector connector = new JustJoinConnector(mapper, "");
 
   private static final String FULL_OFFER = """
       {"applyUrl":null,"guid":"abc-123","slug":"acme-senior-java-dev-krakow-java",
@@ -114,5 +114,15 @@ class JustJoinConnectorTest {
   void pageWithoutOffersYieldsEmptyList() throws Exception {
     assertThat(connector.parseOffers(html("b1:[]\n"))).isEmpty();
     assertThat(connector.parseOffers("<html></html>")).isEmpty();
+  }
+
+  @Test
+  void listingUrlAddsExperienceFilterWhenConfigured() {
+    assertThat(connector.listingUrl(3))
+        .isEqualTo("https://justjoin.it/job-offers/all-locations/java?page=3");
+    var filtered = new JustJoinConnector(mapper, "senior, team-leader-manager");
+    assertThat(filtered.listingUrl(2)).isEqualTo(
+        "https://justjoin.it/job-offers/all-locations/java"
+            + "?experience-levels=senior,team-leader-manager&page=2");
   }
 }
