@@ -4,6 +4,16 @@
     "pr": ""
   },
   "includeCoAuthoredBy": false,
+  "permissions": {
+    "deny": [
+      "Bash(security find-generic-password:*)",
+      "Bash(*find-generic-password*)",
+      "Bash(printenv:*)",
+      "Bash(env)",
+      "Bash(*ANTHROPIC_API_KEY*)",
+      "Read(scripts/run.sh)"
+    ]
+  },
   "hooks": {
 "PreToolUse": [
       {
