@@ -48,6 +48,8 @@ radar.web         — REST controllers
 - Do NOT implement Phase 2 features (UI, GoWork, NoFluffJobs, Pracuj, LinkedIn)
 - Do NOT use database — JSON files only
 - Do NOT send HTML to Claude API
+- Do NOT add any Claude attribution to commits or PRs — no `Co-Authored-By: Claude`,
+  no "Generated with Claude Code" lines (also disabled in `.claude/settings.json` → `attribution`)
 
 ---
 

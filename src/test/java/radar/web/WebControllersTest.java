@@ -20,11 +20,13 @@ import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import radar.model.DetailsResult;
+import radar.model.EvaluationResult;
 import radar.model.JobReport;
 import radar.model.RawJobOffer;
 import radar.model.ScanResult;
 import radar.model.UserProfile;
 import radar.repository.JsonRepository;
+import radar.service.EvaluationService;
 import radar.service.OfferDetailsService;
 import radar.service.ReporterService;
 import radar.service.ScraperService;
@@ -38,6 +40,7 @@ class WebControllersTest {
   private JsonRepository repository;
   private ScraperService scraperService;
   private OfferDetailsService offerDetailsService;
+  private EvaluationService evaluationService;
   private ReporterService reporterService;
   private MockMvc mvc;
 
@@ -49,9 +52,10 @@ class WebControllersTest {
     repository = mock(JsonRepository.class);
     scraperService = mock(ScraperService.class);
     offerDetailsService = mock(OfferDetailsService.class);
+    evaluationService = mock(EvaluationService.class);
     reporterService = mock(ReporterService.class);
     mvc = MockMvcBuilders.standaloneSetup(
-        new ScanController(scraperService, offerDetailsService),
+        new ScanController(scraperService, offerDetailsService, evaluationService),
         new JobController(repository),
         new AnalyticsController(reporterService),
         new ProfileController(repository),
@@ -65,9 +69,10 @@ class WebControllersTest {
   }
 
   @Test
-  void postScanScrapesThenFetchesDetailsWithIncrementalDefaults() throws Exception {
+  void postScanRunsAllThreeStagesWithIncrementalDefaults() throws Exception {
     when(scraperService.scan(false, null)).thenReturn(new ScanResult(5, 10));
     when(offerDetailsService.fetchMissing(null)).thenReturn(new DetailsResult(3, 7));
+    when(evaluationService.evaluate(null)).thenReturn(new EvaluationResult(4, 10));
 
     mvc.perform(post("/api/scan"))
         .andExpect(status().isOk())
@@ -75,46 +80,39 @@ class WebControllersTest {
         .andExpect(jsonPath("$.added").value(5))
         .andExpect(jsonPath("$.total").value(10))
         .andExpect(jsonPath("$.detailsFetched").value(3))
-        .andExpect(jsonPath("$.detailsRemaining").value(7));
+        .andExpect(jsonPath("$.detailsRemaining").value(7))
+        .andExpect(jsonPath("$.evaluated").value(4));
     verify(scraperService).scan(false, null);
     verify(offerDetailsService).fetchMissing(null);
+    verify(evaluationService).evaluate(null);
   }
 
   @Test
-  void postScanPassesFullFetchAndLimitToBothStages() throws Exception {
+  void postScanPassesFullFetchAndLimitToAllStages() throws Exception {
     when(scraperService.scan(true, 20)).thenReturn(new ScanResult(20, 964));
     when(offerDetailsService.fetchMissing(20)).thenReturn(new DetailsResult(20, 100));
+    when(evaluationService.evaluate(20)).thenReturn(new EvaluationResult(20, 20));
 
     mvc.perform(post("/api/scan").param("fullFetch", "true").param("limit", "20"))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.added").value(20))
-        .andExpect(jsonPath("$.detailsFetched").value(20));
+        .andExpect(jsonPath("$.detailsFetched").value(20))
+        .andExpect(jsonPath("$.evaluated").value(20));
     verify(scraperService).scan(true, 20);
     verify(offerDetailsService).fetchMissing(20);
+    verify(evaluationService).evaluate(20);
   }
 
   @Test
-  void getJobsUsesLatestDateAndFiltersByMinMatchScore() throws Exception {
-    when(repository.listDates()).thenReturn(List.of("2026-07-03", "2026-07-04"));
+  void getJobsFiltersByMinMatchScore() throws Exception {
     when(repository.readProfile()).thenReturn(profile);
-    when(repository.loadJobs("2026-07-04")).thenReturn(List.of(report("a", 8), report("b", 4)));
+    when(repository.loadJobs()).thenReturn(List.of(report("a", 8), report("b", 4)));
 
     mvc.perform(get("/api/jobs"))
         .andExpect(status().isOk())
         .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
         .andExpect(jsonPath("$.length()").value(1))
         .andExpect(jsonPath("$[0].matchScore").value(8));
-  }
-
-  @Test
-  void getJobsHonoursExplicitDateParam() throws Exception {
-    when(repository.readProfile()).thenReturn(profile);
-    when(repository.loadJobs("2026-07-01")).thenReturn(List.of(report("x", 9)));
-
-    mvc.perform(get("/api/jobs").param("date", "2026-07-01"))
-        .andExpect(status().isOk())
-        .andExpect(jsonPath("$[0].rawJobOffer.id").value("x"));
-    verify(repository).loadJobs("2026-07-01");
   }
 
   @Test
@@ -128,18 +126,20 @@ class WebControllersTest {
   }
 
   @Test
-  void deleteJobsReturnsRemovedCount() throws Exception {
-    when(repository.deleteAllJobs()).thenReturn(3);
+  void deleteJobsRemovesFileAndClearsEvaluationMarks() throws Exception {
+    when(repository.deleteAllJobs()).thenReturn(1);
 
     mvc.perform(delete("/api/jobs"))
         .andExpect(status().isOk())
-        .andExpect(jsonPath("$.deleted").value(3));
+        .andExpect(jsonPath("$.deleted").value(1));
     verify(repository).deleteAllJobs();
+    verify(repository).clearEvaluationMarks();
   }
 
   @Test
-  void getJobsReturnsEmptyArrayWhenNoSnapshots() throws Exception {
-    when(repository.listDates()).thenReturn(List.of());
+  void getJobsReturnsEmptyWhenNone() throws Exception {
+    when(repository.readProfile()).thenReturn(profile);
+    when(repository.loadJobs()).thenReturn(List.of());
 
     mvc.perform(get("/api/jobs"))
         .andExpect(status().isOk())
