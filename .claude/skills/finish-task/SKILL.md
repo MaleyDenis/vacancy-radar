@@ -1,15 +1,15 @@
 ---
 name: finish-task
-description: Finish a task: create a branch, commit, push, open a PR, squash-merge it into main with a clean subject, and sync local main. Optional GitHub issue number closes the issue and moves it to Done. Usage: /finish-task [issue-number]
+description: Finish a task: create a branch, commit, push, open a PR, rebase-merge it into main, and sync local main. Optional GitHub issue number closes the issue and moves it to Done. Usage: /finish-task [issue-number]
 user-invocable: true
 allowed-tools: Bash, Read
 ---
 
-Finish the current task. **Full flow:** branch → commit → push → PR → squash-merge → checkout main → pull.
+Finish the current task. **Full flow:** branch → commit → push → PR → rebase-merge → checkout main → pull.
 
 ## Conventions (enforced by `scripts/hooks/`)
 
-- **Commit / PR title / squash subject:** `<type>(<scope>): <description>`
+- **Commit / PR title:** `<type>(<scope>): <description>`
   - types: `feat fix refactor docs style test chore`
   - scope required, lowercase; description lowercase, imperative, no trailing period, ≤ 70 chars total
   - **No ticket numbers (`VR-NN`), no PR numbers (`(#NN)`)**
@@ -20,7 +20,7 @@ Finish the current task. **Full flow:** branch → commit → push → PR → sq
 ## Steps
 
 1. **Branch.** If on `main`, `git checkout -b <type>/<slug>`.
-2. **Commit.** `git add` the task's files, `git commit -m "<type>(<scope>): <description>"`. One commit per task.
+2. **Commit.** `git add` the task's files, `git commit -m "<type>(<scope>): <description>"`. **One commit per task** — every branch commit lands on main as-is, so amend/squash locally before pushing.
 3. **Push.** `git push -u origin <branch>`.
 4. **PR.**
    ```
@@ -28,9 +28,9 @@ Finish the current task. **Full flow:** branch → commit → push → PR → sq
    - <bullets>"
    ```
    If an issue number was given, add `Closes #<n>` to the body.
-5. **Merge** — always pass `--subject` so GitHub does NOT append `(#NN)`, and an empty body:
+5. **Merge** — the repo allows **rebase only** (squash disabled in GitHub settings, because squash appends `(#NN)`). Commits land on main exactly as written:
    ```
-   gh pr merge <pr> --squash --delete-branch --subject "<same subject>" --body ""
+   gh pr merge <pr> --rebase --delete-branch
    ```
    If blocked (checks, conflicts) — report and stop, never force.
 6. **Sync.** `git checkout main && git pull --ff-only`.
