@@ -25,8 +25,6 @@ import radar.repository.JsonRepository;
 @ExtendWith(MockitoExtension.class)
 class ScraperServiceTest {
 
-  private static final int RETENTION_DAYS = 30;
-
   @Mock
   JustJoinConnector connector;
 
@@ -37,7 +35,7 @@ class ScraperServiceTest {
 
   @BeforeEach
   void setUp() {
-    scraperService = new ScraperService(connector, repository, RETENTION_DAYS);
+    scraperService = new ScraperService(connector, repository);
   }
 
   private RawJobOffer offer(String id) {
@@ -125,17 +123,17 @@ class ScraperServiceTest {
   }
 
   @Test
-  void scanPrunesOffersPastRetentionWindow() {
-    String old = Instant.now().minus(RETENTION_DAYS + 10L, ChronoUnit.DAYS).toString();
-    String recent = Instant.now().minus(2, ChronoUnit.DAYS).toString();
+  void scanKeepsOldOffers() {
+    var old = Instant.now().minus(400, ChronoUnit.DAYS).toString();
+    var recent = Instant.now().minus(2, ChronoUnit.DAYS).toString();
     when(repository.readRawOffers())
         .thenReturn(List.of(stored("old", old), stored("recent", recent)));
     when(connector.fetchPage(1)).thenReturn(new OfferPage(List.of(), false));
 
-    ScanResult result = scraperService.scan(true, null);
+    var result = scraperService.scan(true, null);
 
-    assertThat(result).isEqualTo(new ScanResult(0, 1));
-    assertThat(capturePersisted()).extracting(s -> s.offer().id()).containsExactly("recent");
+    assertThat(result).isEqualTo(new ScanResult(0, 2));
+    assertThat(capturePersisted()).extracting(s -> s.offer().id()).containsExactly("old", "recent");
   }
 
 }

@@ -7,8 +7,7 @@ package radar.model;
  *
  * @param offer                the scraped offer (its {@code description}/{@code domain} are null
  *                             until the details step fills them)
- * @param firstSeenAt          ISO-8601 instant of the first scan that saw this offer; used for
- *                             retention
+ * @param firstSeenAt          ISO-8601 instant of the first scan that saw this offer
  * @param detailsFetchedAt     ISO-8601 instant the offer's page details were fetched, or {@code null}
  *                             if not fetched yet — the details step processes only null entries
  * @param evaluatedProfileHash the profile hash this offer was last scored under, or {@code null} if
