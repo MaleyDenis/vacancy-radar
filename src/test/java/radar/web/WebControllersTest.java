@@ -67,7 +67,7 @@ class WebControllersTest {
     mvc = MockMvcBuilders.standaloneSetup(
         new ScanController(scraperService, offerDetailsService, extractionService,
             scoringService),
-        new JobController(repository, hasher),
+        new JobController(repository, hasher, scoringService, 7),
         new AnalyticsController(reporterService),
         new ProfileController(repository),
         new DataController(repository)).build();
@@ -159,6 +159,19 @@ class WebControllersTest {
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.removed").value(4));
     verify(repository).deleteAllData();
+  }
+
+  @Test
+  void rescoreUsesConfiguredDaysByDefault() throws Exception {
+    when(scoringService.rescoreRecent(7)).thenReturn(new ScoringResult(12, 1));
+    when(scoringService.rescoreRecent(30)).thenReturn(new ScoringResult(40, 0));
+
+    mvc.perform(post("/api/scores/rescore"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.scored").value(12))
+        .andExpect(jsonPath("$.remaining").value(1));
+    mvc.perform(post("/api/scores/rescore").param("days", "30"))
+        .andExpect(jsonPath("$.scored").value(40));
   }
 
   @Test

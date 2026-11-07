@@ -3,6 +3,7 @@ package radar.service;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -15,7 +16,7 @@ import radar.repository.JsonRepository;
 /**
  * Scores offers against the profile with Claude (raw offer text + profile → score + reason) into
  * {@code scores.json}. A scan scores only offers that have no score yet; a profile change does not
- * re-score anything by itself (scores just become stale).
+ * re-score anything by itself (scores just become stale) — {@link #rescoreRecent(int)} does.
  */
 @Service
 public class ScoringService {
@@ -68,6 +69,52 @@ public class ScoringService {
     var remaining = pending - scored;
     log.info("Score: scored {}, remaining {} (limit={})", scored, remaining, limit);
     return new ScoringResult(scored, remaining);
+  }
+
+  /**
+   * Re-scores, against the current profile, every offer with a description published within the
+   * last {@code days} days (by {@code publishedAt}), replacing existing scores. Offers that fail stay
+   * as they were and are counted in {@code remaining}.
+   */
+  public ScoringResult rescoreRecent(int days) {
+    var profile = repository.readProfile();
+    var profileHash = hasher.hash(profile);
+    var cutoff = Instant.now().minus(days, ChronoUnit.DAYS);
+    var scores = repository.readScores();
+    var scored = 0;
+    var failed = 0;
+    try {
+      for (var stored : repository.readRawOffers()) {
+        var offer = stored.offer();
+        var published = parseInstant(offer.publishedAt());
+        if (published == null || published.isBefore(cutoff)
+            || offer.description() == null || offer.description().isBlank()) {
+          continue;
+        }
+        try {
+          scores.put(offer.id(), score(offer, profile, profileHash));
+          scored++;
+        } catch (RuntimeException e) {
+          failed++;
+          log.warn("Rescoring failed for {}: {}", offer.id(), e.toString());
+        }
+      }
+    } finally {
+      repository.saveScores(scores);
+    }
+    log.info("Rescore: {} offers from the last {} days, {} failed", scored, days, failed);
+    return new ScoringResult(scored, failed);
+  }
+
+  private static Instant parseInstant(String value) {
+    if (value == null || value.isBlank()) {
+      return null;
+    }
+    try {
+      return Instant.parse(value);
+    } catch (RuntimeException e) {
+      return null;
+    }
   }
 
   OfferScore score(RawJobOffer offer, UserProfile profile, String profileHash) {
