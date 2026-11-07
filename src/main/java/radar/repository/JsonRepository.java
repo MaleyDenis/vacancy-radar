@@ -7,13 +7,16 @@ import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.regex.Pattern;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import radar.model.Analytics;
 import radar.model.JobReport;
+import radar.model.OfferExtraction;
 import radar.model.StoredRawOffer;
 import radar.model.UserProfile;
 
@@ -25,6 +28,7 @@ import radar.model.UserProfile;
  * <pre>
  *   {dataDir}/profile.json
  *   {dataDir}/raw-offers.json    (pool of scraped offers, profile-independent)
+ *   {dataDir}/extractions.json   (Claude-extracted facts by offer id)
  *   {dataDir}/{YYYY-MM-DD}/jobs.json
  *   {dataDir}/{YYYY-MM-DD}/analytics.json
  * </pre>
@@ -37,6 +41,7 @@ public class JsonRepository {
 
   private static final String PROFILE_FILE = "profile.json";
   private static final String RAW_OFFERS_FILE = "raw-offers.json";
+  private static final String EXTRACTIONS_FILE = "extractions.json";
   private static final String JOBS_FILE = "jobs.json";
   private static final String ANALYTICS_FILE = "analytics.json";
   private static final Pattern DATE_DIR = Pattern.compile("\\d{4}-\\d{2}-\\d{2}");
@@ -90,6 +95,17 @@ public class JsonRepository {
     saveRawOffers(readRawOffers().stream()
         .map(offer -> offer.withEvaluatedProfileHash(null))
         .toList());
+  }
+
+  // ---- extractions ----
+
+  /** Returns extractions keyed by offer id (mutable, insertion-ordered), or empty if none yet. */
+  public LinkedHashMap<String, OfferExtraction> readExtractions() {
+    return readMap(EXTRACTIONS_FILE, new TypeReference<LinkedHashMap<String, OfferExtraction>>() {});
+  }
+
+  public void saveExtractions(Map<String, OfferExtraction> extractions) {
+    write(dataDir.resolve(EXTRACTIONS_FILE), extractions);
   }
 
   // ---- jobs (all evaluated reports for the current profile) ----
@@ -207,6 +223,22 @@ public class JsonRepository {
 
   private Path dateDir(String date) {
     return dataDir.resolve(date);
+  }
+
+  private <V> LinkedHashMap<String, V> readMap(String name,
+      TypeReference<LinkedHashMap<String, V>> type) {
+    lock.readLock().lock();
+    try {
+      var file = dataDir.resolve(name);
+      if (!Files.exists(file)) {
+        return new LinkedHashMap<>();
+      }
+      return objectMapper.readValue(Files.readAllBytes(file), type);
+    } catch (IOException e) {
+      throw new UncheckedIOException("Failed to read " + name, e);
+    } finally {
+      lock.readLock().unlock();
+    }
   }
 
   private <T> T read(Path file, Class<T> type) {

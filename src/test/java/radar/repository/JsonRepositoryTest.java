@@ -6,6 +6,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
@@ -13,6 +14,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import radar.model.Analytics;
 import radar.model.JobReport;
+import radar.model.OfferExtraction;
 import radar.model.RawJobOffer;
 import radar.model.SalaryRange;
 import radar.model.UserProfile;
@@ -61,6 +63,17 @@ class JsonRepositoryTest {
 
     repo.saveJobs(List.of(report));
     assertThat(repo.loadJobs()).containsExactly(report);
+  }
+
+  @Test
+  void extractionsRoundTripKeyedByOfferId() {
+    assertThat(repo.readExtractions()).isEmpty();
+    var map = new LinkedHashMap<String, OfferExtraction>();
+    map.put("b", new OfferExtraction(List.of("Java"), List.of(), "r", "p", "mid"));
+    map.put("a", new OfferExtraction(List.of(), List.of("5y"), null, null, "senior"));
+    repo.saveExtractions(map);
+    var read = repo.readExtractions();
+    assertThat(read).containsExactlyEntriesOf(map);
   }
 
   @Test
