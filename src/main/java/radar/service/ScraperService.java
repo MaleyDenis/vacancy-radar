@@ -26,10 +26,12 @@ public class ScraperService {
 
   private final JustJoinConnector connector;
   private final JsonRepository repository;
+  private final Progress progress;
 
-  public ScraperService(JustJoinConnector connector, JsonRepository repository) {
+  public ScraperService(JustJoinConnector connector, JsonRepository repository, Progress progress) {
     this.connector = connector;
     this.repository = repository;
+    this.progress = progress;
   }
 
   /**
@@ -56,10 +58,12 @@ public class ScraperService {
     var page = 1;
     var hasNext = true;
     var limitReached = false;
+    progress.begin("scrape", 0);
 
     while (hasNext && page <= JustJoinConnector.MAX_PAGES && !limitReached) {
       var p = connector.fetchPage(page);
       hasNext = p.hasNext();
+      progress.advance();
 
       var newOnPage = 0;
       for (var offer : p.offers()) {

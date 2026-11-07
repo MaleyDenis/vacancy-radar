@@ -43,5 +43,8 @@ GET /api/jobs = raw ⨝ extraction ⨝ score by offer id, score >= minMatchScore
 - Runs per offer (hundreds per full scan); Haiku is fast and cheap enough
 - Output is strictly typed JSON
 
-**Synchronous scan**
-- `POST /api/scan` runs all steps and returns counts; `limit` bounds heavy runs
+**Background scan**
+- `POST /api/scan` and `POST /api/scores/rescore` start a background task (202) and return at once;
+  one task at a time (409 while busy; deletes are refused too)
+- `GET /api/status` = running, task, step, done/total, last result or error; the UI polls it
+- `limit` bounds heavy runs (attempts per step)

@@ -29,13 +29,15 @@ public class ScoringService {
   private final JsonRepository repository;
   private final ProfileHasher hasher;
   private final ObjectMapper objectMapper;
+  private final Progress progress;
 
   public ScoringService(ClaudeClient claude, JsonRepository repository, ProfileHasher hasher,
-      ObjectMapper objectMapper) {
+      ObjectMapper objectMapper, Progress progress) {
     this.claude = claude;
     this.repository = repository;
     this.hasher = hasher;
     this.objectMapper = objectMapper;
+    this.progress = progress;
   }
 
   /** @param limit optional cap on how many offers to score this run; {@code null} = no cap */
@@ -43,30 +45,27 @@ public class ScoringService {
     var profile = repository.readProfile(); // mandatory — throws if missing
     var profileHash = hasher.hash(profile);
     var scores = repository.readScores();
+    var todo = repository.readRawOffers().stream()
+        .map(stored -> stored.offer())
+        .filter(offer -> !scores.containsKey(offer.id()) && hasDescription(offer))
+        .toList();
+    var batch = limit == null ? todo : todo.subList(0, Math.min(limit, todo.size()));
+    progress.begin("score", batch.size());
     var scored = 0;
-    var pending = 0;
     try {
-      for (var stored : repository.readRawOffers()) {
-        var offer = stored.offer();
-        if (scores.containsKey(offer.id())
-            || offer.description() == null || offer.description().isBlank()) {
-          continue;
-        }
-        pending++;
-        if (limit != null && scored >= limit) {
-          continue;
-        }
+      for (var offer : batch) {
         try {
           scores.put(offer.id(), score(offer, profile, profileHash));
           scored++;
         } catch (RuntimeException e) {
           log.warn("Scoring failed for {}: {}", offer.id(), e.toString());
         }
+        progress.advance();
       }
     } finally {
       repository.saveScores(scores);
     }
-    var remaining = pending - scored;
+    var remaining = todo.size() - scored;
     log.info("Score: scored {}, remaining {} (limit={})", scored, remaining, limit);
     return new ScoringResult(scored, remaining);
   }
@@ -81,16 +80,15 @@ public class ScoringService {
     var profileHash = hasher.hash(profile);
     var cutoff = Instant.now().minus(days, ChronoUnit.DAYS);
     var scores = repository.readScores();
+    var batch = repository.readRawOffers().stream()
+        .map(stored -> stored.offer())
+        .filter(offer -> hasDescription(offer) && isPublishedAfter(offer, cutoff))
+        .toList();
+    progress.begin("rescore", batch.size());
     var scored = 0;
     var failed = 0;
     try {
-      for (var stored : repository.readRawOffers()) {
-        var offer = stored.offer();
-        var published = parseInstant(offer.publishedAt());
-        if (published == null || published.isBefore(cutoff)
-            || offer.description() == null || offer.description().isBlank()) {
-          continue;
-        }
+      for (var offer : batch) {
         try {
           scores.put(offer.id(), score(offer, profile, profileHash));
           scored++;
@@ -98,12 +96,22 @@ public class ScoringService {
           failed++;
           log.warn("Rescoring failed for {}: {}", offer.id(), e.toString());
         }
+        progress.advance();
       }
     } finally {
       repository.saveScores(scores);
     }
     log.info("Rescore: {} offers from the last {} days, {} failed", scored, days, failed);
     return new ScoringResult(scored, failed);
+  }
+
+  private static boolean hasDescription(RawJobOffer offer) {
+    return offer.description() != null && !offer.description().isBlank();
+  }
+
+  private static boolean isPublishedAfter(RawJobOffer offer, Instant cutoff) {
+    var published = parseInstant(offer.publishedAt());
+    return published != null && !published.isBefore(cutoff);
   }
 
   private static Instant parseInstant(String value) {

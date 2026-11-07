@@ -2,6 +2,7 @@ package radar.web;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
@@ -13,12 +14,14 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.util.LinkedHashMap;
+import java.util.concurrent.CountDownLatch;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import radar.model.DetailsResult;
 import radar.model.ExtractionResult;
@@ -30,9 +33,11 @@ import radar.model.ScoringResult;
 import radar.model.StoredRawOffer;
 import radar.model.UserProfile;
 import radar.repository.JsonRepository;
+import radar.service.BackgroundRunner;
 import radar.service.ExtractionService;
 import radar.service.OfferDetailsService;
 import radar.service.ProfileHasher;
+import radar.service.Progress;
 import radar.service.ReporterService;
 import radar.service.ScoringService;
 import radar.service.ScraperService;
@@ -50,6 +55,7 @@ class WebControllersTest {
   private ScoringService scoringService;
   private ProfileHasher hasher;
   private ReporterService reporterService;
+  private BackgroundRunner runner;
   private MockMvc mvc;
 
   private final UserProfile profile = new UserProfile(
@@ -64,19 +70,44 @@ class WebControllersTest {
     scoringService = mock(ScoringService.class);
     hasher = mock(ProfileHasher.class);
     reporterService = mock(ReporterService.class);
+    runner = new BackgroundRunner(new Progress());
     mvc = MockMvcBuilders.standaloneSetup(
         new ScanController(scraperService, offerDetailsService, extractionService,
-            scoringService),
-        new JobController(repository, hasher, scoringService, 7),
+            scoringService, runner),
+        new JobController(repository, hasher, scoringService, runner, 7),
         new AnalyticsController(reporterService),
         new ProfileController(repository),
-        new DataController(repository)).build();
+        new DataController(repository, runner)).build();
   }
 
   private StoredRawOffer stored(String id) {
     var offer = new RawJobOffer(id, "Java Dev", "Acme", null, "Kraków", true, "2026-07-04",
         "senior", "desc", 18000, 26000, "PLN", "month", false, "b2b", "url", "justjoin", null);
     return new StoredRawOffer(offer, "2026-07-04T00:00:00Z", null);
+  }
+
+  /** Waits until the background task finishes, then returns {@code GET /api/status} assertions. */
+  private ResultActions awaitStatus() throws Exception {
+    var deadline = System.currentTimeMillis() + 5000;
+    while (runner.isRunning() && System.currentTimeMillis() < deadline) {
+      Thread.sleep(10);
+    }
+    return mvc.perform(get("/api/status")).andExpect(status().isOk())
+        .andExpect(jsonPath("$.running").value(false));
+  }
+
+  /** Occupies the runner until the returned latch is released. */
+  private CountDownLatch occupyRunner() {
+    var latch = new CountDownLatch(1);
+    runner.start("scan", () -> {
+      try {
+        latch.await();
+      } catch (InterruptedException e) {
+        Thread.currentThread().interrupt();
+      }
+      return null;
+    });
+    return latch;
   }
 
   private OfferScore score(int value, String profileHash) {
@@ -91,14 +122,18 @@ class WebControllersTest {
     when(scoringService.scoreMissing(null)).thenReturn(new ScoringResult(4, 0));
 
     mvc.perform(post("/api/scan"))
-        .andExpect(status().isOk())
+        .andExpect(status().isAccepted())
         .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
-        .andExpect(jsonPath("$.added").value(5))
-        .andExpect(jsonPath("$.total").value(10))
-        .andExpect(jsonPath("$.detailsFetched").value(3))
-        .andExpect(jsonPath("$.detailsRemaining").value(7))
-        .andExpect(jsonPath("$.extracted").value(3))
-        .andExpect(jsonPath("$.scored").value(4));
+        .andExpect(jsonPath("$.started").value(true));
+    awaitStatus()
+        .andExpect(jsonPath("$.task").value("scan"))
+        .andExpect(jsonPath("$.error").isEmpty())
+        .andExpect(jsonPath("$.result.added").value(5))
+        .andExpect(jsonPath("$.result.total").value(10))
+        .andExpect(jsonPath("$.result.detailsFetched").value(3))
+        .andExpect(jsonPath("$.result.detailsRemaining").value(7))
+        .andExpect(jsonPath("$.result.extracted").value(3))
+        .andExpect(jsonPath("$.result.scored").value(4));
     verify(scraperService).scan(false, null);
     verify(offerDetailsService).fetchMissing(null);
     verify(extractionService).extractMissing(null);
@@ -113,10 +148,11 @@ class WebControllersTest {
     when(scoringService.scoreMissing(20)).thenReturn(new ScoringResult(20, 60));
 
     mvc.perform(post("/api/scan").param("fullFetch", "true").param("limit", "20"))
-        .andExpect(status().isOk())
-        .andExpect(jsonPath("$.added").value(20))
-        .andExpect(jsonPath("$.detailsFetched").value(20))
-        .andExpect(jsonPath("$.scored").value(20));
+        .andExpect(status().isAccepted());
+    awaitStatus()
+        .andExpect(jsonPath("$.result.added").value(20))
+        .andExpect(jsonPath("$.result.detailsFetched").value(20))
+        .andExpect(jsonPath("$.result.scored").value(20));
     verify(scraperService).scan(true, 20);
     verify(offerDetailsService).fetchMissing(20);
     verify(extractionService).extractMissing(20);
@@ -162,16 +198,45 @@ class WebControllersTest {
   }
 
   @Test
-  void rescoreUsesConfiguredDaysByDefault() throws Exception {
+  void rescoreRunsInBackgroundWithConfiguredDaysByDefault() throws Exception {
     when(scoringService.rescoreRecent(7)).thenReturn(new ScoringResult(12, 1));
     when(scoringService.rescoreRecent(30)).thenReturn(new ScoringResult(40, 0));
 
-    mvc.perform(post("/api/scores/rescore"))
-        .andExpect(status().isOk())
-        .andExpect(jsonPath("$.scored").value(12))
-        .andExpect(jsonPath("$.remaining").value(1));
-    mvc.perform(post("/api/scores/rescore").param("days", "30"))
-        .andExpect(jsonPath("$.scored").value(40));
+    mvc.perform(post("/api/scores/rescore")).andExpect(status().isAccepted());
+    awaitStatus()
+        .andExpect(jsonPath("$.task").value("rescore"))
+        .andExpect(jsonPath("$.result.scored").value(12))
+        .andExpect(jsonPath("$.result.remaining").value(1));
+    mvc.perform(post("/api/scores/rescore").param("days", "30")).andExpect(status().isAccepted());
+    awaitStatus().andExpect(jsonPath("$.result.scored").value(40));
+  }
+
+  @Test
+  void failedTaskReportsError() throws Exception {
+    when(scraperService.scan(false, null)).thenThrow(new IllegalStateException("JustJoin down"));
+
+    mvc.perform(post("/api/scan")).andExpect(status().isAccepted());
+    awaitStatus()
+        .andExpect(jsonPath("$.error").value("JustJoin down"))
+        .andExpect(jsonPath("$.result").isEmpty());
+  }
+
+  @Test
+  void busyRunnerRejectsNewTasksAndDeletes() throws Exception {
+    var latch = occupyRunner();
+    try {
+      mvc.perform(get("/api/status")).andExpect(jsonPath("$.running").value(true));
+      mvc.perform(post("/api/scan")).andExpect(status().isConflict())
+          .andExpect(jsonPath("$.error").exists());
+      mvc.perform(post("/api/scores/rescore")).andExpect(status().isConflict());
+      mvc.perform(delete("/api/scores")).andExpect(status().isConflict());
+      mvc.perform(delete("/api/data")).andExpect(status().isConflict());
+      verify(repository, never()).deleteScores();
+      verify(repository, never()).deleteAllData();
+    } finally {
+      latch.countDown();
+    }
+    awaitStatus();
   }
 
   @Test

@@ -35,7 +35,7 @@ class ScraperServiceTest {
 
   @BeforeEach
   void setUp() {
-    scraperService = new ScraperService(connector, repository);
+    scraperService = new ScraperService(connector, repository, new Progress());
   }
 
   private RawJobOffer offer(String id) {
