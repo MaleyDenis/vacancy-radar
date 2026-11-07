@@ -12,6 +12,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
@@ -20,17 +21,20 @@ import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import radar.model.DetailsResult;
-import radar.model.EvaluationResult;
 import radar.model.ExtractionResult;
-import radar.model.JobReport;
+import radar.model.OfferExtraction;
+import radar.model.OfferScore;
 import radar.model.RawJobOffer;
 import radar.model.ScanResult;
+import radar.model.ScoringResult;
+import radar.model.StoredRawOffer;
 import radar.model.UserProfile;
 import radar.repository.JsonRepository;
-import radar.service.EvaluationService;
 import radar.service.ExtractionService;
 import radar.service.OfferDetailsService;
+import radar.service.ProfileHasher;
 import radar.service.ReporterService;
+import radar.service.ScoringService;
 import radar.service.ScraperService;
 
 /**
@@ -43,7 +47,8 @@ class WebControllersTest {
   private ScraperService scraperService;
   private OfferDetailsService offerDetailsService;
   private ExtractionService extractionService;
-  private EvaluationService evaluationService;
+  private ScoringService scoringService;
+  private ProfileHasher hasher;
   private ReporterService reporterService;
   private MockMvc mvc;
 
@@ -56,21 +61,26 @@ class WebControllersTest {
     scraperService = mock(ScraperService.class);
     offerDetailsService = mock(OfferDetailsService.class);
     extractionService = mock(ExtractionService.class);
-    evaluationService = mock(EvaluationService.class);
+    scoringService = mock(ScoringService.class);
+    hasher = mock(ProfileHasher.class);
     reporterService = mock(ReporterService.class);
     mvc = MockMvcBuilders.standaloneSetup(
         new ScanController(scraperService, offerDetailsService, extractionService,
-            evaluationService),
-        new JobController(repository),
+            scoringService),
+        new JobController(repository, hasher),
         new AnalyticsController(reporterService),
         new ProfileController(repository),
         new DataController(repository)).build();
   }
 
-  private JobReport report(String id, int score) {
+  private StoredRawOffer stored(String id) {
     var offer = new RawJobOffer(id, "Java Dev", "Acme", null, "Kraków", true, "2026-07-04",
-        "senior", null, 18000, 26000, "PLN", "month", false, "b2b", "url", "justjoin", null);
-    return new JobReport(offer, List.of("Java"), "resp", "proj", List.of(), "senior", score);
+        "senior", "desc", 18000, 26000, "PLN", "month", false, "b2b", "url", "justjoin", null);
+    return new StoredRawOffer(offer, "2026-07-04T00:00:00Z", null);
+  }
+
+  private OfferScore score(int value, String profileHash) {
+    return new OfferScore(value, "why", profileHash, "2026-11-07T00:00:00Z");
   }
 
   @Test
@@ -78,7 +88,7 @@ class WebControllersTest {
     when(scraperService.scan(false, null)).thenReturn(new ScanResult(5, 10));
     when(offerDetailsService.fetchMissing(null)).thenReturn(new DetailsResult(3, 7));
     when(extractionService.extractMissing(null)).thenReturn(new ExtractionResult(3, 0));
-    when(evaluationService.evaluate(null)).thenReturn(new EvaluationResult(4, 10));
+    when(scoringService.scoreMissing(null)).thenReturn(new ScoringResult(4, 0));
 
     mvc.perform(post("/api/scan"))
         .andExpect(status().isOk())
@@ -88,11 +98,11 @@ class WebControllersTest {
         .andExpect(jsonPath("$.detailsFetched").value(3))
         .andExpect(jsonPath("$.detailsRemaining").value(7))
         .andExpect(jsonPath("$.extracted").value(3))
-        .andExpect(jsonPath("$.evaluated").value(4));
+        .andExpect(jsonPath("$.scored").value(4));
     verify(scraperService).scan(false, null);
     verify(offerDetailsService).fetchMissing(null);
     verify(extractionService).extractMissing(null);
-    verify(evaluationService).evaluate(null);
+    verify(scoringService).scoreMissing(null);
   }
 
   @Test
@@ -100,29 +110,45 @@ class WebControllersTest {
     when(scraperService.scan(true, 20)).thenReturn(new ScanResult(20, 964));
     when(offerDetailsService.fetchMissing(20)).thenReturn(new DetailsResult(20, 100));
     when(extractionService.extractMissing(20)).thenReturn(new ExtractionResult(20, 80));
-    when(evaluationService.evaluate(20)).thenReturn(new EvaluationResult(20, 20));
+    when(scoringService.scoreMissing(20)).thenReturn(new ScoringResult(20, 60));
 
     mvc.perform(post("/api/scan").param("fullFetch", "true").param("limit", "20"))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.added").value(20))
         .andExpect(jsonPath("$.detailsFetched").value(20))
-        .andExpect(jsonPath("$.evaluated").value(20));
+        .andExpect(jsonPath("$.scored").value(20));
     verify(scraperService).scan(true, 20);
     verify(offerDetailsService).fetchMissing(20);
     verify(extractionService).extractMissing(20);
-    verify(evaluationService).evaluate(20);
+    verify(scoringService).scoreMissing(20);
   }
 
   @Test
-  void getJobsFiltersByMinMatchScore() throws Exception {
+  void getJobsJoinsFilesFiltersSortsAndFlagsStale() throws Exception {
     when(repository.readProfile()).thenReturn(profile);
-    when(repository.loadJobs()).thenReturn(List.of(report("a", 8), report("b", 4)));
+    when(hasher.hash(profile)).thenReturn("current");
+    when(repository.readRawOffers())
+        .thenReturn(List.of(stored("low"), stored("old"), stored("best"), stored("unscored")));
+    var extractions = new LinkedHashMap<String, OfferExtraction>();
+    extractions.put("best", new OfferExtraction(List.of("Java"), List.of(), "r", "p", "senior"));
+    when(repository.readExtractions()).thenReturn(extractions);
+    var scores = new LinkedHashMap<String, OfferScore>();
+    scores.put("low", score(4, "current"));
+    scores.put("old", score(7, "previous"));
+    scores.put("best", score(9, "current"));
+    when(repository.readScores()).thenReturn(scores);
 
     mvc.perform(get("/api/jobs"))
         .andExpect(status().isOk())
         .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
-        .andExpect(jsonPath("$.length()").value(1))
-        .andExpect(jsonPath("$[0].matchScore").value(8));
+        .andExpect(jsonPath("$.length()").value(2))
+        .andExpect(jsonPath("$[0].offer.id").value("best"))
+        .andExpect(jsonPath("$[0].extraction.skills[0]").value("Java"))
+        .andExpect(jsonPath("$[0].score.matchScore").value(9))
+        .andExpect(jsonPath("$[0].stale").value(false))
+        .andExpect(jsonPath("$[1].offer.id").value("old"))
+        .andExpect(jsonPath("$[1].extraction").isEmpty())
+        .andExpect(jsonPath("$[1].stale").value(true));
   }
 
   @Test
@@ -136,20 +162,22 @@ class WebControllersTest {
   }
 
   @Test
-  void deleteJobsRemovesFileAndClearsEvaluationMarks() throws Exception {
-    when(repository.deleteAllJobs()).thenReturn(1);
+  void deleteScoresRemovesScoresFile() throws Exception {
+    when(repository.deleteScores()).thenReturn(1);
 
-    mvc.perform(delete("/api/jobs"))
+    mvc.perform(delete("/api/scores"))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.deleted").value(1));
-    verify(repository).deleteAllJobs();
-    verify(repository).clearEvaluationMarks();
+    verify(repository).deleteScores();
   }
 
   @Test
   void getJobsReturnsEmptyWhenNone() throws Exception {
     when(repository.readProfile()).thenReturn(profile);
-    when(repository.loadJobs()).thenReturn(List.of());
+    when(hasher.hash(profile)).thenReturn("current");
+    when(repository.readRawOffers()).thenReturn(List.of());
+    when(repository.readExtractions()).thenReturn(new LinkedHashMap<>());
+    when(repository.readScores()).thenReturn(new LinkedHashMap<>());
 
     mvc.perform(get("/api/jobs"))
         .andExpect(status().isOk())

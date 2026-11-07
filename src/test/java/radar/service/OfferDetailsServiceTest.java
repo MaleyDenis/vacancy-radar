@@ -59,7 +59,7 @@ class OfferDetailsServiceTest {
 
   private StoredRawOffer withDetails(String id) {
     return new StoredRawOffer(offer(id).withDetails("existing", "acme.com"),
-        "2026-07-05T10:00:00Z", "2026-07-05T11:00:00Z", null);
+        "2026-07-05T10:00:00Z", "2026-07-05T11:00:00Z");
   }
 
   @SuppressWarnings("unchecked")

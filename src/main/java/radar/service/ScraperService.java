@@ -16,7 +16,7 @@ import radar.repository.JsonRepository;
  * newest-first, merges new ones into the {@code raw-offers.json} pool (deduplicating by id — the pool
  * itself is the source of truth, no separate seen-ids list). Never removes offers.
  *
- * <p>This step is profile-independent and never calls Claude — enrichment happens later, reading the
+ * <p>This step is profile-independent and never calls Claude — extraction and scoring happen later, reading the
  * pool this method fills.
  */
 @Service

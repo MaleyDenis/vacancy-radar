@@ -13,9 +13,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import radar.model.Analytics;
-import radar.model.JobReport;
 import radar.model.OfferExtraction;
-import radar.model.RawJobOffer;
+import radar.model.OfferScore;
 import radar.model.SalaryRange;
 import radar.model.UserProfile;
 
@@ -52,20 +51,6 @@ class JsonRepositoryTest {
   }
 
   @Test
-  void jobsRoundTrip() {
-    var offer = new RawJobOffer(
-        "jj-1", "Java Dev", "Acme", "50", "Kraków", true, "2026-07-04", "mid",
-        null, 12000, 18000, "PLN", "month", false, "b2b",
-        "https://justjoin.it/job-offer/jj-1", "justjoin", null);
-    var report = new JobReport(
-        offer, List.of("Java", "SQL"), "Build services.", "A platform.",
-        List.of("5+ years Java"), "mid", 8);
-
-    repo.saveJobs(List.of(report));
-    assertThat(repo.loadJobs()).containsExactly(report);
-  }
-
-  @Test
   void extractionsRoundTripKeyedByOfferId() {
     assertThat(repo.readExtractions()).isEmpty();
     var map = new LinkedHashMap<String, OfferExtraction>();
@@ -77,34 +62,29 @@ class JsonRepositoryTest {
   }
 
   @Test
-  void loadJobsReturnsEmptyWhenMissing() {
-    assertThat(repo.loadJobs()).isEmpty();
-  }
+  void scoresRoundTripAndDelete() {
+    assertThat(repo.readScores()).isEmpty();
+    var map = new LinkedHashMap<String, OfferScore>();
+    map.put("a", new OfferScore(8, "fits", "h1", "2026-11-07T00:00:00Z"));
+    repo.saveScores(map);
+    assertThat(repo.readScores()).containsExactlyEntriesOf(map);
 
-  @Test
-  void deleteAllJobsRemovesJobsFile() {
-    var report = new JobReport(
-        new RawJobOffer("jj-1", "Java Dev", "Acme", null, "Kraków", true, "2026-07-04", "mid",
-            null, 12000, 18000, "PLN", "month", false, "b2b", "url", "justjoin", null),
-        List.of("Java"), "resp", "proj", List.of(), "mid", 8);
-    repo.saveJobs(List.of(report));
-
-    assertThat(repo.deleteAllJobs()).isEqualTo(1);
-    assertThat(repo.loadJobs()).isEmpty();
-    assertThat(repo.deleteAllJobs()).isEqualTo(0); // nothing left to delete
+    assertThat(repo.deleteScores()).isEqualTo(1);
+    assertThat(repo.readScores()).isEmpty();
+    assertThat(repo.deleteScores()).isZero();
   }
 
   @Test
   void deleteAllDataRemovesEverythingExceptProfileAndDotfiles() throws Exception {
     repo.writeProfile(new UserProfile(List.of(), 0, null, false, 0, "PLN", null, List.of(), 0));
     repo.saveRawOffers(List.of());
-    repo.saveJobs(List.of());
+    repo.saveScores(Map.of());
     repo.saveAnalytics("2026-07-05",
         new Analytics("2026-07-05", 0, Map.of(), List.of(), null, 0.0));
     var gitkeep = tmp.resolve("data").resolve(".gitkeep");
     Files.createFile(gitkeep);
 
-    // top-level entries besides profile.json and .gitkeep: raw-offers.json + two date dirs
+    // top-level entries besides profile.json and .gitkeep: raw-offers.json, scores.json, one date dir
     var removed = repo.deleteAllData();
 
     assertThat(removed).isEqualTo(3);

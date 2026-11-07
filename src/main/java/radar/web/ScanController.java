@@ -4,15 +4,15 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import radar.model.ScanResponse;
-import radar.service.EvaluationService;
 import radar.service.ExtractionService;
 import radar.service.OfferDetailsService;
+import radar.service.ScoringService;
 import radar.service.ScraperService;
 
 /**
- * Runs a scan end to end: scrape the listing into the raw-offers pool, fetch page details for offers
- * that don't have them, extract facts with Claude (once per offer), then score offers against the profile with Claude. Synchronous; use
- * {@code limit} to bound heavy runs. Requires a profile — evaluation throws if it is missing.
+ * Runs a scan end to end: scrape the listing into the raw-offers pool, fetch missing page details,
+ * extract facts with Claude (once per offer), then score unscored offers against the profile.
+ * Synchronous; use {@code limit} to bound heavy runs. Requires a profile — scoring throws if it is missing.
  */
 @RestController
 public class ScanController {
@@ -20,21 +20,21 @@ public class ScanController {
   private final ScraperService scraperService;
   private final OfferDetailsService offerDetailsService;
   private final ExtractionService extractionService;
-  private final EvaluationService evaluationService;
+  private final ScoringService scoringService;
 
   public ScanController(ScraperService scraperService, OfferDetailsService offerDetailsService,
-      ExtractionService extractionService, EvaluationService evaluationService) {
+      ExtractionService extractionService, ScoringService scoringService) {
     this.scraperService = scraperService;
     this.offerDetailsService = offerDetailsService;
     this.extractionService = extractionService;
-    this.evaluationService = evaluationService;
+    this.scoringService = scoringService;
   }
 
   /**
    * @param fullFetch walk every listing page to refresh the whole pool; default {@code false} stops
    *                  early once a page brings nothing new
-   * @param limit     caps the scrape (newest N), the details fetch (N pending), the extraction (N pending), and the evaluation
-   *                  (N unscored) this run; omit for no cap
+   * @param limit     caps each step this run (newest N scraped, N details, N extractions,
+   *                  N scores); omit for no cap
    */
   @PostMapping("/api/scan")
   public ScanResponse scan(
@@ -43,7 +43,7 @@ public class ScanController {
     var scan = scraperService.scan(fullFetch, limit);
     var details = offerDetailsService.fetchMissing(limit);
     var extraction = extractionService.extractMissing(limit);
-    var eval = evaluationService.evaluate(limit);
-    return ScanResponse.of(scan, details, extraction, eval);
+    var scoring = scoringService.scoreMissing(limit);
+    return ScanResponse.of(scan, details, extraction, scoring);
   }
 }

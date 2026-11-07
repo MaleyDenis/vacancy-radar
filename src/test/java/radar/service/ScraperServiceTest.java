@@ -45,7 +45,7 @@ class ScraperServiceTest {
   }
 
   private StoredRawOffer stored(String id, String firstSeenAt) {
-    return new StoredRawOffer(offer(id), firstSeenAt, null, null);
+    return new StoredRawOffer(offer(id), firstSeenAt, null);
   }
 
   private OfferPage page(boolean hasNext, String... ids) {
