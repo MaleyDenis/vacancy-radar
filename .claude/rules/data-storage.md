@@ -4,17 +4,19 @@
 
 ```
 data/
-  seen-ids.json          — deduplication list of processed IDs
-  profile.json           — user profile
-  2026-03-05/
-    jobs.json            — JobReports with score >= minMatchScore
-    analytics.json       — aggregated data across all scanned offers
+  profile.json       — user profile
+  raw-offers.json    — scraped offers (site data only, no AI), never pruned by scan
+  extractions.json   — Claude-extracted facts, keyed by offer id (profile-independent)
+  scores.json        — Claude match scores, keyed by offer id (profile-dependent)
 ```
 
 ## Rules
 
 - Do NOT use database — JSON files only
-- `seen-ids.json` prevents reprocessing already enriched offers
-- `analytics.json` aggregates ALL scanned offers (before score filter)
-- `jobs.json` contains only offers with score >= `UserProfile.minMatchScore`
-- Date directories use format `YYYY-MM-DD`
+- Files are linked by offer id; `GET /api/jobs` joins them (raw + extraction + score + `stale`)
+- `raw-offers.json` holds only what the site gives — nothing from Claude
+- Extraction runs once per offer; a profile change never re-extracts
+- A profile change re-scores nothing by itself: old scores get `stale=true` (profile hash differs);
+  `POST /api/scores/rescore?days=N` re-scores offers published in the last N days
+  (default `radar.rescore.days`)
+- `DELETE /api/scores` removes `scores.json` only; `DELETE /api/data` removes everything except `profile.json`

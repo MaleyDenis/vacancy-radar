@@ -23,8 +23,8 @@
 ## Package Structure
 
 ```
-radar.model       — POJOs: RawJobOffer, JobReport, Analytics, UserProfile
-radar.service     — ScraperService, EnricherService, ReporterService
+radar.model       — POJOs: RawJobOffer, StoredRawOffer, OfferExtraction, OfferScore, JobView, UserProfile
+radar.service     — ScraperService, OfferDetailsService, ExtractionService, ScoringService, ClaudeClient
 radar.connector   — JustJoinConnector
 radar.repository  — read/write JSON files to disk
 radar.web         — REST controllers
@@ -36,8 +36,8 @@ radar.web         — REST controllers
 
 | Agent | Responsibility | Does NOT know about |
 |---|---|---|
-| `scraper-agent.md` | JustJoinConnector, `__NEXT_DATA__` parsing | Claude API, reporting |
-| `enricher-agent.md` | Claude Haiku, structured output, JobReport | scraping, export |
+| `scraper-agent.md` | JustJoinConnector, scraping, offer details | Claude API, reporting |
+| `enricher-agent.md` | Claude Haiku: extraction + scoring | scraping, export |
 | `reporter-agent.md` | snapshot aggregation, Analytics, trends | scraping, enrichment |
 
 ---

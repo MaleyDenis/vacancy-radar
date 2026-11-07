@@ -1,55 +1,47 @@
 # Architecture
 
-## High-Level Flow
+## High-Level Flow (`POST /api/scan`)
 
 ```
-JustJoin JSON API (api.justjoin.it/v2/user-panel/offers, categoryId=6, Version: 2)
-    │
+JustJoin listing HTML (justjoin.it/job-offers/all-locations/java?experience-levels=…&page=N)
+    │  JustJoinConnector (flight-chunk JSON → RawJobOffer)
     ▼
-JustJoinConnector (HttpClient → Jackson → List<RawJobOffer>, paginated by meta.totalPages)
-    │
+ScraperService        → raw-offers.json   (new offers only, nothing removed)
     ▼
-ScraperService
-    ├── analytics.json  ← aggregate ALL offers (before filter)
-    │
-    └── EnricherService (Claude Haiku per offer)
-              │
-              ▼
-          JobReport (matchScore 1-10)
-              │
-              └── filter score >= UserProfile.minMatchScore
-                        │
-                        ▼
-                    ReporterService → jobs.json
+OfferDetailsService   → raw-offers.json   (description + domain from offer page JSON-LD, no AI)
+    ▼
+ExtractionService     → extractions.json  (Claude, once per offer: skills, requirements, …)
+    ▼
+ScoringService        → scores.json       (Claude: raw offer + profile → matchScore, reason)
+
+GET /api/jobs = raw ⨝ extraction ⨝ score by offer id, score >= minMatchScore, stale flag
 ```
 
 ## Component Responsibilities
 
 | Component | Responsibility |
 |---|---|
-| `JustJoinConnector` | JustJoin JSON API client, Jackson parsing, pagination |
-| `ScraperService` | orchestrates scan, deduplication, coordinates enrichment |
-| `EnricherService` | sends RawJobOffer + UserProfile to Claude Haiku, returns JobReport |
-| `ReporterService` | aggregates Analytics, saves snapshots |
+| `JustJoinConnector` | listing + offer page HTTP, flight-chunk parsing, pagination |
+| `ScraperService` | merges new offers into the pool (dedupe by id) |
+| `OfferDetailsService` | fills description/domain from the offer page |
+| `ExtractionService` | Claude extraction, once per offer |
+| `ScoringService` | Claude scoring of unscored offers; rescore of recent offers |
+| `ClaudeClient` | Anthropic SDK wrapper, structured output |
 | `JsonRepository` | read/write JSON files to disk |
 
 ## Key Decisions
 
 **JSON files over database**
-- Phase 1 needs no persistence layer, no DevOps infrastructure
-- Date-based snapshots enable trend analysis natively
-- Simple to deploy, simple to inspect
+- No persistence layer or DevOps needed; files are easy to inspect
+- One file per concern, linked by offer id
+
+**Extraction separate from scoring**
+- Extracted facts don't depend on the profile → computed once
+- Only scoring is profile-dependent; a profile change marks scores stale, rescore is explicit
 
 **Claude Haiku over Sonnet**
-- Enrichment runs per-offer (up to 200+ offers per scan)
-- Haiku is fast and cheap enough for structured extraction
-- Output is strictly typed JSON — no need for reasoning
+- Runs per offer (hundreds per full scan); Haiku is fast and cheap enough
+- Output is strictly typed JSON
 
-**Async scan via SSE**
-- Scans can take minutes (rate limiting + API calls)
-- SSE allows real-time progress without polling
-- Single endpoint `POST /api/scan` returns scanId, client subscribes to SSE stream
-
-**Sub-agents with isolated context**
-- Each agent (scraper, enricher, reporter) knows only its own domain
-- Prevents cross-concern confusion when implementing changes
+**Synchronous scan**
+- `POST /api/scan` runs all steps and returns counts; `limit` bounds heavy runs
