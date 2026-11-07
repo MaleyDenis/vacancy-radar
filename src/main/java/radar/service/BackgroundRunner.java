@@ -1,6 +1,7 @@
 package radar.service;
 
 import java.time.Instant;
+import java.util.Optional;
 import java.util.function.Supplier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -32,6 +33,7 @@ public class BackgroundRunner {
 
   private final Progress progress;
   private boolean running;
+  private int quickTasks;
   private String task;
   private String startedAt;
   private String finishedAt;
@@ -44,7 +46,7 @@ public class BackgroundRunner {
 
   /** Starts {@code work} in the background. Returns false (and does nothing) if a task is running. */
   public synchronized boolean start(String name, Supplier<?> work) {
-    if (running) {
+    if (running || quickTasks > 0) {
       return false;
     }
     running = true;
@@ -76,8 +78,29 @@ public class BackgroundRunner {
     }
   }
 
+  /**
+   * Runs a short task (e.g. scoring one offer) on the caller's thread. Several may run at once, but
+   * never together with a background task: returns empty if one is running, and {@link #start}
+   * refuses while any runs.
+   */
+  public <T> Optional<T> runNow(Supplier<T> work) {
+    synchronized (this) {
+      if (running) {
+        return Optional.empty();
+      }
+      quickTasks++;
+    }
+    try {
+      return Optional.of(work.get());
+    } finally {
+      synchronized (this) {
+        quickTasks--;
+      }
+    }
+  }
+
   public synchronized boolean isRunning() {
-    return running;
+    return running || quickTasks > 0;
   }
 
   public synchronized Status status() {

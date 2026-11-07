@@ -177,14 +177,53 @@ class WebControllersTest {
     mvc.perform(get("/api/jobs"))
         .andExpect(status().isOk())
         .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
-        .andExpect(jsonPath("$.length()").value(2))
+        .andExpect(jsonPath("$.length()").value(3))
         .andExpect(jsonPath("$[0].offer.id").value("best"))
         .andExpect(jsonPath("$[0].extraction.skills[0]").value("Java"))
         .andExpect(jsonPath("$[0].score.matchScore").value(9))
         .andExpect(jsonPath("$[0].stale").value(false))
         .andExpect(jsonPath("$[1].offer.id").value("old"))
         .andExpect(jsonPath("$[1].extraction").isEmpty())
-        .andExpect(jsonPath("$[1].stale").value(true));
+        .andExpect(jsonPath("$[1].stale").value(true))
+        .andExpect(jsonPath("$[2].offer.id").value("unscored"))
+        .andExpect(jsonPath("$[2].score").isEmpty())
+        .andExpect(jsonPath("$[2].stale").value(false));
+  }
+
+  @Test
+  void postScoreOneReturnsUpdatedJob() throws Exception {
+    when(repository.readRawOffers()).thenReturn(List.of(stored("a")));
+    when(repository.readExtractions()).thenReturn(new LinkedHashMap<>());
+    when(scoringService.scoreOne("a")).thenReturn(score(8, "current"));
+
+    mvc.perform(post("/api/jobs/a/score"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.offer.id").value("a"))
+        .andExpect(jsonPath("$.score.matchScore").value(8))
+        .andExpect(jsonPath("$.stale").value(false));
+  }
+
+  @Test
+  void postScoreOneMapsErrors() throws Exception {
+    when(scoringService.scoreOne("missing")).thenThrow(new java.util.NoSuchElementException("x"));
+    when(scoringService.scoreOne("bare")).thenThrow(new IllegalStateException("no description"));
+    when(scoringService.scoreOne("down")).thenThrow(new RuntimeException("api down"));
+
+    mvc.perform(post("/api/jobs/missing/score")).andExpect(status().isNotFound());
+    mvc.perform(post("/api/jobs/bare/score")).andExpect(status().isBadRequest());
+    mvc.perform(post("/api/jobs/down/score")).andExpect(status().isBadGateway())
+        .andExpect(jsonPath("$.error").value("api down"));
+  }
+
+  @Test
+  void postScoreOneRefusedWhileScanRuns() throws Exception {
+    var latch = occupyRunner();
+    try {
+      mvc.perform(post("/api/jobs/a/score")).andExpect(status().isConflict());
+      verify(scoringService, never()).scoreOne(any());
+    } finally {
+      latch.countDown();
+    }
   }
 
   @Test
