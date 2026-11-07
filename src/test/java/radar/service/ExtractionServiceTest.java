@@ -33,7 +33,7 @@ class ExtractionServiceTest {
   void setUp() {
     claude = mock(ClaudeClient.class);
     repository = mock(JsonRepository.class);
-    service = new ExtractionService(claude, repository);
+    service = new ExtractionService(claude, repository, new Progress());
   }
 
   private StoredRawOffer stored(String id, String description) {
@@ -73,7 +73,7 @@ class ExtractionServiceTest {
     when(claude.ask(contains("boom"), any())).thenThrow(new IllegalStateException("api down"));
     when(claude.ask(contains("fine"), eq(OfferExtraction.class))).thenReturn(extraction);
 
-    var result = service.extractMissing(1);
+    var result = service.extractMissing(2); // limit counts attempts, failures included
 
     assertThat(result.extracted()).isEqualTo(1);
     assertThat(result.remaining()).isEqualTo(2);

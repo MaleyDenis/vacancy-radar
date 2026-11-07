@@ -38,7 +38,8 @@ class ScoringServiceTest {
   void setUp() {
     claude = mock(ClaudeClient.class);
     repository = mock(JsonRepository.class);
-    service = new ScoringService(claude, repository, new ProfileHasher(mapper), mapper);
+    service = new ScoringService(claude, repository, new ProfileHasher(mapper), mapper,
+        new Progress());
     when(repository.readProfile()).thenReturn(profile);
   }
 
@@ -89,7 +90,7 @@ class ScoringServiceTest {
     when(claude.ask(contains("boom"), any())).thenThrow(new IllegalStateException("api down"));
     when(claude.ask(contains("fine"), eq(ScoreResult.class))).thenReturn(new ScoreResult(6, "ok"));
 
-    var result = service.scoreMissing(1);
+    var result = service.scoreMissing(2); // limit counts attempts, failures included
 
     assertThat(result.scored()).isEqualTo(1);
     assertThat(result.remaining()).isEqualTo(2);

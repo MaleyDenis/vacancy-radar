@@ -25,12 +25,14 @@ public class OfferDetailsService {
   private final JustJoinConnector connector;
   private final OfferDetailsParser parser;
   private final JsonRepository repository;
+  private final Progress progress;
 
   public OfferDetailsService(JustJoinConnector connector, OfferDetailsParser parser,
-      JsonRepository repository) {
+      JsonRepository repository, Progress progress) {
     this.connector = connector;
     this.parser = parser;
     this.repository = repository;
+    this.progress = progress;
   }
 
   /**
@@ -44,6 +46,9 @@ public class OfferDetailsService {
     var updated = new ArrayList<>(pool);
     var fetched = 0;
     var missing = 0;
+    var pending = (int) pool.stream()
+        .filter(s -> !s.hasDetails() && s.offer().applyUrl() != null).count();
+    progress.begin("details", limit == null ? pending : Math.min(limit, pending));
 
     for (var i = 0; i < updated.size(); i++) {
       var stored = updated.get(i);
@@ -63,6 +68,7 @@ public class OfferDetailsService {
       } catch (RuntimeException e) {
         log.warn("Details fetch failed for {}: {}", stored.offer().id(), e.toString());
       }
+      progress.advance();
       sleepPolitely();
     }
 

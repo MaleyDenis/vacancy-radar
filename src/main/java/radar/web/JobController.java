@@ -3,6 +3,7 @@ package radar.web;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -10,8 +11,8 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import radar.model.JobView;
-import radar.model.ScoringResult;
 import radar.repository.JsonRepository;
+import radar.service.BackgroundRunner;
 import radar.service.ProfileHasher;
 import radar.service.ScoringService;
 
@@ -22,13 +23,16 @@ public class JobController {
   private final JsonRepository repository;
   private final ProfileHasher hasher;
   private final ScoringService scoringService;
+  private final BackgroundRunner runner;
   private final int rescoreDays;
 
   public JobController(JsonRepository repository, ProfileHasher hasher,
-      ScoringService scoringService, @Value("${radar.rescore.days:7}") int rescoreDays) {
+      ScoringService scoringService, BackgroundRunner runner,
+      @Value("${radar.rescore.days:7}") int rescoreDays) {
     this.repository = repository;
     this.hasher = hasher;
     this.scoringService = scoringService;
+    this.runner = runner;
     this.rescoreDays = rescoreDays;
   }
 
@@ -54,17 +58,24 @@ public class JobController {
   }
 
   /**
-   * Re-scores offers published in the last {@code days} days against the current profile.
-   * {@code days} defaults to {@code radar.rescore.days}. Returns scored / failed counts.
+   * Starts, in the background, re-scoring of offers published in the last {@code days} days against
+   * the current profile ({@code days} defaults to {@code radar.rescore.days}). Result (scored /
+   * failed) is read from {@code GET /api/status}. 409 when a task is already running.
    */
   @PostMapping("/api/scores/rescore")
-  public ScoringResult rescore(@RequestParam(required = false) Integer days) {
-    return scoringService.rescoreRecent(days == null ? rescoreDays : days);
+  public ResponseEntity<Map<String, Object>> rescore(
+      @RequestParam(required = false) Integer days) {
+    var window = days == null ? rescoreDays : days;
+    var started = runner.start("rescore", () -> scoringService.rescoreRecent(window));
+    return started ? Busy.started() : Busy.conflict();
   }
 
   /** Deletes {@code scores.json}; extractions stay. Returns {@code {"deleted": N}} (files). */
   @DeleteMapping("/api/scores")
-  public Map<String, Integer> deleteScores() {
-    return Map.of("deleted", repository.deleteScores());
+  public ResponseEntity<Map<String, Object>> deleteScores() {
+    if (runner.isRunning()) {
+      return Busy.conflict();
+    }
+    return ResponseEntity.ok(Map.of("deleted", repository.deleteScores()));
   }
 }

@@ -36,7 +36,7 @@ class OfferDetailsServiceTest {
   @BeforeEach
   void setUp() {
     // override the polite sleep so the test doesn't actually wait
-    service = new OfferDetailsService(connector, parser, repository) {
+    service = new OfferDetailsService(connector, parser, repository, new Progress()) {
       @Override
       void sleepPolitely() {
       }
