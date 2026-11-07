@@ -31,6 +31,8 @@ body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,san
 .score{min-width:38px;height:38px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:17px}
 .s-hi{background:#dcfce7;color:#166534}.s-mid{background:#fef3c7;color:#92400e}.s-lo{background:#f1f2f4;color:#4b5563}
 .stale-tag{font-size:10px;color:#b45309}
+.score-btn{padding:6px 10px;font-size:13px;white-space:nowrap}
+.section{font-size:13px;font-weight:600;color:#6b7280;margin:10px 2px 0}
 .reason{font-size:13px;color:#374151;background:#f8fafc;border-left:3px solid #c7d2fe;padding:6px 10px;border-radius:6px}
 .meta{font-size:13px;color:#4b5563}
 .salary{font-size:13px;font-weight:600}
@@ -188,8 +190,11 @@ function salary(o) {
 }
 
 function card(j) {
-  const o = j.offer, e = j.extraction || {}, s = j.score;
+  const o = j.offer, e = j.extraction || {}, s = j.score || {};
   const cls = s.matchScore >= 6 ? 's-hi' : s.matchScore >= 5 ? 's-mid' : 's-lo';
+  const scorebox = j.score
+    ? `<div class="score ${cls}">${s.matchScore}</div>${j.stale ? '<span class="stale-tag">устарела</span>' : ''}`
+    : `<button class="btn score-btn" data-id="${esc(o.id)}" ${busy ? 'disabled' : ''}>Оценить</button>`;
   const meta = [o.location, o.remote ? 'remote' : null, e.realSeniority || o.experienceLevel, o.contractType]
     .filter(Boolean).map(esc).join(' · ');
   const list = xs => (xs || []).map(x => `<li>${esc(x)}</li>`).join('');
@@ -198,10 +203,10 @@ function card(j) {
       ${e.responsibilities ? `<div><h4>Обязанности</h4>${esc(e.responsibilities)}</div>` : ''}
       ${e.requirements && e.requirements.length ? `<div><h4>Требования</h4><ul>${list(e.requirements)}</ul></div>` : ''}
     </div></details>` : '';
-  return `<div class="card ${j.stale ? 'stale' : ''}">
+  return `<div class="card ${j.stale ? 'stale' : ''}" data-card="${esc(o.id)}">
     <div class="top">
       <div><div class="title">${esc(o.title)}</div><div class="company">${esc(o.companyName)}</div></div>
-      <div class="scorebox"><div class="score ${cls}">${s.matchScore}</div>${j.stale ? '<span class="stale-tag">устарела</span>' : ''}</div>
+      <div class="scorebox">${scorebox}</div>
     </div>
     ${s.reason ? `<div class="reason">${esc(s.reason)}</div>` : ''}
     <div class="meta">${meta}</div>
@@ -222,19 +227,26 @@ async function loadJobs() {
     return;
   }
   const min = profile && profile.minMatchScore != null ? profile.minMatchScore : null;
+  const scored = jobs.filter(j => j.score), unscored = jobs.filter(j => !j.score);
   $('count').textContent = jobs.length
-    ? `${jobs.length} ${plural(jobs.length, 'вакансия', 'вакансии', 'вакансий')}` + (min != null ? ` · оценка от ${min}` : '')
+    ? `${scored.length} ${plural(scored.length, 'подходящая', 'подходящие', 'подходящих')}` + (min != null ? ` (оценка от ${min})` : '')
+      + ` · ${unscored.length} без оценки`
     : '';
   const stale = jobs.filter(j => j.stale).length;
   $('staleBanner').style.display = stale ? 'flex' : 'none';
   $('staleCount').textContent = `${stale} ${plural(stale, 'оценка', 'оценки', 'оценок')}`;
-  $('list').innerHTML = jobs.length ? jobs.map(card).join('')
+  $('list').innerHTML = jobs.length
+    ? scored.map(card).join('')
+      + (unscored.length ? `<div class="section">Без оценки — ${unscored.length}</div>` + unscored.map(card).join('') : '')
     : '<div class="empty">Нет подходящих вакансий. Нажми «Сканировать» или снизь minMatchScore в профиле.</div>';
 }
 
 // ---------- status / background tasks ----------
-function setBusy(busy) {
+let busy = false;
+function setBusy(value) {
+  busy = value;
   actionButtons.forEach(id => $(id).disabled = busy);
+  document.querySelectorAll('.score-btn').forEach(b => b.disabled = busy);
   $('scanBtn').textContent = busy ? 'Идёт работа…' : 'Сканировать';
 }
 
@@ -245,7 +257,7 @@ function describeResult(st) {
   if (st.task === 'scan') {
     return `Последний скан: +${r.added} новых · ${r.extracted} извлечено · ${r.scored} оценено`
       + (r.detailsRemaining + r.extractRemaining + r.scoreRemaining > 0
-        ? ` · осталось ${r.detailsRemaining} описаний, ${r.extractRemaining} извлечений, ${r.scoreRemaining} оценок` : '');
+        ? ` · осталось ${r.detailsRemaining} описаний, ${r.extractRemaining} извлечений · без оценки ${r.scoreRemaining}` : '');
   }
   return `Пересчитано оценок: ${r.scored}` + (r.remaining ? ` · не удалось: ${r.remaining}` : '');
 }
@@ -295,6 +307,22 @@ async function rescore() {
   startTask(() => api('POST', `/api/scores/rescore?days=${days}`));
 }
 $('rescoreBtn').onclick = rescore;
+
+// ---------- score one offer from its card ----------
+$('list').addEventListener('click', async ev => {
+  const btn = ev.target.closest('.score-btn');
+  if (!btn) return;
+  btn.disabled = true;
+  btn.textContent = 'Оценка…';
+  try {
+    const job = await api('POST', `/api/jobs/${encodeURIComponent(btn.dataset.id)}/score`);
+    btn.closest('.card').outerHTML = card(job);
+  } catch (err) {
+    toast(err.message, true);
+    btn.disabled = busy;
+    btn.textContent = 'Оценить';
+  }
+});
 $('bannerRescore').onclick = rescore;
 
 $('delScoresBtn').onclick = async () => {
