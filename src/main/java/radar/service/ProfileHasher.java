@@ -6,7 +6,10 @@ import java.util.HexFormat;
 import org.springframework.stereotype.Component;
 import radar.model.UserProfile;
 
-/** Stable SHA-256 of the profile's JSON — ties a score to the profile it was made for. */
+/**
+ * Stable SHA-256 of the profile's scoring fields (all but {@code minMatchScore}) — ties a score to the
+ * profile it was made for.
+ */
 @Component
 public class ProfileHasher {
 
@@ -18,7 +21,7 @@ public class ProfileHasher {
 
   public String hash(UserProfile profile) {
     try {
-      var bytes = objectMapper.writeValueAsBytes(profile);
+      var bytes = objectMapper.writeValueAsBytes(profile.forScoring());
       return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(bytes));
     } catch (Exception e) {
       throw new IllegalStateException("Failed to hash profile", e);

@@ -18,4 +18,13 @@ public record UserProfile(
     List<String> locations,
     Integer minMatchScore
 ) {
+
+  /**
+   * The profile without {@code minMatchScore} — what scoring depends on. {@code minMatchScore} only
+   * filters what {@code GET /api/jobs} shows, so changing it must not make scores stale.
+   */
+  public UserProfile forScoring() {
+    return new UserProfile(currentSkills, experienceYears, preferredType, preferredRemote, salaryMin,
+        currency, contractType, locations, null);
+  }
 }

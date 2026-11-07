@@ -125,6 +125,18 @@ class ScoringServiceTest {
   }
 
   @Test
+  void minMatchScoreDoesNotAffectHashOrPrompt() {
+    var hasher = new ProfileHasher(mapper);
+    var stricter = new UserProfile(profile.currentSkills(), profile.experienceYears(),
+        profile.preferredType(), profile.preferredRemote(), profile.salaryMin(), profile.currency(),
+        profile.contractType(), profile.locations(), 9);
+    var offer = stored("a", "text").offer();
+    assertThat(hasher.hash(stricter)).isEqualTo(hasher.hash(profile));
+    assertThat(service.prompt(offer, stricter)).isEqualTo(service.prompt(offer, profile))
+        .doesNotContain("minMatchScore\":6");
+  }
+
+  @Test
   void promptHasProfileAndPlainOfferText() {
     var prompt = service.prompt(stored("a", "Plain text").offer(), profile);
     assertThat(prompt).contains("CANDIDATE PROFILE").contains("\"currentSkills\":[\"Java\"]")

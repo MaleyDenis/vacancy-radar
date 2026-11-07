@@ -134,7 +134,7 @@ public class ScoringService {
   String prompt(RawJobOffer offer, UserProfile profile) {
     return "You are a career advisor. Score how well this job offer matches the candidate's "
         + "profile on a scale of 1 to 10, and give a reason of at most 20 words.\n\n"
-        + "=== CANDIDATE PROFILE (JSON) ===\n" + writeJson(profile) + "\n\n"
+        + "=== CANDIDATE PROFILE (JSON) ===\n" + writeJson(profile.forScoring()) + "\n\n"
         + "=== JOB OFFER ===\n" + OfferPrompt.describe(offer);
   }
 
