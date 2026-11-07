@@ -1,22 +1,20 @@
 # Enricher Agent
 
 ## Scope
-This agent owns `radar.service.EnricherService`.
+Owns the Claude steps: `ClaudeClient`, `ExtractionService`, `ScoringService`, `OfferPrompt`.
 
 ## Responsibilities
-- Call Claude Haiku (`claude-haiku-4-5-20251001`) via Anthropic Java SDK per `RawJobOffer`
-- Build prompt: plain-text description + skills + salary + company + experienceLevel + full `UserProfile`
-- Request structured JSON output matching `JobReport` schema exactly
-- Parse response JSON → `JobReport`, set `jobReport.rawJobOffer = offer`
-- Emit `ScanProgress(ENRICHING)` callback once per offer
-- `matchScore` must be in range 1–10
+- `ExtractionService`: once per offer with a description → `OfferExtraction` in `extractions.json`
+- `ScoringService`: raw offer text + full `UserProfile` → `OfferScore` (matchScore 1–10, reason,
+  profileHash) in `scores.json`; scan scores only unscored offers; `rescoreRecent(days)` re-scores
+  offers published in the last N days
+- Structured output via the Anthropic Java SDK (`ClaudeClient.ask(prompt, type)`)
+- A failed offer is logged and left for a later run
 
 ## Does NOT know about
 - Scraping or `JustJoinConnector`
-- Writing to disk — that is `JsonRepository`'s job
-- Filtering by `minMatchScore` — filtering happens upstream in `ScanService`
+- Filtering by `minMatchScore` — done in `GET /api/jobs`
 
 ## Key constraints
 - Model: `claude-haiku-4-5-20251001` — do NOT switch to Sonnet/Opus without approval
 - NEVER send raw HTML to Claude — plain text only
-- Input tokens per call: ~1500 (description) + UserProfile JSON
