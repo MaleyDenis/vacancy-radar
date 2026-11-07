@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>vacancy-radar</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;font-size:15px;color:#1f2328;background:#f6f7f9}
+.wrap{max-width:860px;margin:0 auto;padding:16px}
+.bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:12px}
+.bar h1{font-size:20px;margin:0 auto 0 0}
+.btn{padding:8px 14px;font-size:14px;border-radius:10px;border:1px solid #d0d4d9;background:#fff;cursor:pointer;color:#1f2328}
+.btn:hover{background:#f3f4f6}
+.btn.primary{background:#2563eb;border-color:#2563eb;color:#fff}
+.btn.primary:hover{background:#1d4ed8}
+.btn.danger{color:#b42318;border-color:#f3b5ae}
+.btn.solid-danger{background:#d92d20;border-color:#d92d20;color:#fff}
+.btn:disabled{opacity:.6;cursor:default}
+.status{font-size:13px;color:#4b5563;margin-bottom:12px;min-height:18px}
+.count{font-size:13px;color:#6b7280;margin-bottom:8px}
+.banner{display:flex;gap:10px;align-items:center;background:#fffbeb;border:1px solid #fde68a;color:#92400e;border-radius:12px;padding:10px 14px;margin-bottom:12px;font-size:14px}
+.banner .btn{margin-left:auto;padding:6px 12px}
+.list{display:flex;flex-direction:column;gap:10px}
+.card{background:#fff;border:1px solid #e6e8eb;border-radius:14px;padding:14px;display:flex;flex-direction:column;gap:8px}
+.card.stale{border-color:#fde68a}
+.top{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
+.title{font-weight:600;line-height:1.3}
+.company{font-size:13px;color:#6b7280}
+.scorebox{display:flex;flex-direction:column;align-items:center;gap:2px}
+.score{min-width:38px;height:38px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:17px}
+.s-hi{background:#dcfce7;color:#166534}.s-mid{background:#fef3c7;color:#92400e}.s-lo{background:#f1f2f4;color:#4b5563}
+.stale-tag{font-size:10px;color:#b45309}
+.reason{font-size:13px;color:#374151;background:#f8fafc;border-left:3px solid #c7d2fe;padding:6px 10px;border-radius:6px}
+.meta{font-size:13px;color:#4b5563}
+.salary{font-size:13px;font-weight:600}
+.muted{color:#9ca3af;font-weight:400}
+.tags{display:flex;flex-wrap:wrap;gap:4px}
+.tag{font-size:12px;padding:2px 8px;border-radius:999px;background:#eef2ff;color:#3730a3}
+details{font-size:13px;color:#374151}
+details summary{cursor:pointer;color:#2563eb;list-style:none}
+details summary::-webkit-details-marker{display:none}
+details .body{margin-top:8px;display:flex;flex-direction:column;gap:8px}
+details h4{margin:0 0 2px;font-size:12px;color:#6b7280;font-weight:600;text-transform:uppercase;letter-spacing:.03em}
+details ul{margin:0;padding-left:18px}
+.foot{display:flex;justify-content:space-between;align-items:center}
+.foot a{font-size:13px;color:#2563eb;text-decoration:none}
+.panel{display:none;background:#fff;border:1px solid #e6e8eb;border-radius:14px;padding:16px;margin-bottom:12px}
+.panel.open{display:block}
+.panel h2{font-size:16px;margin:0 0 12px}
+textarea{width:100%;min-height:240px;font-family:ui-monospace,Menlo,monospace;font-size:13px;border:1px solid #d0d4d9;border-radius:10px;padding:10px}
+.empty{text-align:center;color:#6b7280;padding:40px 0}
+.hint{font-size:12px;color:#9ca3af;margin-top:12px;text-align:center}
+.overlay{position:fixed;inset:0;background:rgba(17,24,39,.45);display:none;align-items:center;justify-content:center;padding:16px;z-index:10}
+.overlay.open{display:flex}
+.modal{background:#fff;border-radius:16px;max-width:420px;width:100%;padding:20px;box-shadow:0 20px 50px rgba(0,0,0,.2)}
+.modal h3{margin:0 0 8px;font-size:17px}
+.modal p{margin:0 0 14px;color:#4b5563;font-size:14px;line-height:1.45}
+.modal label{display:block;font-size:13px;color:#374151;margin-bottom:14px}
+.modal input{width:80px;margin-left:6px;padding:6px 8px;border:1px solid #d0d4d9;border-radius:8px;font-size:14px}
+.modal .actions{display:flex;justify-content:flex-end;gap:8px}
+.toast.err{background:#b42318}
+.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#111827;color:#fff;padding:10px 16px;border-radius:10px;font-size:14px;opacity:0;transition:opacity .2s;pointer-events:none}
+.toast.show{opacity:1}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<div class="bar">
+  <h1>vacancy-radar</h1>
+  <button class="btn primary" id="scanBtn">Сканировать</button>
+  <button class="btn" id="rescoreBtn">Пересчитать оценки</button>
+  <button class="btn" id="profileBtn">Профиль</button>
+  <button class="btn danger" id="delScoresBtn">Удалить оценки</button>
+  <button class="btn danger" id="wipeBtn">Очистить всё</button>
+</div>
+
+<div class="status" id="status"></div>
+
+<div class="banner" id="staleBanner" style="display:none">
+  <span>Профиль изменился — <b id="staleCount"></b> устарели.</span>
+  <button class="btn" id="bannerRescore">Пересчитать</button>
+</div>
+
+<div class="panel" id="profilePanel">
+  <h2>Профиль</h2>
+  <textarea id="profileText" spellcheck="false"></textarea>
+  <div style="margin-top:8px;display:flex;gap:8px">
+    <button class="btn primary" id="saveProfile">Сохранить</button>
+    <button class="btn" id="closeProfile">Закрыть</button>
+  </div>
+</div>
+
+<div class="count" id="count"></div>
+<div class="list" id="list"></div>
+</div>
+
+<div class="overlay" id="overlay">
+  <div class="modal" role="dialog" aria-modal="true">
+    <h3 id="mTitle"></h3>
+    <p id="mText"></p>
+    <label id="mInputWrap">За последние <input id="mInput" type="number" min="1" value="7"> дней</label>
+    <div class="actions">
+      <button class="btn" id="mCancel">Отмена</button>
+      <button class="btn" id="mOk"></button>
+    </div>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const unitRu = {hour:'ч', day:'день', month:'мес', year:'год'};
+const stepRu = {scrape:'список вакансий', details:'описания', extract:'извлечение (Claude)', score:'оценка (Claude)', rescore:'пересчёт оценок (Claude)'};
+const actionButtons = ['scanBtn','rescoreBtn','delScoresBtn','wipeBtn','bannerRescore'];
+
+let profile = null;
+let polling = null;
+
+// ---------- api ----------
+async function api(method, url, body) {
+  const res = await fetch(url, {
+    method,
+    headers: body === undefined ? {} : {'Content-Type': 'application/json'},
+    body: body === undefined ? undefined : JSON.stringify(body)
+  });
+  const text = await res.text();
+  let data = null;
+  try { data = text ? JSON.parse(text) : null; } catch { data = text; }
+  if (!res.ok) {
+    const msg = res.status === 409 ? 'Уже идёт скан или пересчёт — дождитесь окончания'
+      : (data && data.error) || (data && data.message) || `Ошибка ${res.status}`;
+    throw new Error(msg);
+  }
+  return data;
+}
+
+// ---------- ui helpers ----------
+function toast(text, isError) {
+  const e = $('toast');
+  e.textContent = text;
+  e.className = 'toast show' + (isError ? ' err' : '');
+  clearTimeout(toast.t);
+  toast.t = setTimeout(() => e.className = 'toast', isError ? 4000 : 2200);
+}
+
+function plural(n, one, few, many) {
+  const m10 = n % 10, m100 = n % 100;
+  if (m10 === 1 && m100 !== 11) return one;
+  if (m10 >= 2 && m10 <= 4 && (m100 < 10 || m100 >= 20)) return few;
+  return many;
+}
+
+let onOk = null, onCancel = null;
+function modal({title, text, ok, danger, input}) {
+  $('mTitle').textContent = title;
+  $('mText').textContent = text;
+  $('mOk').textContent = ok;
+  $('mOk').className = 'btn ' + (danger ? 'solid-danger' : 'primary');
+  $('mInputWrap').style.display = input ? 'block' : 'none';
+  $('overlay').classList.add('open');
+  (input ? $('mInput') : $('mCancel')).focus();
+  return new Promise(resolve => {
+    onOk = () => { closeModal(); resolve(true); };
+    onCancel = () => { closeModal(); resolve(false); };
+  });
+}
+function closeModal() { $('overlay').classList.remove('open'); }
+$('mOk').onclick = () => onOk && onOk();
+$('mCancel').onclick = () => onCancel && onCancel();
+$('overlay').onclick = e => { if (e.target.id === 'overlay') onCancel(); };
+document.addEventListener('keydown', e => {
+  if (!$('overlay').classList.contains('open')) return;
+  if (e.key === 'Escape') onCancel();
+  if (e.key === 'Enter') onOk();
+});
+
+// ---------- jobs ----------
+function salary(o) {
+  if (o.salaryMin == null && o.salaryMax == null) return '<span class="muted">Зарплата не указана</span>';
+  const a = o.salaryMin, b = o.salaryMax;
+  const range = a == null ? b : b == null || a === b ? a : `${a}–${b}`;
+  const unit = o.salaryUnit ? '/' + (unitRu[o.salaryUnit] || o.salaryUnit) : '';
+  const gross = o.salaryGross == null ? '' : o.salaryGross ? ' брутто' : ' нетто';
+  return esc(`${range} ${o.currency || ''}${unit}${gross}`);
+}
+
+function card(j) {
+  const o = j.offer, e = j.extraction || {}, s = j.score;
+  const cls = s.matchScore >= 6 ? 's-hi' : s.matchScore >= 5 ? 's-mid' : 's-lo';
+  const meta = [o.location, o.remote ? 'remote' : null, e.realSeniority || o.experienceLevel, o.contractType]
+    .filter(Boolean).map(esc).join(' · ');
+  const list = xs => (xs || []).map(x => `<li>${esc(x)}</li>`).join('');
+  const details = j.extraction ? `<details><summary>Подробнее ▾</summary><div class="body">
+      ${e.projectDescription ? `<div><h4>Проект</h4>${esc(e.projectDescription)}</div>` : ''}
+      ${e.responsibilities ? `<div><h4>Обязанности</h4>${esc(e.responsibilities)}</div>` : ''}
+      ${e.requirements && e.requirements.length ? `<div><h4>Требования</h4><ul>${list(e.requirements)}</ul></div>` : ''}
+    </div></details>` : '';
+  return `<div class="card ${j.stale ? 'stale' : ''}">
+    <div class="top">
+      <div><div class="title">${esc(o.title)}</div><div class="company">${esc(o.companyName)}</div></div>
+      <div class="scorebox"><div class="score ${cls}">${s.matchScore}</div>${j.stale ? '<span class="stale-tag">устарела</span>' : ''}</div>
+    </div>
+    ${s.reason ? `<div class="reason">${esc(s.reason)}</div>` : ''}
+    <div class="meta">${meta}</div>
+    <div class="salary">${salary(o)}</div>
+    <div class="tags">${(e.skills || []).slice(0, 10).map(x => `<span class="tag">${esc(x)}</span>`).join('')}</div>
+    ${details}
+    <div class="foot"><span class="meta">${o.publishedAt ? 'опубликовано ' + esc(o.publishedAt.slice(0, 10)) : ''}</span>
+      ${o.applyUrl ? `<a href="${esc(o.applyUrl)}" target="_blank" rel="noopener">Открыть на JustJoin →</a>` : ''}</div>
+  </div>`;
+}
+
+async function loadJobs() {
+  let jobs;
+  try {
+    jobs = await api('GET', '/api/jobs');
+  } catch (err) {
+    $('list').innerHTML = `<div class="empty">Не удалось загрузить вакансии: ${esc(err.message)}</div>`;
+    return;
+  }
+  const min = profile && profile.minMatchScore != null ? profile.minMatchScore : null;
+  $('count').textContent = jobs.length
+    ? `${jobs.length} ${plural(jobs.length, 'вакансия', 'вакансии', 'вакансий')}` + (min != null ? ` · оценка от ${min}` : '')
+    : '';
+  const stale = jobs.filter(j => j.stale).length;
+  $('staleBanner').style.display = stale ? 'flex' : 'none';
+  $('staleCount').textContent = `${stale} ${plural(stale, 'оценка', 'оценки', 'оценок')}`;
+  $('list').innerHTML = jobs.length ? jobs.map(card).join('')
+    : '<div class="empty">Нет подходящих вакансий. Нажми «Сканировать» или снизь minMatchScore в профиле.</div>';
+}
+
+// ---------- status / background tasks ----------
+function setBusy(busy) {
+  actionButtons.forEach(id => $(id).disabled = busy);
+  $('scanBtn').textContent = busy ? 'Идёт работа…' : 'Сканировать';
+}
+
+function describeResult(st) {
+  if (st.error) return `Последний запуск (${st.task === 'scan' ? 'скан' : 'пересчёт'}) упал: ${st.error}`;
+  const r = st.result;
+  if (!r) return '';
+  if (st.task === 'scan') {
+    return `Последний скан: +${r.added} новых · ${r.extracted} извлечено · ${r.scored} оценено`
+      + (r.detailsRemaining + r.extractRemaining + r.scoreRemaining > 0
+        ? ` · осталось ${r.detailsRemaining} описаний, ${r.extractRemaining} извлечений, ${r.scoreRemaining} оценок` : '');
+  }
+  return `Пересчитано оценок: ${r.scored}` + (r.remaining ? ` · не удалось: ${r.remaining}` : '');
+}
+
+function describeRunning(st) {
+  const step = stepRu[st.step] || 'подготовка';
+  const progress = st.total ? ` ${st.done}/${st.total}` : st.step === 'scrape' && st.done ? `, страница ${st.done}` : '';
+  return `${st.task === 'scan' ? 'Скан' : 'Пересчёт'}: ${step}${progress}…`;
+}
+
+async function refreshStatus() {
+  let st;
+  try { st = await api('GET', '/api/status'); } catch { return; }
+  setBusy(st.running);
+  if (st.running) {
+    $('status').textContent = describeRunning(st);
+    if (!polling) polling = setInterval(refreshStatus, 2000);
+  } else {
+    $('status').textContent = describeResult(st);
+    if (polling) {
+      clearInterval(polling);
+      polling = null;
+      if (st.error) toast('Ошибка: ' + st.error, true); else toast('Готово');
+      loadJobs();
+    }
+  }
+}
+
+async function startTask(request) {
+  try {
+    await request();
+    await refreshStatus();
+    if (!polling) polling = setInterval(refreshStatus, 2000);
+  } catch (err) {
+    toast(err.message, true);
+  }
+}
+
+// ---------- actions ----------
+$('scanBtn').onclick = () => startTask(() => api('POST', '/api/scan'));
+
+async function rescore() {
+  if (!await modal({title: 'Пересчитать оценки', ok: 'Пересчитать', input: true,
+    text: 'Вакансии, опубликованные за выбранный период, будут заново оценены под текущий профиль. Это запросы к Claude.'})) return;
+  const days = parseInt($('mInput').value, 10);
+  if (!(days > 0)) { toast('Укажи число дней больше нуля', true); return; }
+  startTask(() => api('POST', `/api/scores/rescore?days=${days}`));
+}
+$('rescoreBtn').onclick = rescore;
+$('bannerRescore').onclick = rescore;
+
+$('delScoresBtn').onclick = async () => {
+  if (!await modal({title: 'Удалить все оценки?', ok: 'Удалить оценки', danger: true,
+    text: 'Оценки будут удалены, извлечённые навыки и описания останутся. Карточки пропадут до следующего скана или пересчёта.'})) return;
+  try { await api('DELETE', '/api/scores'); toast('Оценки удалены'); loadJobs(); }
+  catch (err) { toast(err.message, true); }
+};
+
+$('wipeBtn').onclick = async () => {
+  if (!await modal({title: 'Очистить всё?', ok: 'Очистить всё', danger: true,
+    text: 'Будут удалены все вакансии, извлечения и оценки. Останется только профиль. Отменить нельзя.'})) return;
+  try { await api('DELETE', '/api/data'); toast('Данные удалены'); $('status').textContent = ''; loadJobs(); }
+  catch (err) { toast(err.message, true); }
+};
+
+// ---------- profile ----------
+async function loadProfile() {
+  try {
+    profile = await api('GET', '/api/profile');
+    $('profileText').value = JSON.stringify(profile, null, 2);
+  } catch (err) {
+    profile = null;
+    $('profileText').value = '';
+    toast('Профиль не найден — заполни и сохрани', true);
+  }
+}
+$('profileBtn').onclick = () => $('profilePanel').classList.toggle('open');
+$('closeProfile').onclick = () => $('profilePanel').classList.remove('open');
+$('saveProfile').onclick = async () => {
+  let body;
+  try { body = JSON.parse($('profileText').value); }
+  catch (err) { toast('Неверный JSON: ' + err.message, true); return; }
+  try {
+    profile = await api('PUT', '/api/profile', body);
+    $('profileText').value = JSON.stringify(profile, null, 2);
+    $('profilePanel').classList.remove('open');
+    toast('Профиль сохранён');
+    loadJobs();
+  } catch (err) { toast(err.message, true); }
+};
+
+// ---------- start ----------
+(async () => {
+  await loadProfile();
+  await loadJobs();
+  await refreshStatus();
+})();
+</script>
+</body>
+</html>
