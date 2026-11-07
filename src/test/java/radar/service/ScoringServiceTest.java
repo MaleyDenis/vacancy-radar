@@ -99,6 +99,21 @@ class ScoringServiceTest {
   }
 
   @Test
+  void scoresNewestOffersFirst() {
+    when(repository.readScores()).thenReturn(new LinkedHashMap<>());
+    when(repository.readRawOffers()).thenReturn(List.of(
+        stored("old", "old text", "2026-10-01T00:00:00Z"),
+        stored("undated", "undated text", null),
+        stored("new", "new text", "2026-11-05T00:00:00Z")));
+    when(claude.ask(contains("new text"), eq(ScoreResult.class))).thenReturn(new ScoreResult(6, "ok"));
+
+    var result = service.scoreMissing(1);
+
+    assertThat(result.scored()).isEqualTo(1);
+    assertThat(saved()).containsOnlyKeys("new");
+  }
+
+  @Test
   void rescoreReplacesScoresOfRecentOffersOnly() {
     var recent = Instant.now().minus(2, ChronoUnit.DAYS).toString();
     var old = Instant.now().minus(20, ChronoUnit.DAYS).toString();
@@ -111,13 +126,12 @@ class ScoringServiceTest {
         stored("undated", "text", null), stored("fresh", "fresh text", recent)));
     when(claude.ask(contains("new text"), eq(ScoreResult.class)))
         .thenReturn(new ScoreResult(8, "now fits"));
-    when(claude.ask(contains("fresh text"), eq(ScoreResult.class)))
-        .thenThrow(new IllegalStateException("api down"));
 
     var result = service.rescoreRecent(7);
 
     assertThat(result.scored()).isEqualTo(1);
-    assertThat(result.remaining()).isEqualTo(1);
+    assertThat(result.remaining()).isZero();
+    verify(claude, never()).ask(contains("fresh text"), any()); // unscored: left for the card button
     var scores = saved();
     assertThat(scores.get("recent").matchScore()).isEqualTo(8);
     assertThat(scores.get("old").reason()).isEqualTo("keep");

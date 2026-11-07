@@ -1,6 +1,7 @@
 package radar.web;
 
 import java.util.Map;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -15,8 +16,8 @@ import radar.service.ScraperService;
 
 /**
  * Starts a scan in the background: scrape the listing into the raw-offers pool, fetch missing page
- * details, extract facts with Claude (once per offer), then score unscored offers against the
- * profile. Progress and the final {@link ScanResponse} are read from {@code GET /api/status}.
+ * details, extract facts with Claude (once per offer), then score the newest unscored offers
+ * against the profile (at most {@code radar.score.batch}; the rest are scored from their card). Progress and the final {@link ScanResponse} are read from {@code GET /api/status}.
  */
 @RestController
 public class ScanController {
@@ -26,15 +27,17 @@ public class ScanController {
   private final ExtractionService extractionService;
   private final ScoringService scoringService;
   private final BackgroundRunner runner;
+  private final int scoreBatch;
 
   public ScanController(ScraperService scraperService, OfferDetailsService offerDetailsService,
       ExtractionService extractionService, ScoringService scoringService,
-      BackgroundRunner runner) {
+      BackgroundRunner runner, @Value("${radar.score.batch:30}") int scoreBatch) {
     this.scraperService = scraperService;
     this.offerDetailsService = offerDetailsService;
     this.extractionService = extractionService;
     this.scoringService = scoringService;
     this.runner = runner;
+    this.scoreBatch = scoreBatch;
   }
 
   /**
@@ -56,7 +59,7 @@ public class ScanController {
     var scan = scraperService.scan(fullFetch, limit);
     var details = offerDetailsService.fetchMissing(limit);
     var extraction = extractionService.extractMissing(limit);
-    var scoring = scoringService.scoreMissing(limit);
+    var scoring = scoringService.scoreMissing(limit == null ? scoreBatch : Math.min(limit, scoreBatch));
     return ScanResponse.of(scan, details, extraction, scoring);
   }
 

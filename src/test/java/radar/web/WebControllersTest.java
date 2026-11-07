@@ -73,7 +73,7 @@ class WebControllersTest {
     runner = new BackgroundRunner(new Progress());
     mvc = MockMvcBuilders.standaloneSetup(
         new ScanController(scraperService, offerDetailsService, extractionService,
-            scoringService, runner),
+            scoringService, runner, 30),
         new JobController(repository, hasher, scoringService, runner, 7),
         new AnalyticsController(reporterService),
         new ProfileController(repository),
@@ -119,7 +119,7 @@ class WebControllersTest {
     when(scraperService.scan(false, null)).thenReturn(new ScanResult(5, 10));
     when(offerDetailsService.fetchMissing(null)).thenReturn(new DetailsResult(3, 7));
     when(extractionService.extractMissing(null)).thenReturn(new ExtractionResult(3, 0));
-    when(scoringService.scoreMissing(null)).thenReturn(new ScoringResult(4, 0));
+    when(scoringService.scoreMissing(30)).thenReturn(new ScoringResult(4, 0));
 
     mvc.perform(post("/api/scan"))
         .andExpect(status().isAccepted())
@@ -137,7 +137,7 @@ class WebControllersTest {
     verify(scraperService).scan(false, null);
     verify(offerDetailsService).fetchMissing(null);
     verify(extractionService).extractMissing(null);
-    verify(scoringService).scoreMissing(null);
+    verify(scoringService).scoreMissing(30);
   }
 
   @Test

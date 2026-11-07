@@ -12,7 +12,7 @@ OfferDetailsService   → raw-offers.json   (description + domain from offer pag
     ▼
 ExtractionService     → extractions.json  (Claude, once per offer: skills, requirements, …)
     ▼
-ScoringService        → scores.json       (Claude: raw offer + profile → matchScore, reason)
+ScoringService        → scores.json       (Claude: raw offer + profile → matchScore, reason; newest radar.score.batch only)
 
 GET /api/jobs = raw ⨝ extraction ⨝ score by offer id, score >= minMatchScore, stale flag
 ```
@@ -25,7 +25,7 @@ GET /api/jobs = raw ⨝ extraction ⨝ score by offer id, score >= minMatchScore
 | `ScraperService` | merges new offers into the pool (dedupe by id) |
 | `OfferDetailsService` | fills description/domain from the offer page |
 | `ExtractionService` | Claude extraction, once per offer |
-| `ScoringService` | Claude scoring of unscored offers; rescore of recent offers |
+| `ScoringService` | Claude scoring: newest unscored (batch per scan), one offer on demand, rescore of recent scored offers |
 | `ClaudeClient` | Anthropic SDK wrapper, structured output |
 | `JsonRepository` | read/write JSON files to disk |
 

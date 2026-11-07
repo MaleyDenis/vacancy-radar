@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+import java.util.Comparator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -15,7 +16,7 @@ import radar.repository.JsonRepository;
 
 /**
  * Scores offers against the profile with Claude (raw offer text + profile → score + reason) into
- * {@code scores.json}. A scan scores only offers that have no score yet; a profile change does not
+ * {@code scores.json}. A scan scores only offers that have no score yet (newest first, capped); a profile change does not
  * re-score anything by itself (scores just become stale) — {@link #rescoreRecent(int)} does.
  */
 @Service
@@ -24,6 +25,9 @@ public class ScoringService {
   private static final Logger log = LoggerFactory.getLogger(ScoringService.class);
   private static final int MIN_SCORE = 1;
   private static final int MAX_SCORE = 10;
+  private static final Comparator<RawJobOffer> NEWEST_FIRST = Comparator.comparing(
+      (RawJobOffer offer) -> parseInstant(offer.publishedAt()),
+      Comparator.nullsLast(Comparator.reverseOrder()));
 
   private final ClaudeClient claude;
   private final JsonRepository repository;
@@ -40,7 +44,11 @@ public class ScoringService {
     this.progress = progress;
   }
 
-  /** @param limit optional cap on how many offers to score this run; {@code null} = no cap */
+  /**
+   * Scores unscored offers, newest ({@code publishedAt}) first.
+   *
+   * @param limit optional cap on how many offers to score this run; {@code null} = no cap
+   */
   public ScoringResult scoreMissing(Integer limit) {
     var profile = repository.readProfile(); // mandatory — throws if missing
     var profileHash = hasher.hash(profile);
@@ -48,6 +56,7 @@ public class ScoringService {
     var todo = repository.readRawOffers().stream()
         .map(stored -> stored.offer())
         .filter(offer -> !scores.containsKey(offer.id()) && hasDescription(offer))
+        .sorted(NEWEST_FIRST)
         .toList();
     var batch = limit == null ? todo : todo.subList(0, Math.min(limit, todo.size()));
     progress.begin("score", batch.size());
@@ -71,7 +80,7 @@ public class ScoringService {
   }
 
   /**
-   * Re-scores, against the current profile, every offer with a description published within the
+   * Re-scores, against the current profile, every already scored offer published within the
    * last {@code days} days (by {@code publishedAt}), replacing existing scores. Offers that fail stay
    * as they were and are counted in {@code remaining}.
    */
@@ -82,7 +91,8 @@ public class ScoringService {
     var scores = repository.readScores();
     var batch = repository.readRawOffers().stream()
         .map(stored -> stored.offer())
-        .filter(offer -> hasDescription(offer) && isPublishedAfter(offer, cutoff))
+        .filter(offer -> scores.containsKey(offer.id()) && hasDescription(offer)
+            && isPublishedAfter(offer, cutoff))
         .toList();
     progress.begin("rescore", batch.size());
     var scored = 0;
