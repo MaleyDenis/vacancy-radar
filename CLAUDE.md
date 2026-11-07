@@ -3,7 +3,8 @@
 ## Project
 
 **Goal:** Collect job offers from JustJoin, enrich via Claude Haiku, filter by user profile, analyze skill trends.
-**Trigger:** REST API (Phase 1 only). Phase 2 (UI, GoWork, new connectors) — do NOT implement.
+**Trigger:** REST API + a minimal static UI (`src/main/resources/static/index.html`: plain HTML/CSS/JS,
+no build, no dependencies). Phase 2 (GoWork, new connectors) — do NOT implement.
 **Storage:** JSON files by date. No database.
 
 ---
@@ -28,6 +29,7 @@ radar.service     — ScraperService, OfferDetailsService, ExtractionService, Sc
 radar.connector   — JustJoinConnector
 radar.repository  — read/write JSON files to disk
 radar.web         — REST controllers
+static/index.html — the UI (single file, talks to /api/*)
 ```
 
 ---
@@ -45,7 +47,7 @@ radar.web         — REST controllers
 ## Constraints
 
 - Do NOT add Gradle dependencies without approval
-- Do NOT implement Phase 2 features (UI, GoWork, NoFluffJobs, Pracuj, LinkedIn)
+- Do NOT implement Phase 2 features (GoWork, NoFluffJobs, Pracuj, LinkedIn)
 - Do NOT use database — JSON files only
 - Do NOT send HTML to Claude API
 - Do NOT add any Claude attribution to commits or PRs — no `Co-Authored-By: Claude`,
