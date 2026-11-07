@@ -10,6 +10,8 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -41,7 +43,11 @@ class ScoringServiceTest {
   }
 
   private StoredRawOffer stored(String id, String description) {
-    var offer = new RawJobOffer(id, "Java Dev", "Acme", null, "Kraków", true, "2026-11-01",
+    return stored(id, description, "2026-11-01");
+  }
+
+  private StoredRawOffer stored(String id, String description, String publishedAt) {
+    var offer = new RawJobOffer(id, "Java Dev", "Acme", null, "Kraków", true, publishedAt,
         "senior", description, null, null, null, null, null, "b2b", "url", "justjoin", null);
     return new StoredRawOffer(offer, "2026-11-01T00:00:00Z", null);
   }
@@ -89,6 +95,32 @@ class ScoringServiceTest {
     assertThat(result.remaining()).isEqualTo(2);
     assertThat(saved()).containsOnlyKeys("ok");
     verify(claude, never()).ask(contains("wait"), any());
+  }
+
+  @Test
+  void rescoreReplacesScoresOfRecentOffersOnly() {
+    var recent = Instant.now().minus(2, ChronoUnit.DAYS).toString();
+    var old = Instant.now().minus(20, ChronoUnit.DAYS).toString();
+    var existing = new LinkedHashMap<String, OfferScore>();
+    existing.put("recent", new OfferScore(3, "stale", "other", "t"));
+    existing.put("old", new OfferScore(4, "keep", "other", "t"));
+    when(repository.readScores()).thenReturn(existing);
+    when(repository.readRawOffers()).thenReturn(List.of(
+        stored("recent", "new text", recent), stored("old", "old text", old),
+        stored("undated", "text", null), stored("fresh", "fresh text", recent)));
+    when(claude.ask(contains("new text"), eq(ScoreResult.class)))
+        .thenReturn(new ScoreResult(8, "now fits"));
+    when(claude.ask(contains("fresh text"), eq(ScoreResult.class)))
+        .thenThrow(new IllegalStateException("api down"));
+
+    var result = service.rescoreRecent(7);
+
+    assertThat(result.scored()).isEqualTo(1);
+    assertThat(result.remaining()).isEqualTo(1);
+    var scores = saved();
+    assertThat(scores.get("recent").matchScore()).isEqualTo(8);
+    assertThat(scores.get("old").reason()).isEqualTo("keep");
+    assertThat(scores).doesNotContainKeys("undated", "fresh");
   }
 
   @Test
