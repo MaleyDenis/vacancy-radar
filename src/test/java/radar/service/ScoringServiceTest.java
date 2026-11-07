@@ -1,6 +1,7 @@
 package radar.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.contains;
 import static org.mockito.ArgumentMatchers.eq;
@@ -15,6 +16,7 @@ import java.time.temporal.ChronoUnit;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.NoSuchElementException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -96,6 +98,20 @@ class ScoringServiceTest {
     assertThat(result.remaining()).isEqualTo(2);
     assertThat(saved()).containsOnlyKeys("ok");
     verify(claude, never()).ask(contains("wait"), any());
+  }
+
+  @Test
+  void scoreOneStoresScoreAndRejectsBadOffers() {
+    when(repository.readScores()).thenReturn(new LinkedHashMap<>());
+    when(repository.readRawOffers()).thenReturn(List.of(stored("a", "one text"), stored("b", "")));
+    when(claude.ask(contains("one text"), eq(ScoreResult.class))).thenReturn(new ScoreResult(7, "ok"));
+
+    var score = service.scoreOne("a");
+
+    assertThat(score.matchScore()).isEqualTo(7);
+    assertThat(saved()).containsOnlyKeys("a");
+    assertThatThrownBy(() -> service.scoreOne("b")).isInstanceOf(IllegalStateException.class);
+    assertThatThrownBy(() -> service.scoreOne("zzz")).isInstanceOf(NoSuchElementException.class);
   }
 
   @Test
