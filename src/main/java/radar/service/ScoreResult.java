@@ -8,7 +8,8 @@ import com.fasterxml.jackson.annotation.JsonPropertyDescription;
 public record ScoreResult(
     @JsonPropertyDescription("Match from 1 (poor) to 10 (excellent).")
     int matchScore,
-    @JsonPropertyDescription("One short sentence explaining the score: main fits and gaps.")
+    @JsonPropertyDescription(
+        "One short sentence, at most 20 words: the main fit and the main gap. No profile recap.")
     String reason
 ) {
 }
