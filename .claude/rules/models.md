@@ -30,7 +30,7 @@
 - `profileHash` ≠ current profile hash → score is stale.
 
 ## JobView (`GET /api/jobs` element)
-`offer (RawJobOffer), extraction (OfferExtraction|null), score (OfferScore), stale`
+`offer (RawJobOffer), extraction (OfferExtraction|null), score (OfferScore|null), stale`
 
 ## Analytics
 `date, totalScanned, skillFrequency, topCompanies, salaryDistribution, remotePercentage`

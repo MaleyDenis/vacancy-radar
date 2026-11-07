@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.Comparator;
+import java.util.NoSuchElementException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -113,6 +114,33 @@ public class ScoringService {
     }
     log.info("Rescore: {} offers from the last {} days, {} failed", scored, days, failed);
     return new ScoringResult(scored, failed);
+  }
+
+  /**
+   * Scores one offer now (the card button) and stores the score; safe to call for several offers
+   * at once.
+   *
+   * @throws java.util.NoSuchElementException no such offer
+   * @throws IllegalStateException            the offer has no description yet
+   */
+  public OfferScore scoreOne(String id) {
+    var profile = repository.readProfile();
+    var offer = repository.readRawOffers().stream()
+        .map(stored -> stored.offer())
+        .filter(candidate -> candidate.id().equals(id))
+        .findFirst()
+        .orElseThrow(() -> new NoSuchElementException("No offer " + id));
+    if (!hasDescription(offer)) {
+      throw new IllegalStateException("Offer " + id + " has no description yet");
+    }
+    var score = score(offer, profile, hasher.hash(profile));
+    synchronized (this) {
+      var scores = repository.readScores();
+      scores.put(id, score);
+      repository.saveScores(scores);
+    }
+    log.info("Scored {} on demand: {}", id, score.matchScore());
+    return score;
   }
 
   private static boolean hasDescription(RawJobOffer offer) {
