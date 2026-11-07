@@ -15,21 +15,21 @@ import java.util.regex.Pattern;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import radar.model.Analytics;
-import radar.model.JobReport;
 import radar.model.OfferExtraction;
+import radar.model.OfferScore;
 import radar.model.StoredRawOffer;
 import radar.model.UserProfile;
 
 /**
  * Reads and writes the application's JSON files under the data directory. There is no database —
- * everything is date-partitioned JSON on disk (see {@code .claude/rules/data-storage.md}).
+ * everything is JSON on disk (see {@code .claude/rules/data-storage.md}).
  *
  * <p>Layout:
  * <pre>
  *   {dataDir}/profile.json
  *   {dataDir}/raw-offers.json    (pool of scraped offers, profile-independent)
  *   {dataDir}/extractions.json   (Claude-extracted facts by offer id)
- *   {dataDir}/{YYYY-MM-DD}/jobs.json
+ *   {dataDir}/scores.json        (Claude match scores by offer id)
  *   {dataDir}/{YYYY-MM-DD}/analytics.json
  * </pre>
  *
@@ -42,7 +42,7 @@ public class JsonRepository {
   private static final String PROFILE_FILE = "profile.json";
   private static final String RAW_OFFERS_FILE = "raw-offers.json";
   private static final String EXTRACTIONS_FILE = "extractions.json";
-  private static final String JOBS_FILE = "jobs.json";
+  private static final String SCORES_FILE = "scores.json";
   private static final String ANALYTICS_FILE = "analytics.json";
   private static final Pattern DATE_DIR = Pattern.compile("\\d{4}-\\d{2}-\\d{2}");
 
@@ -90,13 +90,6 @@ public class JsonRepository {
     write(dataDir.resolve(RAW_OFFERS_FILE), offers);
   }
 
-  /** Clears every offer's {@code evaluatedProfileHash} so the next scan re-scores them. */
-  public void clearEvaluationMarks() {
-    saveRawOffers(readRawOffers().stream()
-        .map(offer -> offer.withEvaluatedProfileHash(null))
-        .toList());
-  }
-
   // ---- extractions ----
 
   /** Returns extractions keyed by offer id (mutable, insertion-ordered), or empty if none yet. */
@@ -108,44 +101,31 @@ public class JsonRepository {
     write(dataDir.resolve(EXTRACTIONS_FILE), extractions);
   }
 
-  // ---- jobs (all evaluated reports for the current profile) ----
+  // ---- scores ----
 
-  /** Overwrites {@code jobs.json} with all evaluated reports. */
-  public void saveJobs(List<JobReport> jobs) {
-    write(dataDir.resolve(JOBS_FILE), jobs);
+  /** Returns scores keyed by offer id (mutable, insertion-ordered), or empty if none yet. */
+  public LinkedHashMap<String, OfferScore> readScores() {
+    return readMap(SCORES_FILE, new TypeReference<LinkedHashMap<String, OfferScore>>() {});
   }
 
-  /** Returns all saved reports, or an empty list if none exist yet. */
-  public List<JobReport> loadJobs() {
-    lock.readLock().lock();
-    try {
-      var file = dataDir.resolve(JOBS_FILE);
-      if (!Files.exists(file)) {
-        return new ArrayList<>();
-      }
-      return objectMapper.readValue(Files.readAllBytes(file),
-          new TypeReference<List<JobReport>>() {});
-    } catch (IOException e) {
-      throw new UncheckedIOException("Failed to read " + JOBS_FILE, e);
-    } finally {
-      lock.readLock().unlock();
-    }
+  public void saveScores(Map<String, OfferScore> scores) {
+    write(dataDir.resolve(SCORES_FILE), scores);
   }
 
-  /** Deletes {@code jobs.json}. Returns how many files were removed (0 or 1). */
-  public int deleteAllJobs() {
+  /** Deletes {@code scores.json}. Returns how many files were removed (0 or 1). */
+  public int deleteScores() {
     lock.writeLock().lock();
     try {
-      return Files.deleteIfExists(dataDir.resolve(JOBS_FILE)) ? 1 : 0;
+      return Files.deleteIfExists(dataDir.resolve(SCORES_FILE)) ? 1 : 0;
     } catch (IOException e) {
-      throw new UncheckedIOException("Failed to delete " + JOBS_FILE, e);
+      throw new UncheckedIOException("Failed to delete " + SCORES_FILE, e);
     } finally {
       lock.writeLock().unlock();
     }
   }
 
   /**
-   * Wipes all data — raw offers and every date snapshot (jobs + analytics) — keeping only
+   * Wipes all data — raw offers, extractions, scores, analytics snapshots — keeping only
    * {@code profile.json}. Returns how many top-level entries were removed.
    */
   public int deleteAllData() {

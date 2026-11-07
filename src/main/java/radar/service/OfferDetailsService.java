@@ -14,7 +14,7 @@ import radar.repository.JsonRepository;
 /**
  * Fills in offer page details (full description + company domain) for pooled offers that don't have
  * them yet. Reads {@code raw-offers.json}, fetches each pending offer's page, parses the JobPosting
- * JSON-LD, and writes the enriched pool back. Incremental (only {@code detailsFetchedAt == null}
+ * JSON-LD, and writes the updated pool back. Incremental (only {@code detailsFetchedAt == null}
  * offers), bounded by {@code limit}, and never calls Claude.
  */
 @Service

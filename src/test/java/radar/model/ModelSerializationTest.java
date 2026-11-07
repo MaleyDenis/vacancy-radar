@@ -54,18 +54,25 @@ class ModelSerializationTest {
   }
 
   @Test
+  void offerScoreRoundTrips() throws Exception {
+    assertRoundTrip(new OfferScore(7, "Stack fits", "abc", "2026-11-07T10:00:00Z"),
+        OfferScore.class);
+  }
+
+  @Test
+  void storedRawOfferIgnoresOldEvaluationMark() throws Exception {
+    var json = """
+        {"offer":{"id":"a"},"firstSeenAt":"t","detailsFetchedAt":null,"evaluatedProfileHash":"x"}
+        """;
+    assertThat(mapper.readValue(json, StoredRawOffer.class).offer().id()).isEqualTo("a");
+  }
+
+  @Test
   void analyticsRoundTrips() throws Exception {
     var analytics = new Analytics(
         "2026-07-04", 42, Map.of("Java", 30, "Spring", 20), List.of("Acme", "Globex"),
         new SalaryRange(10000, 30000, "PLN"), 66.7);
     assertRoundTrip(analytics, Analytics.class);
-  }
-
-  @Test
-  void scanProgressRoundTrips() throws Exception {
-    assertRoundTrip(
-        new ScanProgress(ScanProgress.Type.ENRICHING, "enriching", 5, 42, 0),
-        ScanProgress.class);
   }
 
   @Test
