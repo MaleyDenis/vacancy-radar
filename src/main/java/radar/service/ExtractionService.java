@@ -9,8 +9,8 @@ import radar.model.RawJobOffer;
 import radar.repository.JsonRepository;
 
 /**
- * Extracts skills, requirements, responsibilities, project and real seniority from each offer's text
- * with Claude — once per offer, independent of the profile. Processes offers that have a description
+ * Extracts the facts of {@link OfferExtraction} (skills, work mode, company type, AI tools, …) from
+ * each offer's text with Claude — once per offer, independent of the profile. Processes offers that have a description
  * and no entry in {@code extractions.json}; a failed offer is left for a later run.
  */
 @Service
@@ -41,7 +41,8 @@ public class ExtractionService {
     try {
       for (var offer : batch) {
         try {
-          extractions.put(offer.id(), claude.ask(prompt(offer), OfferExtraction.class));
+          var facts = claude.ask(prompt(offer), ExtractedFacts.class);
+          extractions.put(offer.id(), facts.toExtraction());
           extracted++;
         } catch (RuntimeException e) {
           log.warn("Extraction failed for {}: {}", offer.id(), e.toString());
@@ -61,7 +62,8 @@ public class ExtractionService {
   }
 
   static String prompt(RawJobOffer offer) {
-    return "Extract the facts from this job offer. Use only what the text says.\n\n"
+    return "Extract the facts from this job offer. Use only what the text says; "
+        + "answer null for anything the text does not mention. Do not guess.\n\n"
         + "=== JOB OFFER ===\n" + OfferPrompt.describe(offer);
   }
 }

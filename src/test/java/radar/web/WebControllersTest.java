@@ -166,7 +166,7 @@ class WebControllersTest {
     when(repository.readRawOffers())
         .thenReturn(List.of(stored("low"), stored("old"), stored("best"), stored("unscored")));
     var extractions = new LinkedHashMap<String, OfferExtraction>();
-    extractions.put("best", new OfferExtraction(List.of("Java"), List.of(), "r", "p", "senior"));
+    extractions.put("best", new OfferExtraction(List.of("Java"), null, List.of(), "r", "p", "senior", null, null, null, null, null, null, null, null, null, null));
     when(repository.readExtractions()).thenReturn(extractions);
     var scores = new LinkedHashMap<String, OfferScore>();
     scores.put("low", score(4, "current"));

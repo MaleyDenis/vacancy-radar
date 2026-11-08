@@ -12,6 +12,7 @@ import static org.mockito.Mockito.when;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -26,8 +27,12 @@ class ExtractionServiceTest {
   private JsonRepository repository;
   private ExtractionService service;
 
-  private final OfferExtraction extraction =
-      new OfferExtraction(List.of("Java"), List.of("5y"), "build", "payments", "senior");
+  private final ExtractedFacts facts = new ExtractedFacts(Optional.of(List.of("Java")),
+      Optional.empty(), Optional.of(List.of("5y")), Optional.of("build"), Optional.of("payments"),
+      Optional.of("senior"), Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(),
+      Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(),
+      Optional.empty());
+  private final OfferExtraction extraction = facts.toExtraction();
 
   @BeforeEach
   void setUp() {
@@ -56,7 +61,7 @@ class ExtractionServiceTest {
     when(repository.readExtractions()).thenReturn(existing);
     when(repository.readRawOffers()).thenReturn(List.of(
         stored("done", "text"), stored("new", "Spring job"), stored("nodesc", null)));
-    when(claude.ask(contains("Spring job"), eq(OfferExtraction.class))).thenReturn(extraction);
+    when(claude.ask(contains("Spring job"), eq(ExtractedFacts.class))).thenReturn(facts);
 
     var result = service.extractMissing(null);
 
@@ -71,7 +76,7 @@ class ExtractionServiceTest {
     when(repository.readRawOffers()).thenReturn(List.of(
         stored("fail", "boom"), stored("ok", "fine"), stored("later", "wait")));
     when(claude.ask(contains("boom"), any())).thenThrow(new IllegalStateException("api down"));
-    when(claude.ask(contains("fine"), eq(OfferExtraction.class))).thenReturn(extraction);
+    when(claude.ask(contains("fine"), eq(ExtractedFacts.class))).thenReturn(facts);
 
     var result = service.extractMissing(2); // limit counts attempts, failures included
 
