@@ -41,7 +41,7 @@ class ScraperServiceTest {
   private RawJobOffer offer(String id) {
     return new RawJobOffer(id, "Java Dev", "Acme", null, "Kraków", true, "2026-07-04", "mid",
         null, null, null, null, null, null, "b2b", "https://justjoin.it/job-offer/" + id,
-        "justjoin", null);
+        "justjoin", null, null);
   }
 
   private StoredRawOffer stored(String id, String firstSeenAt) {
@@ -120,6 +120,23 @@ class ScraperServiceTest {
     assertThat(result).isEqualTo(new ScanResult(2, 2));
     assertThat(capturePersisted()).extracting(s -> s.offer().id()).containsExactly("a", "b");
     verify(connector, never()).fetchPage(2);
+  }
+
+  @Test
+  void scanUpdatesCitiesOfKnownOffersAndKeepsTheRest() {
+    var seen = Instant.now().minus(5, ChronoUnit.DAYS).toString();
+    var known = new StoredRawOffer(offer("a").withDetails("text", "acme.com"), seen, seen);
+    when(repository.readRawOffers()).thenReturn(List.of(known));
+    var fromListing = offer("a").withLocations(List.of("Kraków", "Wrocław"));
+    when(connector.fetchPage(1)).thenReturn(new OfferPage(List.of(fromListing), false));
+
+    scraperService.scan(true, null);
+
+    var saved = capturePersisted().get(0);
+    assertThat(saved.offer().locations()).containsExactly("Kraków", "Wrocław");
+    assertThat(saved.offer().description()).isEqualTo("text"); // details kept
+    assertThat(saved.firstSeenAt()).isEqualTo(seen);
+    assertThat(saved.detailsFetchedAt()).isEqualTo(seen);
   }
 
   @Test

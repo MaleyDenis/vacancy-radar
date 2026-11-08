@@ -1,8 +1,9 @@
 # Key Models
 
 ## RawJobOffer
-`id, title, companyName, companySize, location, remote, publishedAt, experienceLevel, description, salaryMin, salaryMax, currency, salaryUnit, salaryGross, contractType, applyUrl, sourceConnector, domain`
+`id, title, companyName, companySize, location, remote, publishedAt, experienceLevel, description, salaryMin, salaryMax, currency, salaryUnit, salaryGross, contractType, applyUrl, sourceConnector, domain, locations`
 
+- `location` = main city; `locations` = every city the offer is open in (JustJoin "multilocation": one offer, several cities — stored once, not duplicated; the site's "1 019 offers" counts city variants, the pool holds ~583 unique offers). Null for older entries; `allLocations()` falls back to `[location]`. A scan refreshes `locations` of known offers it sees again.
 - Salary is the original (non-converted) amount; `salaryUnit` = `hour`/`day`/`month`/`year`, `salaryGross` = gross (`true`) or net (`false`).
 
 - `description` and `domain` come from the offer's own page (details step), not the listing API — `null` until fetched. `RawJobOffer.withDetails(description, domain)` returns an updated copy.

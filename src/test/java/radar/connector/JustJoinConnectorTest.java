@@ -19,6 +19,9 @@ class JustJoinConnectorTest {
        "title":"Senior Java Developer","companyName":"Acme","city":"Kraków",
        "workplaceType":"remote","experienceLevel":"senior",
        "publishedAt":"2026-11-06T17:09:51.121419Z",
+       "multilocation":[{"slug":"acme-senior-java-dev-krakow-java","city":"Kraków"},
+                        {"slug":"acme-senior-java-dev-wroclaw-java","city":"Wrocław"},
+                        {"slug":"acme-senior-java-dev-krakow-java-2","city":"Kraków"}],
        "employmentTypes":[
          {"from":28,"to":38,"currency":"USD","currencySource":"conversion","type":"b2b","unit":"hour","gross":false},
          {"from":140,"to":170,"currency":"pln","currencySource":"original","type":"b2b","unit":"hour","gross":false}
@@ -50,6 +53,7 @@ class JustJoinConnectorTest {
     assertThat(o.title()).isEqualTo("Senior Java Developer");
     assertThat(o.companyName()).isEqualTo("Acme");
     assertThat(o.location()).isEqualTo("Kraków");
+    assertThat(o.locations()).containsExactly("Kraków", "Wrocław"); // main first, no repeats
     assertThat(o.remote()).isTrue();
     assertThat(o.experienceLevel()).isEqualTo("senior");
     assertThat(o.publishedAt()).isEqualTo("2026-11-06T17:09:51.121419Z");
@@ -68,6 +72,7 @@ class JustJoinConnectorTest {
   @Test
   void handlesMissingSalaryAndNonRemote() throws Exception {
     var o = connector.parseOffers(html("b1:[" + BARE_OFFER + "]\n")).get(0);
+    assertThat(o.locations()).containsExactly("Warszawa"); // no multilocation: main city only
 
     assertThat(o.remote()).isFalse();
     assertThat(o.salaryMin()).isNull();

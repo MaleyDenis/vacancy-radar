@@ -270,8 +270,16 @@ function aiLine(e) {
   return `<div class="badges"><span class="badge ai">${label}: ${e.aiTools.map(esc).join(', ')}</span></div>`;
 }
 
+// every city of the offer; older entries only have the main `location`
+function cities(o) {
+  return o.locations && o.locations.length ? o.locations : (o.location ? [o.location] : []);
+}
+
+// "Acme · Warszawa +2" (main city, then how many more)
 function where(o) {
-  return [o.companyName, o.location].filter(Boolean).map(esc).join(' · ');
+  const c = cities(o);
+  const city = c.length ? esc(c[0]) + (c.length > 1 ? ` <span class="muted">+${c.length - 1}</span>` : '') : '';
+  return [esc(o.companyName || ''), city].filter(Boolean).join(' · ');
 }
 
 function card(j) {
@@ -313,6 +321,7 @@ function detail(j) {
     ? `<div class="dsec"><span class="none">Факты ещё не извлечены — появятся после следующего скана.</span></div>`
     : `<div class="dsec"><h3>Условия</h3>${kv([
           ['Зарплата', salary(o) + contract],
+          ['Города', cities(o).map(esc).join(', ')],
           ['Формат', e.workMode && RU.workMode[e.workMode]],
           ['Компания', e.companyType && RU.companyType[e.companyType]],
           ['Отрасль', e.industry && esc(e.industry)],

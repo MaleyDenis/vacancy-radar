@@ -51,7 +51,7 @@ class ScoringServiceTest {
 
   private StoredRawOffer stored(String id, String description, String publishedAt) {
     var offer = new RawJobOffer(id, "Java Dev", "Acme", null, "Kraków", true, publishedAt,
-        "senior", description, null, null, null, null, null, "b2b", "url", "justjoin", null);
+        "senior", description, null, null, null, null, null, "b2b", "url", "justjoin", null, null);
     return new StoredRawOffer(offer, "2026-11-01T00:00:00Z", null);
   }
 
