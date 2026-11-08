@@ -90,10 +90,6 @@ const FIELDS = [
   {source:'extract', name:'leadership', type:'да/нет', analytics:true, note:'ждут менторинг / руководство людьми'},
   {source:'extract', name:'aiTools', type:'список', analytics:true, note:'AI-инструменты разработки: Copilot, Cursor, Claude Code…'},
   {source:'extract', name:'aiToolsUsage', type:'значение', values:['required','preferred','used'], analytics:true},
-  {source:'extract', name:'minYearsExperience', type:'число', analytics:true, status:'pending'},
-  {source:'extract', name:'projectStage', type:'значение', values:['greenfield','development','maintenance','migration'], analytics:true, status:'pending'},
-  {source:'extract', name:'aiInProduct', type:'значение', values:['core','feature'], analytics:true, status:'pending', note:'AI в самом продукте'},
-  {source:'extract', name:'aiTech', type:'список', analytics:true, status:'pending', note:'OpenAI API, LangChain4j, Spring AI, RAG…'},
 
   // ---------- AI · scoring (scores.json) ----------
   {source:'score', name:'matchScore', type:'число', values:['1…10']},
