@@ -29,6 +29,9 @@ public class ExtractionService {
   }
 
   /** @param limit optional cap on how many offers to extract this run; {@code null} = no cap */
+  /** Progress is written to disk after every this many extractions, not only at the end. */
+  static final int SAVE_EVERY = 10;
+
   public ExtractionResult extractMissing(Integer limit) {
     var extractions = repository.readExtractions();
     var todo = repository.readRawOffers().stream()
@@ -44,6 +47,9 @@ public class ExtractionService {
           var facts = claude.ask(prompt(offer), ExtractedFacts.class);
           extractions.put(offer.id(), facts.toExtraction());
           extracted++;
+          if (extracted % SAVE_EVERY == 0) {
+            repository.saveExtractions(extractions); // a stopped server loses at most SAVE_EVERY
+          }
         } catch (RuntimeException e) {
           log.warn("Extraction failed for {}: {}", offer.id(), e.toString());
         }
