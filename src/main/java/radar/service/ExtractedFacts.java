@@ -23,12 +23,13 @@ public record ExtractedFacts(
     Optional<List<String>> niceToHaveSkills,
     @JsonPropertyDescription("The concrete requirements the candidate must meet, as a list.")
     Optional<List<String>> requirements,
-    @JsonPropertyDescription(
-        "The day-to-day responsibilities, summarised in your own words, a few short sentences.")
-    Optional<String> responsibilities,
-    @JsonPropertyDescription(
-        "What the project/product is about, summarised in your own words, a few short sentences.")
-    Optional<String> projectDescription,
+    @JsonPropertyDescription("The day-to-day responsibilities as at most 5 short bullet points, "
+        + "most important first, in your own words, at most 10 words each "
+        + "('Build REST APIs in Spring Boot').")
+    Optional<List<String>> responsibilities,
+    @JsonPropertyDescription("What the project/product is about as at most 4 short bullet points in "
+        + "your own words, at most 10 words each ('Payments platform for EU banks').")
+    Optional<List<String>> projectDescription,
     @JsonPropertyDescription("The real seniority the role demands. One of: junior, mid, senior, lead.")
     Optional<String> realSeniority,
     @JsonPropertyDescription("Required English level. One of: A2, B1, B2, C1, C2. "
@@ -72,6 +73,9 @@ public record ExtractedFacts(
       + "NOT skills: Jira, Confluence, Git, Agile, Scrum, Kanban, code review, testing, "
       + "design patterns, mentoring, business domains (e-commerce, fintech), AI coding tools.";
 
+  private static final int MAX_RESPONSIBILITIES = 5;
+  private static final int MAX_PROJECT = 4;
+
   private static final Set<String> SENIORITY = Set.of("junior", "mid", "senior", "lead");
   private static final Set<String> ENGLISH = Set.of("A2", "B1", "B2", "C1", "C2");
   private static final Set<String> WORK_MODE = Set.of("remote", "hybrid", "office");
@@ -90,12 +94,16 @@ public record ExtractedFacts(
           .toList();
       nice = nice.isEmpty() ? null : nice;
     }
-    return new OfferExtraction(must, nice, list(requirements), text(responsibilities),
-        text(projectDescription), oneOf(realSeniority, SENIORITY, false),
+    return new OfferExtraction(must, nice, list(requirements), first(MAX_RESPONSIBILITIES, list(responsibilities)),
+        first(MAX_PROJECT, list(projectDescription)), oneOf(realSeniority, SENIORITY, false),
         oneOf(englishLevel, ENGLISH, true), polishRequired.orElse(null),
         oneOf(workMode, WORK_MODE, false), list(benefits), text(recruitmentSteps), text(industry),
         oneOf(companyType, COMPANY_TYPE, false), leadership.orElse(null), list(aiTools),
         oneOf(aiToolsUsage, AI_USAGE, false));
+  }
+
+  private static List<String> first(int max, List<String> items) {
+    return items == null || items.size() <= max ? items : items.subList(0, max);
   }
 
   private static List<String> skills(Optional<List<String>> value) {

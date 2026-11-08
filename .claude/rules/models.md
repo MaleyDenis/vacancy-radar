@@ -25,6 +25,7 @@
 - Claude, once per offer, profile-independent. Any field is null when the text does not say.
 - Claude answers with `ExtractedFacts` (Optional fields → nullable schema; enum-like values are strings checked in `toExtraction()`, the SDK rejects nullable enums).
 - Values: `realSeniority` junior/mid/senior/lead · `englishLevel` A2–C2 · `workMode` remote/hybrid/office · `companyType` product/outsourcing/bodyleasing/agency · `aiToolsUsage` required/preferred/used.
+- `responsibilities` (≤ 5) and `projectDescription` (≤ 4, capped in code) are lists of short bullets in Claude's own words, English.
 - `skills` = must-have, `niceToHaveSkills` = a plus (no overlap); canonical names, no versions, no AI tools. Full list with notes: `docs/fields.html`.
 
 ## OfferScore (`scores.json`, keyed by offer id)

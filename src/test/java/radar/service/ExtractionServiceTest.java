@@ -28,7 +28,7 @@ class ExtractionServiceTest {
   private ExtractionService service;
 
   private final ExtractedFacts facts = new ExtractedFacts(Optional.of(List.of("Java")),
-      Optional.empty(), Optional.of(List.of("5y")), Optional.of("build"), Optional.of("payments"),
+      Optional.empty(), Optional.of(List.of("5y")), Optional.of(List.of("build")), Optional.of(List.of("payments")),
       Optional.of("senior"), Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(),
       Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(),
       Optional.empty());
