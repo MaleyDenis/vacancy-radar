@@ -17,7 +17,7 @@ no build, no dependencies). Phase 2 (GoWork, new connectors) — do NOT implemen
 - JustJoin JSON API (`api.justjoin.it/v2/user-panel/offers`, `Version: 2` header, Java = `categoryId=6`)
 - Jsoup (HTML→text for job descriptions when fetched)
 - Jackson (JSON mapping)
-- Anthropic Java SDK (Claude Haiku — model `claude-haiku-4-5-20251001`)
+- Anthropic Java SDK (Claude Haiku — model `claude-haiku-5-5`, effort `low`)
 
 ---
 
