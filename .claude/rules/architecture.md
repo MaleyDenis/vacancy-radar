@@ -14,7 +14,7 @@ ExtractionService     → extractions.json  (Claude, once per offer: skills, req
     ▼
 ScoringService        → scores.json       (Claude: raw offer + profile → matchScore, reason; newest radar.score.batch only)
 
-GET /api/jobs = raw ⨝ extraction ⨝ score by offer id: scored (>= minMatchScore) best first, then unscored
+GET /api/jobs = raw ⨝ extraction ⨝ score by offer id, filtered/sorted/paged on the server (see api-design.md)
 POST /api/jobs/{id}/score = score one offer now (card button), synchronous
 ```
 

@@ -16,6 +16,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import radar.model.JobPage;
 import radar.model.JobView;
 import radar.repository.JsonRepository;
 import radar.service.BackgroundRunner;
@@ -26,12 +27,24 @@ import radar.service.ScoringService;
 @RestController
 public class JobController {
 
-  /** Scored by score (desc), then unscored by publishedAt (desc, ISO strings sort as dates). */
-  private static final Comparator<JobView> BEST_FIRST = Comparator
-      .comparing((JobView job) -> job.score() == null ? null : job.score().matchScore(),
-          Comparator.nullsLast(Comparator.reverseOrder()))
-      .thenComparing(job -> job.offer().publishedAt(),
-          Comparator.nullsLast(Comparator.reverseOrder()));
+  private static final int MAX_PAGE_SIZE = 200;
+
+  /** Newest first (ISO strings sort as dates). */
+  private static final Comparator<JobView> NEWEST = Comparator.comparing(
+      (JobView job) -> job.offer().publishedAt(), Comparator.nullsLast(Comparator.reverseOrder()));
+  /** Best score first, unscored last. */
+  private static final Comparator<JobView> BEST = Comparator.comparing(
+      (JobView job) -> job.score() == null ? null : job.score().matchScore(),
+      Comparator.nullsLast(Comparator.reverseOrder()));
+  /** Publication day (yyyy-MM-dd), newest first. */
+  private static final Comparator<JobView> NEWEST_DAY = Comparator.comparing(
+      (JobView job) -> day(job.offer().publishedAt()),
+      Comparator.nullsLast(Comparator.reverseOrder()));
+
+  private static final Map<String, Comparator<JobView>> SORTS = Map.of(
+      "score", BEST.thenComparing(NEWEST),
+      "date", NEWEST,
+      "date_score", NEWEST_DAY.thenComparing(BEST).thenComparing(NEWEST));
 
   private final JsonRepository repository;
   private final ProfileHasher hasher;
@@ -50,23 +63,70 @@ public class JobController {
   }
 
   /**
-   * Scored offers with {@code matchScore >= minMatchScore}, best first, then unscored offers
-   * (score null), newest first.
+   * Filtered, sorted, paged card views (offers without {@code description}).
+   *
+   * @param minScore   hide scored offers below this score; unscored offers are not affected
+   * @param scoredOnly hide unscored offers
+   * @param sort       {@code score} (best first, then newest), {@code date} (newest first) or
+   *                   {@code date_score} (newest day first, best score within a day)
+   * @param page       1-based page number
+   * @param size       page size, at most {@value #MAX_PAGE_SIZE}
    */
   @GetMapping("/api/jobs")
-  public List<JobView> jobs() {
-    var profile = repository.readProfile();
-    var minScore = profile.minMatchScore() == null ? 0 : profile.minMatchScore();
-    var profileHash = hasher.hash(profile);
+  public ResponseEntity<?> jobs(
+      @RequestParam(required = false) Integer minScore,
+      @RequestParam(defaultValue = "false") boolean scoredOnly,
+      @RequestParam(defaultValue = "score") String sort,
+      @RequestParam(defaultValue = "1") int page,
+      @RequestParam(defaultValue = "50") int size) {
+    var order = SORTS.get(sort);
+    if (order == null || page < 1 || size < 1 || size > MAX_PAGE_SIZE) {
+      return ResponseEntity.badRequest().body(Map.of("error",
+          "sort must be one of " + SORTS.keySet() + ", page >= 1, 1 <= size <= " + MAX_PAGE_SIZE));
+    }
+    var all = allJobs();
+    var staleCount = (int) all.stream().filter(job -> job.stale()).count();
+    var matching = all.stream()
+        .filter(job -> !scoredOnly || job.score() != null)
+        .filter(job -> minScore == null || job.score() == null
+            || job.score().matchScore() >= minScore)
+        .sorted(order)
+        .toList();
+    var from = Math.min((page - 1) * size, matching.size());
+    var to = Math.min(from + size, matching.size());
+    var items = matching.subList(from, to).stream().map(job -> forCard(job)).toList();
+    return ResponseEntity.ok(new JobPage(items, matching.size(), page, size, staleCount));
+  }
+
+  /** One offer with everything, description included (the detail view). 404 if unknown. */
+  @GetMapping("/api/jobs/{id}")
+  public ResponseEntity<JobView> job(@PathVariable String id) {
+    return allJobs().stream()
+        .filter(job -> job.offer().id().equals(id))
+        .findFirst()
+        .map(job -> ResponseEntity.ok(job))
+        .orElse(ResponseEntity.notFound().build());
+  }
+
+  private List<JobView> allJobs() {
+    var profileHash = hasher.hash(repository.readProfile());
     var extractions = repository.readExtractions();
     var scores = repository.readScores();
     return repository.readRawOffers().stream()
         .map(stored -> stored.offer())
         .map(offer -> view(offer, extractions.get(offer.id()), scores.get(offer.id()),
             profileHash))
-        .filter(job -> job.score() == null || job.score().matchScore() >= minScore)
-        .sorted(BEST_FIRST)
         .toList();
+  }
+
+  private static JobView forCard(JobView job) {
+    var offer = job.offer().withDetails(null, job.offer().domain());
+    return new JobView(offer, job.extraction(), job.score(), job.stale());
+  }
+
+  private static String day(String publishedAt) {
+    return publishedAt == null || publishedAt.length() < 10 ? publishedAt
+        : publishedAt.substring(0, 10);
   }
 
   /**

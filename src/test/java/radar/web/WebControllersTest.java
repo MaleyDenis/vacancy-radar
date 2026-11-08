@@ -159,35 +159,97 @@ class WebControllersTest {
     verify(scoringService).scoreMissing(20);
   }
 
-  @Test
-  void getJobsJoinsFilesFiltersSortsAndFlagsStale() throws Exception {
+  private StoredRawOffer stored(String id, String publishedAt) {
+    var offer = new RawJobOffer(id, "Java Dev", "Acme", null, "Kraków", true, publishedAt,
+        "senior", "desc", 18000, 26000, "PLN", "month", false, "b2b", "url", "justjoin", null);
+    return new StoredRawOffer(offer, "2026-07-04T00:00:00Z", null);
+  }
+
+  /** low(4, day 3), old(7 stale, day 1), best(9, day 2 morning), mid(7, day 2 evening), none(day 3). */
+  private void givenJobs() {
     when(repository.readProfile()).thenReturn(profile);
     when(hasher.hash(profile)).thenReturn("current");
-    when(repository.readRawOffers())
-        .thenReturn(List.of(stored("low"), stored("old"), stored("best"), stored("unscored")));
+    when(repository.readRawOffers()).thenReturn(List.of(
+        stored("low", "2026-11-03T10:00:00Z"), stored("old", "2026-11-01T10:00:00Z"),
+        stored("best", "2026-11-02T08:00:00Z"), stored("mid", "2026-11-02T20:00:00Z"),
+        stored("none", "2026-11-03T12:00:00Z")));
     var extractions = new LinkedHashMap<String, OfferExtraction>();
-    extractions.put("best", new OfferExtraction(List.of("Java"), null, List.of(), List.of("r"), List.of("p"), "senior", null, null, null, null, null, null, null, null, null, null));
+    extractions.put("best", new OfferExtraction(List.of("Java"), null, List.of(), List.of("r"),
+        List.of("p"), "senior", null, null, null, null, null, null, null, null, null, null));
     when(repository.readExtractions()).thenReturn(extractions);
     var scores = new LinkedHashMap<String, OfferScore>();
     scores.put("low", score(4, "current"));
     scores.put("old", score(7, "previous"));
     scores.put("best", score(9, "current"));
+    scores.put("mid", score(7, "current"));
     when(repository.readScores()).thenReturn(scores);
+  }
+
+  @Test
+  void getJobsSortsByScoreAndShowsUnscoredLast() throws Exception {
+    givenJobs();
 
     mvc.perform(get("/api/jobs"))
         .andExpect(status().isOk())
         .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
-        .andExpect(jsonPath("$.length()").value(3))
-        .andExpect(jsonPath("$[0].offer.id").value("best"))
-        .andExpect(jsonPath("$[0].extraction.skills[0]").value("Java"))
-        .andExpect(jsonPath("$[0].score.matchScore").value(9))
-        .andExpect(jsonPath("$[0].stale").value(false))
-        .andExpect(jsonPath("$[1].offer.id").value("old"))
-        .andExpect(jsonPath("$[1].extraction").isEmpty())
-        .andExpect(jsonPath("$[1].stale").value(true))
-        .andExpect(jsonPath("$[2].offer.id").value("unscored"))
-        .andExpect(jsonPath("$[2].score").isEmpty())
-        .andExpect(jsonPath("$[2].stale").value(false));
+        .andExpect(jsonPath("$.total").value(5))
+        .andExpect(jsonPath("$.staleCount").value(1))
+        .andExpect(jsonPath("$.items[*].offer.id").value(
+            org.hamcrest.Matchers.contains("best", "mid", "old", "low", "none")))
+        .andExpect(jsonPath("$.items[0].extraction.skills[0]").value("Java"))
+        .andExpect(jsonPath("$.items[0].offer.description").isEmpty()) // cards: no description
+        .andExpect(jsonPath("$.items[2].stale").value(true))
+        .andExpect(jsonPath("$.items[4].score").isEmpty());
+  }
+
+  @Test
+  void getJobsFiltersByMinScoreAndScoredOnly() throws Exception {
+    givenJobs();
+
+    mvc.perform(get("/api/jobs").param("minScore", "7"))
+        .andExpect(jsonPath("$.items[*].offer.id").value(
+            org.hamcrest.Matchers.contains("best", "mid", "old", "none")));
+    mvc.perform(get("/api/jobs").param("minScore", "7").param("scoredOnly", "true"))
+        .andExpect(jsonPath("$.total").value(3))
+        .andExpect(jsonPath("$.items[*].offer.id").value(
+            org.hamcrest.Matchers.contains("best", "mid", "old")));
+  }
+
+  @Test
+  void getJobsSortsByDateAndByDayThenScore() throws Exception {
+    givenJobs();
+
+    mvc.perform(get("/api/jobs").param("sort", "date"))
+        .andExpect(jsonPath("$.items[*].offer.id").value(
+            org.hamcrest.Matchers.contains("none", "low", "mid", "best", "old")));
+    mvc.perform(get("/api/jobs").param("sort", "date_score"))
+        .andExpect(jsonPath("$.items[*].offer.id").value(
+            org.hamcrest.Matchers.contains("low", "none", "best", "mid", "old")));
+  }
+
+  @Test
+  void getJobsPagesAndRejectsBadParams() throws Exception {
+    givenJobs();
+
+    mvc.perform(get("/api/jobs").param("page", "2").param("size", "2"))
+        .andExpect(jsonPath("$.total").value(5))
+        .andExpect(jsonPath("$.items[*].offer.id").value(
+            org.hamcrest.Matchers.contains("old", "low")));
+    mvc.perform(get("/api/jobs").param("page", "9").param("size", "2"))
+        .andExpect(jsonPath("$.items").isEmpty());
+    mvc.perform(get("/api/jobs").param("sort", "salary")).andExpect(status().isBadRequest());
+    mvc.perform(get("/api/jobs").param("size", "500")).andExpect(status().isBadRequest());
+  }
+
+  @Test
+  void getJobByIdReturnsFullOffer() throws Exception {
+    givenJobs();
+
+    mvc.perform(get("/api/jobs/best"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.offer.description").value("desc"))
+        .andExpect(jsonPath("$.score.matchScore").value(9));
+    mvc.perform(get("/api/jobs/nope")).andExpect(status().isNotFound());
   }
 
   @Test
@@ -298,7 +360,8 @@ class WebControllersTest {
 
     mvc.perform(get("/api/jobs"))
         .andExpect(status().isOk())
-        .andExpect(jsonPath("$.length()").value(0));
+        .andExpect(jsonPath("$.total").value(0))
+        .andExpect(jsonPath("$.items").isEmpty());
   }
 
   @Test
