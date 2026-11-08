@@ -246,6 +246,12 @@ function badges(e) {
   return b.join('');
 }
 
+function aiLine(e) {
+  if (!e.aiTools || !e.aiTools.length) return '';
+  const label = e.aiToolsUsage ? RU.aiToolsUsage[e.aiToolsUsage] : 'AI';
+  return `<div class="badges"><span class="badge ai">${label}: ${e.aiTools.map(esc).join(', ')}</span></div>`;
+}
+
 function where(o) {
   return [o.companyName, o.location].filter(Boolean).map(esc).join(' · ');
 }
@@ -264,6 +270,7 @@ function card(j) {
     <div class="salary">${salary(o)}${contract}</div>
     ${j.extraction ? `<div class="badges">${badges(e)}</div>` : ''}
     <div class="tags">${skills.slice(0, CARD_SKILLS).map(x => `<span class="tag">${esc(x)}</span>`).join('')}${rest ? `<span class="tag more">+${rest}</span>` : ''}</div>
+    ${aiLine(e)}
     <div class="foot"><span>${o.publishedAt ? 'опубликовано ' + esc(o.publishedAt.slice(0, 10)) : ''}</span>
       <span class="more-link">подробнее →</span></div>
   </div>`;
@@ -300,6 +307,9 @@ function detail(j) {
         ])}
         <h4>Обязательно</h4>${tagList(e.skills)}
         <h4>Будет плюсом</h4>${tagList(e.niceToHaveSkills, 'nice')}
+        <h4>AI</h4>${e.aiTools && e.aiTools.length
+          ? (e.aiToolsUsage ? `<div class="badges" style="margin-bottom:6px"><span class="badge ai">${RU.aiToolsUsage[e.aiToolsUsage]}</span></div>` : '') + tagList(e.aiTools)
+          : '<span class="none">не упоминается</span>'}
         <h4>Требования</h4>${bullets(e.requirements)}
       </div>
       <div class="dsec"><h3>Проект</h3>${bullets(e.projectDescription)}</div>
@@ -307,10 +317,7 @@ function detail(j) {
       <div class="dsec"><h3>Этапы найма</h3>${steps && steps.length
         ? `<div class="steps">${steps.map((x, i) => `<div class="step"><span class="n">${i + 1}</span><span>${esc(x)}</span></div>`).join('')}</div>`
         : NONE}</div>
-      <div class="dsec"><h3>Бенефиты</h3>${bullets(e.benefits)}</div>
-      <div class="dsec"><h3>AI</h3>${e.aiTools && e.aiTools.length
-        ? (e.aiToolsUsage ? `<div class="badges" style="margin-bottom:8px"><span class="badge ai">${RU.aiToolsUsage[e.aiToolsUsage]}</span></div>` : '') + tagList(e.aiTools)
-        : '<span class="none">не упоминается</span>'}</div>`;
+      <div class="dsec"><h3>Бенефиты</h3>${bullets(e.benefits)}</div>`;
   return `<div class="dhead">
       <button class="back" id="detailClose" aria-label="Закрыть">←</button>
       <div style="flex:1;min-width:0"><div class="title">${esc(o.title)}</div><div class="company">${where(o)}</div></div>
