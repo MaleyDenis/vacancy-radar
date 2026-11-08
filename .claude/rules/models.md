@@ -36,5 +36,8 @@
 ## JobView (`GET /api/jobs` element)
 `offer (RawJobOffer), extraction (OfferExtraction|null), score (OfferScore|null), stale`
 
+## JobPage (`GET /api/jobs`)
+`items (JobView, offer without description), total, page, size, staleCount`
+
 ## Analytics
 `date, totalScanned, skillFrequency, topCompanies, salaryDistribution, remotePercentage`

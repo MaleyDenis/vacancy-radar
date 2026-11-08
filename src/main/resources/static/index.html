@@ -20,6 +20,10 @@ body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,san
 .btn:disabled{opacity:.6;cursor:default}
 .status{font-size:13px;color:#4b5563;margin-bottom:12px;min-height:18px}
 .count{font-size:13px;color:#6b7280;margin-bottom:8px}
+.filters{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center;background:#fff;border:1px solid #e6e8eb;border-radius:12px;padding:10px 12px;margin-bottom:10px;font-size:14px}
+.filters label{display:flex;align-items:center;gap:6px;color:#374151}
+.filters select{font-size:14px;padding:5px 8px;border:1px solid #d0d4d9;border-radius:8px;background:#fff}
+.more-btn{display:block;margin:12px auto 0}
 .banner{display:flex;gap:10px;align-items:center;background:#fffbeb;border:1px solid #fde68a;color:#92400e;border-radius:12px;padding:10px 14px;margin-bottom:12px;font-size:14px}
 .banner .btn{margin-left:auto;padding:6px 12px}
 .list{display:flex;flex-direction:column;gap:10px}
@@ -35,7 +39,6 @@ body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,san
 .s-hi{background:#dcfce7;color:#166534}.s-mid{background:#fef3c7;color:#92400e}.s-lo{background:#f1f2f4;color:#4b5563}
 .stale-tag{font-size:10px;color:#b45309}
 .score-btn{padding:6px 10px;font-size:13px;white-space:nowrap}
-.section{font-size:13px;font-weight:600;color:#6b7280;margin:10px 2px 0}
 .reason{font-size:13px;color:#374151;background:#f8fafc;border-left:3px solid #c7d2fe;padding:6px 10px;border-radius:6px}
 .meta{font-size:13px;color:#4b5563}
 .salary{font-size:13px;font-weight:600}
@@ -119,8 +122,26 @@ textarea{width:100%;min-height:240px;font-family:ui-monospace,Menlo,monospace;fo
   </div>
 </div>
 
+<div class="filters" id="filters">
+  <label>Оценка от
+    <select id="fMinScore">
+      <option value="">любая</option>
+      <option>1</option><option>2</option><option>3</option><option>4</option><option>5</option>
+      <option>6</option><option>7</option><option>8</option><option>9</option><option>10</option>
+    </select>
+  </label>
+  <label><input type="checkbox" id="fScoredOnly"> только оценённые</label>
+  <label>Сортировка
+    <select id="fSort">
+      <option value="score">по оценке</option>
+      <option value="date">по дате</option>
+      <option value="date_score">по дате + оценке</option>
+    </select>
+  </label>
+</div>
 <div class="count" id="count"></div>
 <div class="list" id="list"></div>
+<button class="btn more-btn" id="moreBtn" style="display:none">Показать ещё</button>
 </div>
 <aside class="detail" id="detail"></aside>
 </div>
@@ -347,29 +368,76 @@ function closeDetail() {
   document.querySelectorAll('.card.active').forEach(c => c.classList.remove('active'));
 }
 
-async function loadJobs() {
+// ---------- filters (kept in the URL) ----------
+const PAGE_SIZE = 50;
+let filters = null;
+let page = 1, total = 0;
+
+function initFilters() {
+  const q = new URLSearchParams(location.search);
+  const profileMin = profile && profile.minMatchScore != null ? String(profile.minMatchScore) : '';
+  filters = {
+    minScore: q.has('minScore') ? q.get('minScore') : profileMin,
+    scoredOnly: q.get('scoredOnly') === 'true',
+    sort: ['score', 'date', 'date_score'].includes(q.get('sort')) ? q.get('sort') : 'score',
+  };
+  $('fMinScore').value = filters.minScore;
+  $('fScoredOnly').checked = filters.scoredOnly;
+  $('fSort').value = filters.sort;
+}
+
+function onFilterChange() {
+  filters = {minScore: $('fMinScore').value, scoredOnly: $('fScoredOnly').checked, sort: $('fSort').value};
+  const q = new URLSearchParams();
+  if (filters.minScore !== '') q.set('minScore', filters.minScore);
+  if (filters.scoredOnly) q.set('scoredOnly', 'true');
+  if (filters.sort !== 'score') q.set('sort', filters.sort);
+  history.replaceState(null, '', q.toString() ? '?' + q : location.pathname);
+  loadJobs();
+}
+['fMinScore', 'fScoredOnly', 'fSort'].forEach(id => $(id).onchange = onFilterChange);
+
+function jobsUrl(p) {
+  const q = new URLSearchParams({sort: filters.sort, page: p, size: PAGE_SIZE});
+  if (filters.minScore !== '') q.set('minScore', filters.minScore);
+  if (filters.scoredOnly) q.set('scoredOnly', 'true');
+  return '/api/jobs?' + q;
+}
+
+// reset = first page (filters changed, scan finished, …); otherwise append the next page
+async function loadJobs(reset = true) {
+  const next = reset ? 1 : page + 1;
+  let data;
   try {
-    jobs = await api('GET', '/api/jobs');
+    data = await api('GET', jobsUrl(next));
   } catch (err) {
-    jobs = [];
-    $('list').innerHTML = `<div class="empty">Не удалось загрузить вакансии: ${esc(err.message)}</div>`;
+    if (reset) {
+      jobs = [];
+      $('list').innerHTML = `<div class="empty">Не удалось загрузить вакансии: ${esc(err.message)}</div>`;
+      $('moreBtn').style.display = 'none';
+    } else {
+      toast(err.message, true);
+    }
     return;
   }
-  const min = profile && profile.minMatchScore != null ? profile.minMatchScore : null;
-  const scored = jobs.filter(j => j.score), unscored = jobs.filter(j => !j.score);
-  $('count').textContent = jobs.length
-    ? `${scored.length} ${plural(scored.length, 'подходящая', 'подходящие', 'подходящих')}` + (min != null ? ` (оценка от ${min})` : '')
-      + ` · ${unscored.length} без оценки`
-    : '';
-  const stale = jobs.filter(j => j.stale).length;
-  $('staleBanner').style.display = stale ? 'flex' : 'none';
-  $('staleCount').textContent = `${stale} ${plural(stale, 'оценка', 'оценки', 'оценок')}`;
-  $('list').innerHTML = jobs.length
-    ? scored.map(card).join('')
-      + (unscored.length ? `<div class="section">Без оценки — ${unscored.length}</div>` + unscored.map(card).join('') : '')
-    : '<div class="empty">Нет подходящих вакансий. Нажми «Сканировать» или снизь minMatchScore в профиле.</div>';
-  if (openId && jobs.some(j => j.offer.id === openId)) openDetail(openId); else closeDetail();
+  page = next;
+  total = data.total;
+  jobs = reset ? data.items : jobs.concat(data.items);
+  $('count').textContent = total ? `${total} ${plural(total, 'вакансия', 'вакансии', 'вакансий')} · показано ${jobs.length}` : '';
+  $('staleBanner').style.display = data.staleCount ? 'flex' : 'none';
+  $('staleCount').textContent = `${data.staleCount} ${plural(data.staleCount, 'оценка', 'оценки', 'оценок')}`;
+  if (reset) {
+    $('list').innerHTML = jobs.length ? jobs.map(card).join('')
+      : '<div class="empty">Нет вакансий под эти фильтры. Ослабь фильтры или нажми «Сканировать».</div>';
+  } else {
+    $('list').insertAdjacentHTML('beforeend', data.items.map(card).join(''));
+  }
+  $('moreBtn').style.display = jobs.length < total ? 'block' : 'none';
+  if (reset) {
+    if (openId && jobs.some(j => j.offer.id === openId)) openDetail(openId); else closeDetail();
+  }
 }
+$('moreBtn').onclick = () => loadJobs(false);
 
 // ---------- status / background tasks ----------
 let busy = false;
@@ -517,6 +585,7 @@ $('saveProfile').onclick = async () => {
 // ---------- start ----------
 (async () => {
   await loadProfile();
+  initFilters();
   await loadJobs();
   await refreshStatus();
 })();
