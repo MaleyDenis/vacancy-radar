@@ -82,7 +82,7 @@ class WebControllersTest {
 
   private StoredRawOffer stored(String id) {
     var offer = new RawJobOffer(id, "Java Dev", "Acme", null, "Kraków", true, "2026-07-04",
-        "senior", "desc", 18000, 26000, "PLN", "month", false, "b2b", "url", "justjoin", null);
+        "senior", "desc", 18000, 26000, "PLN", "month", false, "b2b", "url", "justjoin", null, null);
     return new StoredRawOffer(offer, "2026-07-04T00:00:00Z", null);
   }
 
@@ -158,7 +158,7 @@ class WebControllersTest {
 
   private StoredRawOffer stored(String id, String publishedAt) {
     var offer = new RawJobOffer(id, "Java Dev", "Acme", null, "Kraków", true, publishedAt,
-        "senior", "desc", 18000, 26000, "PLN", "month", false, "b2b", "url", "justjoin", null);
+        "senior", "desc", 18000, 26000, "PLN", "month", false, "b2b", "url", "justjoin", null, null);
     return new StoredRawOffer(offer, "2026-07-04T00:00:00Z", null);
   }
 

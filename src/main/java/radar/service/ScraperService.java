@@ -71,11 +71,17 @@ public class ScraperService {
           limitReached = true;
           break;
         }
-        // Known offers are left untouched — only brand-new ones enter the pool.
-        if (!pool.containsKey(offer.id())) {
+        var known = pool.get(offer.id());
+        if (known == null) {
           pool.put(offer.id(), StoredRawOffer.fresh(offer, now));
           added++;
           newOnPage++;
+        } else if (offer.locations() != null
+            && !offer.locations().equals(known.offer().locations())) {
+          // Known offers keep everything except their city list, which the listing may update
+          // (or which older entries lack).
+          pool.put(offer.id(), new StoredRawOffer(known.offer().withLocations(offer.locations()),
+              known.firstSeenAt(), known.detailsFetchedAt()));
         }
         processed++;
       }

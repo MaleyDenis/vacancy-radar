@@ -12,6 +12,7 @@ import java.net.http.HttpResponse;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
@@ -189,7 +190,27 @@ public class JustJoinConnector {
         textOrNull(employment, "type"), // contract type is known even without a salary
         slug == null ? null : OFFER_URL + slug,
         SOURCE,
-        null); // domain — filled by the details step
+        null, // domain — filled by the details step
+        cities(n));
+  }
+
+  /**
+   * Every city the offer is open in, main city first, without repeats. JustJoin lists one offer
+   * (one guid) with a "multilocation" array — one entry (own slug) per city.
+   */
+  private static List<String> cities(JsonNode n) {
+    var cities = new LinkedHashSet<String>();
+    var main = textOrNull(n, "city");
+    if (main != null) {
+      cities.add(main);
+    }
+    for (var location : n.path("multilocation")) {
+      var city = textOrNull(location, "city");
+      if (city != null) {
+        cities.add(city);
+      }
+    }
+    return List.copyOf(cities);
   }
 
   /**

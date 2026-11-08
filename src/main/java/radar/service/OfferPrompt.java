@@ -12,7 +12,7 @@ final class OfferPrompt {
     var sb = new StringBuilder();
     append(sb, "Title", offer.title());
     append(sb, "Company", offer.companyName());
-    append(sb, "Location", offer.location());
+    append(sb, "Locations", String.join(", ", offer.allLocations()));
     append(sb, "Remote", offer.remote() == null ? null : offer.remote().toString());
     append(sb, "Experience level", offer.experienceLevel());
     append(sb, "Contract type", offer.contractType());

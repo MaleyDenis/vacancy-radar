@@ -43,7 +43,7 @@ class ExtractionServiceTest {
 
   private StoredRawOffer stored(String id, String description) {
     var offer = new RawJobOffer(id, "Java Dev", "Acme", null, "Kraków", true, "2026-11-01",
-        "senior", description, null, null, null, null, null, "b2b", "url", "justjoin", null);
+        "senior", description, null, null, null, null, null, "b2b", "url", "justjoin", null, null);
     return new StoredRawOffer(offer, "2026-11-01T00:00:00Z", null);
   }
 
