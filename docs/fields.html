@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>vacancy-radar — поля вакансии</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;background:#f6f7f9;color:#1f2937;line-height:1.4}
+.wrap{max-width:900px;margin:0 auto;padding:20px 14px 40px}
+h1{font-size:22px;margin:0 0 4px}
+.sub{color:#6b7280;font-size:14px;margin-bottom:16px}
+.legend{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:18px;font-size:13px}
+.group{background:#fff;border:1px solid #e6e8eb;border-radius:14px;margin-bottom:16px;overflow:hidden}
+.group h2{font-size:16px;margin:0;padding:12px 14px;display:flex;align-items:center;gap:8px;border-bottom:1px solid #eef0f2}
+.group .hint{font-size:13px;color:#6b7280;padding:8px 14px 0}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th,td{text-align:left;padding:8px 14px;border-top:1px solid #f1f2f4;vertical-align:top}
+th{font-size:12px;color:#6b7280;font-weight:600;border-top:none}
+code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:13px;color:#111827}
+.vals{display:flex;flex-wrap:wrap;gap:4px}
+.val{font-family:ui-monospace,Menlo,monospace;font-size:12px;padding:1px 7px;border-radius:999px;background:#eef2ff;color:#3730a3}
+.type{color:#6b7280;font-size:13px;white-space:nowrap}
+.badge{font-size:11px;font-weight:600;padding:2px 8px;border-radius:999px;white-space:nowrap}
+.b-site{background:#e5e7eb;color:#374151}
+.b-extract{background:#dcfce7;color:#166534}
+.b-score{background:#dbeafe;color:#1e40af}
+.b-pending{background:#fef3c7;color:#92400e}
+.b-analytics{background:#f3e8ff;color:#6b21a8}
+tr.pending td{background:#fffbeb}
+@media (max-width:600px){
+  thead{display:none}
+  table,tbody,tr,td{display:block;width:100%}
+  tr{border-top:1px solid #f1f2f4;padding:6px 0}
+  td{border:none;padding:3px 14px}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Поля вакансии</h1>
+  <div class="sub">Откуда берётся каждое поле. Чтобы добавить поле — допиши строку в массив <code>FIELDS</code> внизу файла.</div>
+  <div class="legend">
+    <span class="badge b-site">сайт</span> берётся с JustJoin, без AI
+    <span class="badge b-extract">AI · extraction</span> Claude, один раз на вакансию, не зависит от профиля
+    <span class="badge b-score">AI · scoring</span> Claude, зависит от профиля
+    <span class="badge b-analytics">аналитика</span> поле считается в аналитике
+    <span class="badge b-pending">обсуждается</span> ещё не решили
+  </div>
+  <div id="groups"></div>
+</div>
+
+<script>
+// source: site | extract | score
+// status: (empty) = agreed, 'pending' = not decided yet
+// analytics: true = used in analytics (counts, trends)
+// values: allowed values for enum-like fields; every AI field may also be null ("not said in the text")
+const FIELDS = [
+  // ---------- сайт (raw-offers.json) ----------
+  {source:'site', name:'title', type:'текст'},
+  {source:'site', name:'companyName', type:'текст'},
+  {source:'site', name:'companySize', type:'текст'},
+  {source:'site', name:'location', type:'текст', analytics:true},
+  {source:'site', name:'remote', type:'да/нет'},
+  {source:'site', name:'publishedAt', type:'дата', analytics:true},
+  {source:'site', name:'experienceLevel', type:'значение', values:['junior','mid','senior','manager']},
+  {source:'site', name:'salaryMin / salaryMax', type:'число', analytics:true},
+  {source:'site', name:'currency', type:'значение', values:['PLN','EUR','USD']},
+  {source:'site', name:'salaryUnit', type:'значение', values:['hour','day','month','year']},
+  {source:'site', name:'salaryGross', type:'да/нет', note:'брутто / нетто'},
+  {source:'site', name:'contractType', type:'значение', values:['b2b','permanent','…'], analytics:true},
+  {source:'site', name:'description', type:'текст', note:'со страницы вакансии (JSON-LD)'},
+  {source:'site', name:'domain', type:'текст', note:'со страницы вакансии (JSON-LD)'},
+  {source:'site', name:'applyUrl', type:'ссылка'},
+
+  // ---------- AI · extraction (extractions.json) ----------
+  {source:'extract', name:'skills', type:'список', analytics:true, note:'обязательные технологии; канонические имена без версий; без AI-инструментов'},
+  {source:'extract', name:'niceToHaveSkills', type:'список', analytics:true, note:'«будет плюсом»; не пересекается со skills'},
+  {source:'extract', name:'requirements', type:'список', note:'для карточки'},
+  {source:'extract', name:'responsibilities', type:'текст', note:'своими словами, для карточки'},
+  {source:'extract', name:'projectDescription', type:'текст', note:'своими словами, для карточки'},
+  {source:'extract', name:'realSeniority', type:'значение', values:['junior','mid','senior','lead'], analytics:true},
+  {source:'extract', name:'englishLevel', type:'значение', values:['A2','B1','B2','C1','C2'], analytics:true},
+  {source:'extract', name:'polishRequired', type:'да/нет', analytics:true, note:'null, если про польский не сказано'},
+  {source:'extract', name:'workMode', type:'значение', values:['remote','hybrid','office'], analytics:true},
+  {source:'extract', name:'benefits', type:'список', analytics:true, note:'короткие названия'},
+  {source:'extract', name:'recruitmentSteps', type:'текст', note:'этапы найма своими словами — важно'},
+  {source:'extract', name:'industry', type:'текст', analytics:true, note:'fintech, e-commerce, …'},
+  {source:'extract', name:'companyType', type:'значение', values:['product','outsourcing','bodyleasing','agency'], analytics:true},
+  {source:'extract', name:'leadership', type:'да/нет', analytics:true, note:'ждут менторинг / руководство людьми'},
+  {source:'extract', name:'aiTools', type:'список', analytics:true, note:'AI-инструменты разработки: Copilot, Cursor, Claude Code…'},
+  {source:'extract', name:'aiToolsUsage', type:'значение', values:['required','preferred','used'], analytics:true},
+  {source:'extract', name:'minYearsExperience', type:'число', analytics:true, status:'pending'},
+  {source:'extract', name:'projectStage', type:'значение', values:['greenfield','development','maintenance','migration'], analytics:true, status:'pending'},
+  {source:'extract', name:'aiInProduct', type:'значение', values:['core','feature'], analytics:true, status:'pending', note:'AI в самом продукте'},
+  {source:'extract', name:'aiTech', type:'список', analytics:true, status:'pending', note:'OpenAI API, LangChain4j, Spring AI, RAG…'},
+
+  // ---------- AI · scoring (scores.json) ----------
+  {source:'score', name:'matchScore', type:'число', values:['1…10']},
+  {source:'score', name:'reason', type:'текст', note:'одно предложение, до 20 слов'},
+];
+
+const GROUPS = [
+  {source:'site', title:'Сайт', file:'raw-offers.json', badge:'b-site', label:'сайт',
+   hint:'Данные JustJoin как есть: со списка вакансий и со страницы вакансии. Без AI.'},
+  {source:'extract', title:'AI · extraction', file:'extractions.json', badge:'b-extract', label:'AI · extraction',
+   hint:'Claude Haiku читает текст вакансии один раз и вытаскивает факты. Профиль не используется — смена профиля их не пересчитывает. Любое поле = null, если в тексте о нём ничего нет.'},
+  {source:'score', title:'AI · scoring', file:'scores.json', badge:'b-score', label:'AI · scoring',
+   hint:'Claude Haiku сравнивает вакансию с профилем. Скан оценивает 30 самых свежих, остальные — кнопкой «Оценить».'},
+];
+
+const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+document.getElementById('groups').innerHTML = GROUPS.map(g => {
+  const rows = FIELDS.filter(f => f.source === g.source).map(f => `
+    <tr class="${f.status === 'pending' ? 'pending' : ''}">
+      <td><code>${esc(f.name)}</code>
+        ${f.analytics ? ' <span class="badge b-analytics">аналитика</span>' : ''}
+        ${f.status === 'pending' ? ' <span class="badge b-pending">обсуждается</span>' : ''}</td>
+      <td class="type">${esc(f.type)}</td>
+      <td>${f.values ? `<div class="vals">${f.values.map(v => `<span class="val">${esc(v)}</span>`).join('')}</div>` : ''}
+        ${f.note ? `<div class="type" style="white-space:normal">${esc(f.note)}</div>` : ''}</td>
+    </tr>`).join('');
+  return `<div class="group">
+    <h2><span class="badge ${g.badge}">${g.label}</span> ${g.title} <code style="margin-left:auto;color:#6b7280">${g.file}</code></h2>
+    <div class="hint">${g.hint}</div>
+    <table><thead><tr><th>Поле</th><th>Тип</th><th>Значения / заметка</th></tr></thead><tbody>${rows}</tbody></table>
+  </div>`;
+}).join('');
+</script>
+</body>
+</html>
