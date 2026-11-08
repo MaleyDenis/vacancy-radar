@@ -199,8 +199,8 @@ function card(j) {
     .filter(Boolean).map(esc).join(' · ');
   const list = xs => (xs || []).map(x => `<li>${esc(x)}</li>`).join('');
   const details = j.extraction ? `<details><summary>Подробнее ▾</summary><div class="body">
-      ${e.projectDescription ? `<div><h4>Проект</h4>${esc(e.projectDescription)}</div>` : ''}
-      ${e.responsibilities ? `<div><h4>Обязанности</h4>${esc(e.responsibilities)}</div>` : ''}
+      ${e.projectDescription && e.projectDescription.length ? `<div><h4>Проект</h4><ul>${list(e.projectDescription)}</ul></div>` : ''}
+      ${e.responsibilities && e.responsibilities.length ? `<div><h4>Обязанности</h4><ul>${list(e.responsibilities)}</ul></div>` : ''}
       ${e.requirements && e.requirements.length ? `<div><h4>Требования</h4><ul>${list(e.requirements)}</ul></div>` : ''}
     </div></details>` : '';
   return `<div class="card ${j.stale ? 'stale' : ''}" data-card="${esc(o.id)}">

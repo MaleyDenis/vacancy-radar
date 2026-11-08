@@ -25,8 +25,8 @@ class ExtractedFactsTest {
         Optional.of(List.of("Java", " Spring Boot ", "Java", "")),
         Optional.of(List.of("Kafka", "Java")),
         Optional.of(List.of()),
-        Optional.of("  "),
-        Optional.of("Payments platform"),
+        Optional.of(List.of("a", "b", "c", "d", "e", "f", "g")),
+        Optional.of(List.of("Payments platform", "EU banks")),
         Optional.of("Senior"),
         Optional.of("b2"),
         Optional.of(false),
@@ -44,7 +44,8 @@ class ExtractedFactsTest {
     assertThat(extraction.skills()).containsExactly("Java", "Spring Boot");
     assertThat(extraction.niceToHaveSkills()).containsExactly("Kafka"); // no overlap with skills
     assertThat(extraction.requirements()).isNull();      // empty list -> null
-    assertThat(extraction.responsibilities()).isNull();  // blank -> null
+    assertThat(extraction.responsibilities()).containsExactly("a", "b", "c", "d", "e"); // max 5
+    assertThat(extraction.projectDescription()).containsExactly("Payments platform", "EU banks");
     assertThat(extraction.realSeniority()).isEqualTo("senior");
     assertThat(extraction.englishLevel()).isEqualTo("B2");
     assertThat(extraction.polishRequired()).isFalse();
