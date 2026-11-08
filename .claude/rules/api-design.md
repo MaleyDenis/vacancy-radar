@@ -13,6 +13,8 @@ POST   /api/scores/rescore?days=N       — rescore scored offers of last N days
 DELETE /api/scores                      — delete scores.json (409 if busy)
 DELETE /api/data                        — delete everything except profile.json (409 if busy)
 GET    /api/profile, PUT /api/profile   — user profile
+GET    /api/analytics?domain=all|finance|insurance|retail|it|other|unknown
+                                        — Dashboard (no AI, computed from the JSON files; 400 unknown domain)
 GET    /api/trends                      — legacy, unused
 ```
 
@@ -26,3 +28,11 @@ GET    /api/trends                      — legacy, unused
 - `page` (1-based, default 1), `size` (default 50, max 200).
 - Items are card views: `offer.description` is null; the detail view loads `GET /api/jobs/{id}`.
 - Filtering, sorting and paging run on the server (the pool may grow to thousands of offers).
+
+## GET /api/analytics
+
+- Only offers with an extraction count. Skills go through `SkillNames.clean` at read time
+  (versions stripped, synonyms merged, junk dropped) — editing those lists needs no re-extraction.
+- Domains: `Domain.of(industry)` by keywords; insurance before finance; small groups → `other`.
+- Salary: mid of min/max → PLN/month (hour × 168, day × 21, year ÷ 12; `radar.rate.eur|usd`);
+  median and 25th–75th percentile, separately for `b2b` (net) and `permanent` (gross).

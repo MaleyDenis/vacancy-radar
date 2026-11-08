@@ -26,6 +26,15 @@ class SkillNamesTest {
   }
 
   @Test
+  void mergesSynonyms() {
+    assertThat(SkillNames.canonical("Apache Kafka")).isEqualTo("Kafka");
+    assertThat(SkillNames.canonical("postgres")).isEqualTo("PostgreSQL");
+    assertThat(SkillNames.canonical("RESTful APIs")).isEqualTo("REST");
+    assertThat(SkillNames.clean(List.of("Kafka", "Apache Kafka", "K8s", "Kubernetes")))
+        .containsExactly("Kafka", "Kubernetes");
+  }
+
+  @Test
   void dropsJunkAndDuplicates() {
     assertThat(SkillNames.clean(List.of("C++", "C++17", "C++20", "Jira", "Confluence", "Git",
         "Agile", "Databases", "PostgreSQL", "java", "Java 21")))
