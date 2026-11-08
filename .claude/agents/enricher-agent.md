@@ -4,7 +4,8 @@
 Owns the Claude steps: `ClaudeClient`, `ExtractionService`, `ScoringService`, `OfferPrompt`.
 
 ## Responsibilities
-- `ExtractionService`: once per offer with a description → `OfferExtraction` in `extractions.json`
+- `ExtractionService`: once per offer with a description → `ExtractedFacts` (Claude output) →
+  `OfferExtraction` in `extractions.json` (fields: `docs/fields.html`)
 - `ScoringService`: raw offer text + full `UserProfile` → `OfferScore` (matchScore 1–10, reason,
   profileHash) in `scores.json`; scan scores the newest `radar.score.batch` unscored offers
   (the rest via the card button); `rescoreRecent(days)` re-scores already scored offers published

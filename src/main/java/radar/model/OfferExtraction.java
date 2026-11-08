@@ -1,30 +1,36 @@
 package radar.model;
 
-import com.fasterxml.jackson.annotation.JsonClassDescription;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import com.fasterxml.jackson.annotation.JsonPropertyDescription;
 import java.util.List;
 
 /**
  * Profile-independent facts Claude extracts from an offer's text, once per offer. Stored in
- * {@code extractions.json} keyed by offer id. Field descriptions are sent to Claude as the schema.
+ * {@code extractions.json} keyed by offer id. Any field is null when the offer text does not say.
+ * Claude answers with {@code radar.service.ExtractedFacts}; see there for what each field means.
+ *
+ * @param realSeniority junior | mid | senior | lead
+ * @param englishLevel  A2 | B1 | B2 | C1 | C2
+ * @param workMode      remote | hybrid | office
+ * @param companyType   product | outsourcing | bodyleasing | agency
+ * @param aiToolsUsage  required | preferred | used
  */
 @JsonIgnoreProperties(ignoreUnknown = true)
-@JsonClassDescription("Facts extracted from a single job offer.")
 public record OfferExtraction(
-    @JsonPropertyDescription(
-        "Every technical skill or technology mentioned anywhere in the offer text "
-            + "(languages, frameworks, tools, databases, cloud, methodologies).")
     List<String> skills,
-    @JsonPropertyDescription("The concrete requirements the candidate must meet, as a list.")
+    List<String> niceToHaveSkills,
     List<String> requirements,
-    @JsonPropertyDescription(
-        "The day-to-day responsibilities, summarised in your own words, a few short sentences.")
     String responsibilities,
-    @JsonPropertyDescription(
-        "What the project/product is about, summarised in your own words, a few short sentences.")
     String projectDescription,
-    @JsonPropertyDescription("The real seniority the role demands: junior, mid, senior, or lead.")
-    String realSeniority
+    String realSeniority,
+    String englishLevel,
+    Boolean polishRequired,
+    String workMode,
+    List<String> benefits,
+    String recruitmentSteps,
+    String industry,
+    String companyType,
+    Boolean leadership,
+    List<String> aiTools,
+    String aiToolsUsage
 ) {
 }
