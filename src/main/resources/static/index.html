@@ -519,12 +519,12 @@ async function startTask(request) {
 // ---------- actions ----------
 // ---------- scan with options ----------
 const SCAN_DEFAULT_N = 30;
-const EXTRACT_COST_USD = 0.004; // about one Claude Haiku extraction
+const EXTRACT_COST_USD = 0.001; // about one Claude Haiku 5.5 extraction (effort low)
 
 function scanCostText() {
   const n = parseInt($('scanN').value, 10) || 0;
   return $('scanFull').checked
-    ? 'Полное: все ~580 вакансий JustJoin. Extraction только для новых — до ~$2.5 при первом проходе, потом копейки. Оценки скан не делает.'
+    ? 'Полное: все ~580 вакансий JustJoin. Extraction только для новых — до ~$0.6 при первом проходе, потом копейки. Оценки скан не делает.'
     : `Extraction для новых из последних ${n}: до ~$${(n * EXTRACT_COST_USD).toFixed(2)}. Оценки скан не делает.`;
 }
 

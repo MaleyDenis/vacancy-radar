@@ -18,5 +18,5 @@ Owns the Claude steps: `ClaudeClient`, `ExtractionService`, `ScoringService`, `O
 - Filtering by `minMatchScore` — done in `GET /api/jobs`
 
 ## Key constraints
-- Model: `claude-haiku-4-5-20251001` — do NOT switch to Sonnet/Opus without approval
+- Model: `claude-haiku-5-5`, effort `low` (`ClaudeClient`) — do NOT switch to Sonnet/Opus without approval
 - NEVER send raw HTML to Claude — plain text only
