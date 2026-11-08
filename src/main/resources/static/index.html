@@ -85,6 +85,12 @@ textarea{width:100%;min-height:240px;font-family:ui-monospace,Menlo,monospace;fo
 .modal{background:#fff;border-radius:16px;max-width:420px;width:100%;padding:20px;box-shadow:0 20px 50px rgba(0,0,0,.2)}
 .modal h3{margin:0 0 8px;font-size:17px}
 .modal p{margin:0 0 14px;color:#4b5563;font-size:14px;line-height:1.45}
+.opts{display:flex;flex-direction:column;gap:10px;margin-bottom:14px}
+.opt{display:flex;gap:10px;align-items:flex-start;border:1px solid #e6e8eb;border-radius:10px;padding:10px 12px;cursor:pointer;font-size:14px}
+.opt:has(input:checked){border-color:#2563eb;background:#eff6ff}
+.opt .sub{display:block;color:#6b7280;font-size:13px;margin-top:2px}
+.opt input[type=number]{width:70px;margin:0 4px;padding:3px 6px;border:1px solid #d0d4d9;border-radius:6px;font-size:14px}
+.cost{font-size:13px;color:#6b7280;margin:0 0 14px}
 .modal .actions{display:flex;justify-content:flex-end;gap:8px}
 .toast.err{background:#b42318}
 .toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#111827;color:#fff;padding:10px 16px;border-radius:10px;font-size:14px;opacity:0;transition:opacity .2s;pointer-events:none}
@@ -146,6 +152,7 @@ textarea{width:100%;min-height:240px;font-family:ui-monospace,Menlo,monospace;fo
   <div class="modal" role="dialog" aria-modal="true">
     <h3 id="mTitle"></h3>
     <p id="mText"></p>
+    <div id="mBody"></div>
     <div class="actions">
       <button class="btn" id="mCancel">Отмена</button>
       <button class="btn" id="mOk"></button>
@@ -199,9 +206,12 @@ function plural(n, one, few, many) {
 }
 
 let onOk = null, onCancel = null;
-function modal({title, text, ok, danger}) {
+// body: optional extra HTML (form controls) shown under the text
+function modal({title, text, ok, danger, body}) {
   $('mTitle').textContent = title;
-  $('mText').textContent = text;
+  $('mText').textContent = text || '';
+  $('mText').style.display = text ? 'block' : 'none';
+  $('mBody').innerHTML = body || '';
   $('mOk').textContent = ok;
   $('mOk').className = 'btn ' + (danger ? 'solid-danger' : 'primary');
   $('overlay').classList.add('open');
@@ -507,7 +517,43 @@ async function startTask(request) {
 }
 
 // ---------- actions ----------
-$('scanBtn').onclick = () => startTask(() => api('POST', '/api/scan'));
+// ---------- scan with options ----------
+const SCAN_DEFAULT_N = 30;
+const EXTRACT_COST_USD = 0.004; // about one Claude Haiku extraction
+
+function scanCostText() {
+  const n = parseInt($('scanN').value, 10) || 0;
+  return $('scanFull').checked
+    ? 'Полное: все ~580 вакансий JustJoin. Extraction только для новых — до ~$2.5 при первом проходе, потом копейки. Оценки скан не делает.'
+    : `Extraction для новых из последних ${n}: до ~$${(n * EXTRACT_COST_USD).toFixed(2)}. Оценки скан не делает.`;
+}
+
+$('scanBtn').onclick = async () => {
+  const body = `<div class="opts">
+      <label class="opt"><input type="radio" name="scanMode" id="scanLast" checked>
+        <span>Последние <input type="number" id="scanN" min="1" max="1000" value="${SCAN_DEFAULT_N}"> вакансий
+          <span class="sub">самые свежие с JustJoin; уже скачанные не обрабатываются повторно</span></span></label>
+      <label class="opt"><input type="radio" name="scanMode" id="scanFull">
+        <span>Полное
+          <span class="sub">все страницы JustJoin (~580 вакансий); дописывает города уже известным</span></span></label>
+    </div>
+    <div class="cost" id="scanCost"></div>`;
+  const opened = modal({title: 'Сканировать', ok: 'Запустить', body});
+  const refresh = () => { $('scanCost').textContent = scanCostText(); };
+  $('scanN').oninput = () => { $('scanLast').checked = true; refresh(); };
+  $('scanN').onfocus = () => { $('scanLast').checked = true; refresh(); };
+  $('scanLast').onchange = refresh;
+  $('scanFull').onchange = refresh;
+  refresh();
+  if (!await opened) return;
+  if ($('scanFull').checked) {
+    startTask(() => api('POST', '/api/scan?fullFetch=true'));
+    return;
+  }
+  const n = parseInt($('scanN').value, 10);
+  if (!(n > 0)) { toast('Укажи число вакансий больше нуля', true); return; }
+  startTask(() => api('POST', `/api/scan?limit=${n}`));
+};
 
 
 
