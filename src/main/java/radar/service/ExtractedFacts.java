@@ -16,12 +16,10 @@ import radar.model.OfferExtraction;
  */
 @JsonClassDescription("Facts extracted from a single job offer. Use null when the text does not say.")
 public record ExtractedFacts(
-    @JsonPropertyDescription("Required (must-have) technologies only: languages, frameworks, "
-        + "databases, cloud, tools. Canonical names without versions ('Java', 'Spring Boot', "
-        + "'PostgreSQL'). No soft skills, methodologies or AI coding tools.")
+    @JsonPropertyDescription("Required (must-have) technologies. " + SKILL_RULES)
     Optional<List<String>> skills,
-    @JsonPropertyDescription("Nice-to-have technologies ('a plus', 'nice to have'), same naming "
-        + "rules as skills. Never repeat a skill listed in skills.")
+    @JsonPropertyDescription("Nice-to-have technologies ('a plus', 'nice to have'). "
+        + "Never repeat a skill listed in skills. " + SKILL_RULES)
     Optional<List<String>> niceToHaveSkills,
     @JsonPropertyDescription("The concrete requirements the candidate must meet, as a list.")
     Optional<List<String>> requirements,
@@ -54,7 +52,9 @@ public record ExtractedFacts(
         + "(builds projects for clients), bodyleasing (the candidate is placed at a client), agency "
         + "(recruitment agency, real employer hidden).")
     Optional<String> companyType,
-    @JsonPropertyDescription("True if the role expects mentoring or leading people.")
+    @JsonPropertyDescription("True only if the text says the role mentors or leads people "
+        + "(tech lead, team lead, mentoring juniors). False only if the text says it does not. "
+        + "Null otherwise — general teamwork or helping colleagues is not leadership.")
     Optional<Boolean> leadership,
     @JsonPropertyDescription("AI coding tools mentioned for the developer's own work "
         + "('GitHub Copilot', 'Cursor', 'Claude Code', 'ChatGPT'). Canonical names.")
@@ -63,6 +63,14 @@ public record ExtractedFacts(
         + "plus), used (the team just uses them). Null if no AI coding tools are mentioned.")
     Optional<String> aiToolsUsage
 ) {
+
+  static final String SKILL_RULES = "Technologies only: languages, frameworks, libraries, "
+      + "databases, message brokers, cloud services, containers, build tools. "
+      + "Canonical name without version: 'C++17' -> 'C++', 'Java 21' -> 'Java', "
+      + "'Spring Boot 3' -> 'Spring Boot'. Name the specific product ('PostgreSQL', 'Oracle'), "
+      + "never generic words ('databases', 'SQL databases', 'cloud'). "
+      + "NOT skills: Jira, Confluence, Git, Agile, Scrum, Kanban, code review, testing, "
+      + "design patterns, mentoring, business domains (e-commerce, fintech), AI coding tools.";
 
   private static final Set<String> SENIORITY = Set.of("junior", "mid", "senior", "lead");
   private static final Set<String> ENGLISH = Set.of("A2", "B1", "B2", "C1", "C2");
@@ -73,10 +81,14 @@ public record ExtractedFacts(
 
   /** The stored form: Optionals unwrapped to nulls, enum-like values checked. */
   public OfferExtraction toExtraction() {
-    var must = list(skills);
-    var nice = list(niceToHaveSkills);
+    var must = skills(skills);
+    var nice = skills(niceToHaveSkills);
     if (must != null && nice != null) {
-      nice = nice.stream().filter(skill -> !must.contains(skill)).toList();
+      var mustKeys = must.stream().map(skill -> skill.toLowerCase(Locale.ROOT)).toList();
+      nice = nice.stream()
+          .filter(skill -> !mustKeys.contains(skill.toLowerCase(Locale.ROOT)))
+          .toList();
+      nice = nice.isEmpty() ? null : nice;
     }
     return new OfferExtraction(must, nice, list(requirements), text(responsibilities),
         text(projectDescription), oneOf(realSeniority, SENIORITY, false),
@@ -84,6 +96,15 @@ public record ExtractedFacts(
         oneOf(workMode, WORK_MODE, false), list(benefits), text(recruitmentSteps), text(industry),
         oneOf(companyType, COMPANY_TYPE, false), leadership.orElse(null), list(aiTools),
         oneOf(aiToolsUsage, AI_USAGE, false));
+  }
+
+  private static List<String> skills(Optional<List<String>> value) {
+    var cleaned = list(value);
+    if (cleaned == null) {
+      return null;
+    }
+    var result = SkillNames.clean(cleaned);
+    return result.isEmpty() ? null : result;
   }
 
   private static List<String> list(Optional<List<String>> value) {
