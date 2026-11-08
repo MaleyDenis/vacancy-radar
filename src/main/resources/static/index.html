@@ -7,7 +7,8 @@
 <style>
 *{box-sizing:border-box}
 body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;font-size:15px;color:#1f2328;background:#f6f7f9}
-.wrap{max-width:860px;margin:0 auto;padding:16px}
+.layout{display:flex;align-items:flex-start}
+.wrap{flex:1;min-width:0;max-width:860px;margin:0 auto;padding:16px}
 .bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:12px}
 .bar h1{font-size:20px;margin:0 auto 0 0}
 .btn{padding:8px 14px;font-size:14px;border-radius:10px;border:1px solid #d0d4d9;background:#fff;cursor:pointer;color:#1f2328}
@@ -22,13 +23,15 @@ body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,san
 .banner{display:flex;gap:10px;align-items:center;background:#fffbeb;border:1px solid #fde68a;color:#92400e;border-radius:12px;padding:10px 14px;margin-bottom:12px;font-size:14px}
 .banner .btn{margin-left:auto;padding:6px 12px}
 .list{display:flex;flex-direction:column;gap:10px}
-.card{background:#fff;border:1px solid #e6e8eb;border-radius:14px;padding:14px;display:flex;flex-direction:column;gap:8px}
+.card{background:#fff;border:1px solid #e6e8eb;border-radius:14px;padding:14px;display:flex;flex-direction:column;gap:8px;cursor:pointer;transition:border-color .15s,box-shadow .15s}
+.card:hover{border-color:#c7d2fe}
+.card.active{border-color:#6366f1;box-shadow:0 0 0 2px #e0e7ff}
 .card.stale{border-color:#fde68a}
 .top{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
 .title{font-weight:600;line-height:1.3}
 .company{font-size:13px;color:#6b7280}
 .scorebox{display:flex;flex-direction:column;align-items:center;gap:2px}
-.score{min-width:38px;height:38px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:17px}
+.score{flex-shrink:0;min-width:38px;height:38px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:17px}
 .s-hi{background:#dcfce7;color:#166534}.s-mid{background:#fef3c7;color:#92400e}.s-lo{background:#f1f2f4;color:#4b5563}
 .stale-tag{font-size:10px;color:#b45309}
 .score-btn{padding:6px 10px;font-size:13px;white-space:nowrap}
@@ -39,14 +42,35 @@ body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,san
 .muted{color:#9ca3af;font-weight:400}
 .tags{display:flex;flex-wrap:wrap;gap:4px}
 .tag{font-size:12px;padding:2px 8px;border-radius:999px;background:#eef2ff;color:#3730a3}
-details{font-size:13px;color:#374151}
-details summary{cursor:pointer;color:#2563eb;list-style:none}
-details summary::-webkit-details-marker{display:none}
-details .body{margin-top:8px;display:flex;flex-direction:column;gap:8px}
-details h4{margin:0 0 2px;font-size:12px;color:#6b7280;font-weight:600;text-transform:uppercase;letter-spacing:.03em}
-details ul{margin:0;padding-left:18px}
-.foot{display:flex;justify-content:space-between;align-items:center}
-.foot a{font-size:13px;color:#2563eb;text-decoration:none}
+.tag.nice{background:#fff;color:#4f46e5;border:1px dashed #c7d2fe}
+.tag.more{background:#f1f2f4;color:#6b7280}
+.badges{display:flex;flex-wrap:wrap;gap:4px}
+.badge{font-size:12px;padding:2px 8px;border-radius:6px;background:#f1f5f9;color:#334155;border:1px solid #e2e8f0}
+.badge.warn{background:#fff7ed;color:#9a3412;border-color:#fed7aa}
+.badge.ai{background:#f5f3ff;color:#5b21b6;border-color:#ddd6fe}
+.foot{display:flex;justify-content:space-between;align-items:center;font-size:12px;color:#9ca3af}
+.foot .more-link{color:#2563eb}
+/* detail view: side panel on wide screens, full screen on phones */
+.detail{display:none;background:#fff;border-left:1px solid #e6e8eb;width:460px;flex-shrink:0;height:100vh;position:sticky;top:0;overflow-y:auto}
+.detail.open{display:block}
+.dhead{position:sticky;top:0;background:#fff;border-bottom:1px solid #eef0f2;padding:14px 16px;display:flex;gap:10px;align-items:flex-start;z-index:1}
+.dhead .back{border:none;background:#f1f2f4;border-radius:8px;width:32px;height:32px;font-size:18px;cursor:pointer;flex-shrink:0}
+.dbody{padding:4px 16px 30px}
+.dsec{padding:12px 0;border-bottom:1px solid #f1f2f4}
+.dsec:last-child{border-bottom:none}
+.dsec h3{margin:0 0 8px;font-size:12px;color:#6b7280;text-transform:uppercase;letter-spacing:.04em}
+.dsec h4{margin:10px 0 4px;font-size:13px;color:#6b7280;font-weight:400}
+.kv{display:grid;grid-template-columns:120px 1fr;gap:6px 10px;font-size:14px}
+.kv .k{color:#6b7280}
+.dsec ul{margin:0;padding-left:18px;font-size:14px;line-height:1.45}
+.steps{display:flex;flex-direction:column;gap:6px;font-size:14px}
+.step{display:flex;gap:8px;align-items:flex-start}
+.step .n{background:#eef2ff;color:#3730a3;border-radius:999px;width:22px;height:22px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;flex-shrink:0}
+.none{color:#9ca3af;font-size:14px}
+.apply{display:block;text-align:center;background:#2563eb;color:#fff;text-decoration:none;border-radius:10px;padding:10px;font-weight:600;margin-top:14px}
+@media (max-width:900px){
+  .detail{position:fixed;inset:0;width:100%;height:100%;border:none;z-index:5}
+}
 .panel{display:none;background:#fff;border:1px solid #e6e8eb;border-radius:14px;padding:16px;margin-bottom:12px}
 .panel.open{display:block}
 .panel h2{font-size:16px;margin:0 0 12px}
@@ -67,6 +91,7 @@ textarea{width:100%;min-height:240px;font-family:ui-monospace,Menlo,monospace;fo
 </style>
 </head>
 <body>
+<div class="layout">
 <div class="wrap">
 
 <div class="bar">
@@ -96,6 +121,8 @@ textarea{width:100%;min-height:240px;font-family:ui-monospace,Menlo,monospace;fo
 
 <div class="count" id="count"></div>
 <div class="list" id="list"></div>
+</div>
+<aside class="detail" id="detail"></aside>
 </div>
 
 <div class="overlay" id="overlay">
@@ -189,40 +216,135 @@ function salary(o) {
   return esc(`${range} ${o.currency || ''}${unit}${gross}`);
 }
 
+const RU = {
+  workMode: {remote: 'удалённо', hybrid: 'гибрид', office: 'офис'},
+  companyType: {product: 'продукт', outsourcing: 'аутсорс', bodyleasing: 'боди-лизинг', agency: 'агентство'},
+  aiToolsUsage: {required: 'AI обязателен', preferred: 'AI — плюс', used: 'AI используют'},
+};
+const CARD_SKILLS = 6;
+let jobs = [];
+let openId = null;
+
+function scoreBox(j) {
+  if (!j.score) {
+    return `<button class="btn score-btn" data-id="${esc(j.offer.id)}" ${busy ? 'disabled' : ''}>Оценить</button>`;
+  }
+  const v = j.score.matchScore;
+  return `<div class="scorebox"><div class="score ${v >= 6 ? 's-hi' : v >= 5 ? 's-mid' : 's-lo'}">${v}</div>`
+    + `${j.stale ? '<span class="stale-tag">устарела</span>' : ''}</div>`;
+}
+
+function badges(e) {
+  const b = [];
+  if (e.workMode) b.push(`<span class="badge">${RU.workMode[e.workMode]}</span>`);
+  if (e.companyType) {
+    const warn = e.companyType === 'agency' || e.companyType === 'bodyleasing';
+    b.push(`<span class="badge ${warn ? 'warn' : ''}">${RU.companyType[e.companyType]}</span>`);
+  }
+  if (e.englishLevel) b.push(`<span class="badge">English ${esc(e.englishLevel)}</span>`);
+  if (e.polishRequired === true) b.push('<span class="badge warn">польский нужен</span>');
+  return b.join('');
+}
+
+function where(o) {
+  return [o.companyName, o.location].filter(Boolean).map(esc).join(' · ');
+}
+
 function card(j) {
-  const o = j.offer, e = j.extraction || {}, s = j.score || {};
-  const cls = s.matchScore >= 6 ? 's-hi' : s.matchScore >= 5 ? 's-mid' : 's-lo';
-  const scorebox = j.score
-    ? `<div class="score ${cls}">${s.matchScore}</div>${j.stale ? '<span class="stale-tag">устарела</span>' : ''}`
-    : `<button class="btn score-btn" data-id="${esc(o.id)}" ${busy ? 'disabled' : ''}>Оценить</button>`;
-  const meta = [o.location, o.remote ? 'remote' : null, e.realSeniority || o.experienceLevel, o.contractType]
-    .filter(Boolean).map(esc).join(' · ');
-  const list = xs => (xs || []).map(x => `<li>${esc(x)}</li>`).join('');
-  const details = j.extraction ? `<details><summary>Подробнее ▾</summary><div class="body">
-      ${e.projectDescription && e.projectDescription.length ? `<div><h4>Проект</h4><ul>${list(e.projectDescription)}</ul></div>` : ''}
-      ${e.responsibilities && e.responsibilities.length ? `<div><h4>Обязанности</h4><ul>${list(e.responsibilities)}</ul></div>` : ''}
-      ${e.requirements && e.requirements.length ? `<div><h4>Требования</h4><ul>${list(e.requirements)}</ul></div>` : ''}
-    </div></details>` : '';
-  return `<div class="card ${j.stale ? 'stale' : ''}" data-card="${esc(o.id)}">
+  const o = j.offer, e = j.extraction || {};
+  const skills = e.skills || [];
+  const rest = Math.max(0, skills.length - CARD_SKILLS) + (e.niceToHaveSkills || []).length;
+  const contract = o.contractType ? ` <span class="muted">· ${esc(o.contractType)}</span>` : '';
+  return `<div class="card ${j.stale ? 'stale' : ''} ${openId === o.id ? 'active' : ''}" data-card="${esc(o.id)}">
     <div class="top">
-      <div><div class="title">${esc(o.title)}</div><div class="company">${esc(o.companyName)}</div></div>
-      <div class="scorebox">${scorebox}</div>
+      <div><div class="title">${esc(o.title)}</div><div class="company">${where(o)}</div></div>
+      ${scoreBox(j)}
     </div>
-    ${s.reason ? `<div class="reason">${esc(s.reason)}</div>` : ''}
-    <div class="meta">${meta}</div>
-    <div class="salary">${salary(o)}</div>
-    <div class="tags">${(e.skills || []).slice(0, 10).map(x => `<span class="tag">${esc(x)}</span>`).join('')}</div>
-    ${details}
-    <div class="foot"><span class="meta">${o.publishedAt ? 'опубликовано ' + esc(o.publishedAt.slice(0, 10)) : ''}</span>
-      ${o.applyUrl ? `<a href="${esc(o.applyUrl)}" target="_blank" rel="noopener">Открыть на JustJoin →</a>` : ''}</div>
+    ${j.score && j.score.reason ? `<div class="reason">${esc(j.score.reason)}</div>` : ''}
+    <div class="salary">${salary(o)}${contract}</div>
+    ${j.extraction ? `<div class="badges">${badges(e)}</div>` : ''}
+    <div class="tags">${skills.slice(0, CARD_SKILLS).map(x => `<span class="tag">${esc(x)}</span>`).join('')}${rest ? `<span class="tag more">+${rest}</span>` : ''}</div>
+    <div class="foot"><span>${o.publishedAt ? 'опубликовано ' + esc(o.publishedAt.slice(0, 10)) : ''}</span>
+      <span class="more-link">подробнее →</span></div>
   </div>`;
 }
 
+const NONE = '<span class="none">не указано</span>';
+const yesNo = v => v === true ? 'да' : v === false ? 'нет' : null;
+const tagList = (xs, cls = '') => xs && xs.length
+  ? `<div class="tags">${xs.map(x => `<span class="tag ${cls}">${esc(x)}</span>`).join('')}</div>` : NONE;
+const bullets = xs => xs && xs.length ? `<ul>${xs.map(x => `<li>${esc(x)}</li>`).join('')}</ul>` : NONE;
+const kv = rows => {
+  const shown = rows.filter(([, v]) => v != null && v !== '');
+  return shown.length
+    ? `<div class="kv">${shown.map(([k, v]) => `<div class="k">${k}</div><div>${v}</div>`).join('')}</div>` : NONE;
+};
+
+function detail(j) {
+  const o = j.offer, e = j.extraction || {};
+  const steps = e.recruitmentSteps ? e.recruitmentSteps.split(/\s*(?:->|→)\s*/).filter(Boolean) : null;
+  const contract = o.contractType ? ` <span class="muted">· ${esc(o.contractType)}</span>` : '';
+  const body = !j.extraction
+    ? `<div class="dsec"><span class="none">Факты ещё не извлечены — появятся после следующего скана.</span></div>`
+    : `<div class="dsec"><h3>Условия</h3>${kv([
+          ['Зарплата', salary(o) + contract],
+          ['Формат', e.workMode && RU.workMode[e.workMode]],
+          ['Компания', e.companyType && RU.companyType[e.companyType]],
+          ['Отрасль', e.industry && esc(e.industry)],
+        ])}</div>
+      <div class="dsec"><h3>Требования</h3>${kv([
+          ['Уровень', e.realSeniority && esc(e.realSeniority)],
+          ['English', e.englishLevel && esc(e.englishLevel)],
+          ['Польский', yesNo(e.polishRequired)],
+          ['Лидерство', yesNo(e.leadership)],
+        ])}
+        <h4>Обязательно</h4>${tagList(e.skills)}
+        <h4>Будет плюсом</h4>${tagList(e.niceToHaveSkills, 'nice')}
+        <h4>Требования</h4>${bullets(e.requirements)}
+      </div>
+      <div class="dsec"><h3>Проект</h3>${bullets(e.projectDescription)}</div>
+      <div class="dsec"><h3>Обязанности</h3>${bullets(e.responsibilities)}</div>
+      <div class="dsec"><h3>Этапы найма</h3>${steps && steps.length
+        ? `<div class="steps">${steps.map((x, i) => `<div class="step"><span class="n">${i + 1}</span><span>${esc(x)}</span></div>`).join('')}</div>`
+        : NONE}</div>
+      <div class="dsec"><h3>Бенефиты</h3>${bullets(e.benefits)}</div>
+      <div class="dsec"><h3>AI</h3>${e.aiTools && e.aiTools.length
+        ? (e.aiToolsUsage ? `<div class="badges" style="margin-bottom:8px"><span class="badge ai">${RU.aiToolsUsage[e.aiToolsUsage]}</span></div>` : '') + tagList(e.aiTools)
+        : '<span class="none">не упоминается</span>'}</div>`;
+  return `<div class="dhead">
+      <button class="back" id="detailClose" aria-label="Закрыть">←</button>
+      <div style="flex:1;min-width:0"><div class="title">${esc(o.title)}</div><div class="company">${where(o)}</div></div>
+      ${scoreBox(j)}
+    </div>
+    <div class="dbody">
+      ${j.score && j.score.reason ? `<div class="dsec"><div class="reason">${esc(j.score.reason)}</div></div>` : ''}
+      ${body}
+      ${o.applyUrl ? `<a class="apply" href="${esc(o.applyUrl)}" target="_blank" rel="noopener">Открыть на JustJoin →</a>` : ''}
+    </div>`;
+}
+
+function openDetail(id) {
+  const j = jobs.find(x => x.offer.id === id);
+  if (!j) return;
+  openId = id;
+  document.querySelectorAll('.card').forEach(c => c.classList.toggle('active', c.dataset.card === id));
+  $('detail').innerHTML = detail(j);
+  $('detail').classList.add('open');
+  $('detail').scrollTop = 0;
+  $('detailClose').onclick = closeDetail;
+}
+
+function closeDetail() {
+  openId = null;
+  $('detail').classList.remove('open');
+  document.querySelectorAll('.card.active').forEach(c => c.classList.remove('active'));
+}
+
 async function loadJobs() {
-  let jobs;
   try {
     jobs = await api('GET', '/api/jobs');
   } catch (err) {
+    jobs = [];
     $('list').innerHTML = `<div class="empty">Не удалось загрузить вакансии: ${esc(err.message)}</div>`;
     return;
   }
@@ -239,6 +361,7 @@ async function loadJobs() {
     ? scored.map(card).join('')
       + (unscored.length ? `<div class="section">Без оценки — ${unscored.length}</div>` + unscored.map(card).join('') : '')
     : '<div class="empty">Нет подходящих вакансий. Нажми «Сканировать» или снизь minMatchScore в профиле.</div>';
+  if (openId && jobs.some(j => j.offer.id === openId)) openDetail(openId); else closeDetail();
 }
 
 // ---------- status / background tasks ----------
@@ -309,19 +432,38 @@ async function rescore() {
 $('rescoreBtn').onclick = rescore;
 
 // ---------- score one offer from its card ----------
-$('list').addEventListener('click', async ev => {
-  const btn = ev.target.closest('.score-btn');
-  if (!btn) return;
-  btn.disabled = true;
-  btn.textContent = 'Оценка…';
+async function scoreOne(btn) {
+  const id = btn.dataset.id;
+  document.querySelectorAll(`.score-btn[data-id="${CSS.escape(id)}"]`).forEach(b => {
+    b.disabled = true;
+    b.textContent = 'Оценка…';
+  });
   try {
-    const job = await api('POST', `/api/jobs/${encodeURIComponent(btn.dataset.id)}/score`);
-    btn.closest('.card').outerHTML = card(job);
+    const job = await api('POST', `/api/jobs/${encodeURIComponent(id)}/score`);
+    jobs = jobs.map(j => j.offer.id === id ? job : j);
+    const el = document.querySelector(`.card[data-card="${CSS.escape(id)}"]`);
+    if (el) el.outerHTML = card(job);
+    if (openId === id) openDetail(id);
   } catch (err) {
     toast(err.message, true);
-    btn.disabled = busy;
-    btn.textContent = 'Оценить';
+    document.querySelectorAll(`.score-btn[data-id="${CSS.escape(id)}"]`).forEach(b => {
+      b.disabled = busy;
+      b.textContent = 'Оценить';
+    });
   }
+}
+$('list').addEventListener('click', ev => {
+  const btn = ev.target.closest('.score-btn');
+  if (btn) { scoreOne(btn); return; }
+  const c = ev.target.closest('.card');
+  if (c) openDetail(c.dataset.card);
+});
+$('detail').addEventListener('click', ev => {
+  const btn = ev.target.closest('.score-btn');
+  if (btn) scoreOne(btn);
+});
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && !$('overlay').classList.contains('open') && openId) closeDetail();
 });
 $('bannerRescore').onclick = rescore;
 
