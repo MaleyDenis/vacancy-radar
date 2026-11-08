@@ -102,7 +102,7 @@ const GROUPS = [
   {source:'extract', title:'AI · extraction', file:'extractions.json', badge:'b-extract', label:'AI · extraction',
    hint:'Claude Haiku читает текст вакансии один раз и вытаскивает факты. Профиль не используется — смена профиля их не пересчитывает. Любое поле = null, если в тексте о нём ничего нет.'},
   {source:'score', title:'AI · scoring', file:'scores.json', badge:'b-score', label:'AI · scoring',
-   hint:'Claude Haiku сравнивает вакансию с профилем. Скан оценивает 30 самых свежих, остальные — кнопкой «Оценить».'},
+   hint:'Claude Haiku сравнивает вакансию с профилем. Только по кнопке: «Оценить» у неоценённых, «Переоценить» у устаревших (после смены профиля). Скан не оценивает.'},
 ];
 
 const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));

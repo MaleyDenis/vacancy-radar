@@ -7,8 +7,8 @@ Owns the Claude steps: `ClaudeClient`, `ExtractionService`, `ScoringService`, `O
 - `ExtractionService`: once per offer with a description → `ExtractedFacts` (Claude output) →
   `OfferExtraction` in `extractions.json` (fields: `docs/fields.html`)
 - `ScoringService`: raw offer text + full `UserProfile` → `OfferScore` (matchScore 1–10, reason,
-  profileHash) in `scores.json`; scan scores the newest `radar.score.batch` unscored offers
-  (the rest via the card button); `rescoreRecent(days)` re-scores already scored offers published
+  profileHash) in `scores.json`; scans never score — `scoreOne(id)` scores on demand
+  (card buttons "Оценить" / "Переоценить"); `rescoreRecent(days)` (endpoint only) re-scores already scored offers published
   in the last N days
 - Structured output via the Anthropic Java SDK (`ClaudeClient.ask(prompt, type)`)
 - A failed offer is logged and left for a later run

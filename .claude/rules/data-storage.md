@@ -17,6 +17,7 @@ data/
 - `raw-offers.json` holds only what the site gives — nothing from Claude
 - Extraction runs once per offer; a profile change never re-extracts
 - A profile change re-scores nothing by itself: old scores get `stale=true` (profile hash differs);
-  `POST /api/scores/rescore?days=N` re-scores already scored offers published in the last N days
-  (default `radar.rescore.days`)
+  the UI's "Переоценить" button re-scores one offer; `POST /api/scores/rescore?days=N` (endpoint
+  only, no UI) re-scores already scored offers published in the last N days (default `radar.rescore.days`)
+- Scans never score; offers are scored on demand (`POST /api/jobs/{id}/score`)
 - `DELETE /api/scores` removes `scores.json` only; `DELETE /api/data` removes everything except `profile.json`
