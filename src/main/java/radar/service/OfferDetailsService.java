@@ -41,6 +41,9 @@ public class OfferDetailsService {
    * @param limit optional cap on how many offers to fetch this run; {@code null} = no cap. Offers a
    *              fetch fails on are left for a later run.
    */
+  /** Progress is written to disk after every this many fetched pages, not only at the end. */
+  static final int SAVE_EVERY = 10;
+
   public DetailsResult fetchMissing(Integer limit) {
     var pool = repository.readRawOffers();
     var updated = new ArrayList<>(pool);
@@ -65,6 +68,9 @@ public class OfferDetailsService {
         updated.set(i, stored.withDetails(details.description(), details.domain(),
             Instant.now().toString()));
         fetched++;
+        if (fetched % SAVE_EVERY == 0) {
+          repository.saveRawOffers(updated); // a stopped server loses at most SAVE_EVERY pages
+        }
       } catch (RuntimeException e) {
         log.warn("Details fetch failed for {}: {}", stored.offer().id(), e.toString());
       }

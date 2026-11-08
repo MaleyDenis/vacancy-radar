@@ -55,6 +55,21 @@ class ExtractionServiceTest {
   }
 
   @Test
+  void savesProgressEveryTenExtractions() {
+    when(repository.readExtractions()).thenReturn(new LinkedHashMap<>());
+    var pool = java.util.stream.IntStream.range(0, 11).mapToObj(i -> stored("o" + i, "text " + i))
+        .toList();
+    when(repository.readRawOffers()).thenReturn(pool);
+    when(claude.ask(any(), eq(ExtractedFacts.class))).thenReturn(facts);
+
+    var result = service.extractMissing(null);
+
+    assertThat(result.extracted()).isEqualTo(11);
+    // once after the 10th extraction, once at the end
+    verify(repository, org.mockito.Mockito.times(2)).saveExtractions(any());
+  }
+
+  @Test
   void extractsOnlyOffersWithDescriptionAndNoExtraction() {
     var existing = new LinkedHashMap<String, OfferExtraction>();
     existing.put("done", extraction);

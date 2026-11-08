@@ -88,6 +88,19 @@ class OfferDetailsServiceTest {
   }
 
   @Test
+  void savesProgressEveryTenPages() {
+    var pool = java.util.stream.IntStream.range(0, 12).mapToObj(i -> pending("o" + i)).toList();
+    when(repository.readRawOffers()).thenReturn(pool);
+    when(connector.fetchOfferPageHtml(org.mockito.ArgumentMatchers.anyString())).thenReturn("<x>");
+    when(parser.parse("<x>")).thenReturn(new OfferDetails("desc", "x.com"));
+
+    service.fetchMissing(null);
+
+    // once after the 10th page, once at the end
+    verify(repository, org.mockito.Mockito.times(2)).saveRawOffers(org.mockito.ArgumentMatchers.any());
+  }
+
+  @Test
   void skipsOffersThatAlreadyHaveDetails() {
     when(repository.readRawOffers()).thenReturn(List.of(withDetails("a"), pending("b")));
     when(connector.fetchOfferPageHtml(url("b"))).thenReturn("<b>");
