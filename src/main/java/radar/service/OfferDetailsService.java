@@ -87,7 +87,7 @@ public class OfferDetailsService {
   /** Rate-limits between page fetches. Package-private/overridable so tests can run without sleeping. */
   void sleepPolitely() {
     try {
-      Thread.sleep(500 + ThreadLocalRandom.current().nextInt(500));
+      Thread.sleep(300 + ThreadLocalRandom.current().nextInt(300));
     } catch (InterruptedException e) {
       Thread.currentThread().interrupt();
     }

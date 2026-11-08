@@ -15,11 +15,12 @@ public class Progress {
 
   private volatile Snapshot current = new Snapshot(null, 0, 0);
 
-  public void begin(String step, int total) {
+  public synchronized void begin(String step, int total) {
     current = new Snapshot(step, 0, total);
   }
 
-  public void advance() {
+  /** Safe to call from several threads at once (parallel extraction). */
+  public synchronized void advance() {
     var c = current;
     current = new Snapshot(c.step(), c.done() + 1, c.total());
   }

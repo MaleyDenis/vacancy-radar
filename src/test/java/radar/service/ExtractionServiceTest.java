@@ -55,6 +55,31 @@ class ExtractionServiceTest {
   }
 
   @Test
+  void extractsSeveralOffersAtOnce() {
+    when(repository.readExtractions()).thenReturn(new LinkedHashMap<>());
+    var pool = java.util.stream.IntStream.range(0, 12).mapToObj(i -> stored("o" + i, "text " + i))
+        .toList();
+    when(repository.readRawOffers()).thenReturn(pool);
+    var running = new java.util.concurrent.atomic.AtomicInteger();
+    var maxRunning = new java.util.concurrent.atomic.AtomicInteger();
+    when(claude.ask(any(), eq(ExtractedFacts.class))).thenAnswer(call -> {
+      maxRunning.accumulateAndGet(running.incrementAndGet(), Math::max);
+      Thread.sleep(50);
+      running.decrementAndGet();
+      return facts;
+    });
+
+    var result = service.extractMissing(null);
+
+    assertThat(result.extracted()).isEqualTo(12);
+    assertThat(maxRunning.get()).isGreaterThan(1).isLessThanOrEqualTo(ExtractionService.PARALLEL);
+    @SuppressWarnings("unchecked")
+    ArgumentCaptor<Map<String, OfferExtraction>> captor = ArgumentCaptor.forClass(Map.class);
+    verify(repository, org.mockito.Mockito.times(2)).saveExtractions(captor.capture());
+    assertThat(captor.getValue()).hasSize(12); // final save has every extraction
+  }
+
+  @Test
   void savesProgressEveryTenExtractions() {
     when(repository.readExtractions()).thenReturn(new LinkedHashMap<>());
     var pool = java.util.stream.IntStream.range(0, 11).mapToObj(i -> stored("o" + i, "text " + i))
