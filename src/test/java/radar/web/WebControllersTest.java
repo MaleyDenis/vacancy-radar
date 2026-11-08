@@ -73,7 +73,7 @@ class WebControllersTest {
     runner = new BackgroundRunner(new Progress());
     mvc = MockMvcBuilders.standaloneSetup(
         new ScanController(scraperService, offerDetailsService, extractionService,
-            scoringService, runner, 30),
+            runner),
         new JobController(repository, hasher, scoringService, runner, 7),
         new AnalyticsController(reporterService),
         new ProfileController(repository),
@@ -119,7 +119,6 @@ class WebControllersTest {
     when(scraperService.scan(false, null)).thenReturn(new ScanResult(5, 10));
     when(offerDetailsService.fetchMissing(null)).thenReturn(new DetailsResult(3, 7));
     when(extractionService.extractMissing(null)).thenReturn(new ExtractionResult(3, 0));
-    when(scoringService.scoreMissing(30)).thenReturn(new ScoringResult(4, 0));
 
     mvc.perform(post("/api/scan"))
         .andExpect(status().isAccepted())
@@ -133,11 +132,11 @@ class WebControllersTest {
         .andExpect(jsonPath("$.result.detailsFetched").value(3))
         .andExpect(jsonPath("$.result.detailsRemaining").value(7))
         .andExpect(jsonPath("$.result.extracted").value(3))
-        .andExpect(jsonPath("$.result.scored").value(4));
+        .andExpect(jsonPath("$.result.scored").doesNotExist());
     verify(scraperService).scan(false, null);
     verify(offerDetailsService).fetchMissing(null);
     verify(extractionService).extractMissing(null);
-    verify(scoringService).scoreMissing(30);
+    org.mockito.Mockito.verifyNoInteractions(scoringService); // scans never score
   }
 
   @Test
@@ -145,18 +144,16 @@ class WebControllersTest {
     when(scraperService.scan(true, 20)).thenReturn(new ScanResult(20, 964));
     when(offerDetailsService.fetchMissing(20)).thenReturn(new DetailsResult(20, 100));
     when(extractionService.extractMissing(20)).thenReturn(new ExtractionResult(20, 80));
-    when(scoringService.scoreMissing(20)).thenReturn(new ScoringResult(20, 60));
 
     mvc.perform(post("/api/scan").param("fullFetch", "true").param("limit", "20"))
         .andExpect(status().isAccepted());
     awaitStatus()
         .andExpect(jsonPath("$.result.added").value(20))
         .andExpect(jsonPath("$.result.detailsFetched").value(20))
-        .andExpect(jsonPath("$.result.scored").value(20));
+        .andExpect(jsonPath("$.result.extracted").value(20));
     verify(scraperService).scan(true, 20);
     verify(offerDetailsService).fetchMissing(20);
     verify(extractionService).extractMissing(20);
-    verify(scoringService).scoreMissing(20);
   }
 
   private StoredRawOffer stored(String id, String publishedAt) {

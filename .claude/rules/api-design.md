@@ -3,13 +3,13 @@
 ## Endpoints
 
 ```
-POST   /api/scan?fullFetch&limit        — start scan in background (202; 409 if busy)
+POST   /api/scan?fullFetch&limit        — scrape → details → extract in background (202; 409 if busy); no scoring
 GET    /api/status                      — running task, step, done/total, last result or error
 GET    /api/jobs?minScore&scoredOnly&sort&page&size
                                         — JobPage {items, total, page, size, staleCount}
 GET    /api/jobs/{id}                   — one JobView with full description (404 if unknown)
 POST   /api/jobs/{id}/score             — score one offer now (sync; 404/400/409/502)
-POST   /api/scores/rescore?days=N       — rescore scored offers of last N days (background)
+POST   /api/scores/rescore?days=N       — rescore scored offers of last N days (background; no UI button)
 DELETE /api/scores                      — delete scores.json (409 if busy)
 DELETE /api/data                        — delete everything except profile.json (409 if busy)
 GET    /api/profile, PUT /api/profile   — user profile

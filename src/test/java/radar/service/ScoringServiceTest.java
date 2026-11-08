@@ -63,44 +63,6 @@ class ScoringServiceTest {
   }
 
   @Test
-  void scoresOnlyUnscoredOffersWithDescription() {
-    var existing = new LinkedHashMap<String, OfferScore>();
-    existing.put("done", new OfferScore(5, "old", "other-profile", "t"));
-    when(repository.readScores()).thenReturn(existing);
-    when(repository.readRawOffers()).thenReturn(List.of(
-        stored("done", "x"), stored("new", "Kafka job"), stored("nodesc", " ")));
-    when(claude.ask(contains("Kafka job"), eq(ScoreResult.class)))
-        .thenReturn(new ScoreResult(42, "Great fit"));
-
-    var result = service.scoreMissing(null);
-
-    assertThat(result.scored()).isEqualTo(1);
-    assertThat(result.remaining()).isZero();
-    var scores = saved();
-    assertThat(scores.get("done").reason()).isEqualTo("old"); // stale score left alone
-    var fresh = scores.get("new");
-    assertThat(fresh.matchScore()).isEqualTo(10); // clamped
-    assertThat(fresh.reason()).isEqualTo("Great fit");
-    assertThat(fresh.profileHash()).isEqualTo(new ProfileHasher(mapper).hash(profile));
-  }
-
-  @Test
-  void limitAndFailuresLeaveOffersForLater() {
-    when(repository.readScores()).thenReturn(new LinkedHashMap<>());
-    when(repository.readRawOffers()).thenReturn(List.of(
-        stored("fail", "boom"), stored("ok", "fine"), stored("later", "wait")));
-    when(claude.ask(contains("boom"), any())).thenThrow(new IllegalStateException("api down"));
-    when(claude.ask(contains("fine"), eq(ScoreResult.class))).thenReturn(new ScoreResult(6, "ok"));
-
-    var result = service.scoreMissing(2); // limit counts attempts, failures included
-
-    assertThat(result.scored()).isEqualTo(1);
-    assertThat(result.remaining()).isEqualTo(2);
-    assertThat(saved()).containsOnlyKeys("ok");
-    verify(claude, never()).ask(contains("wait"), any());
-  }
-
-  @Test
   void scoreOneStoresScoreAndRejectsBadOffers() {
     when(repository.readScores()).thenReturn(new LinkedHashMap<>());
     when(repository.readRawOffers()).thenReturn(List.of(stored("a", "one text"), stored("b", "")));
@@ -112,21 +74,6 @@ class ScoringServiceTest {
     assertThat(saved()).containsOnlyKeys("a");
     assertThatThrownBy(() -> service.scoreOne("b")).isInstanceOf(IllegalStateException.class);
     assertThatThrownBy(() -> service.scoreOne("zzz")).isInstanceOf(NoSuchElementException.class);
-  }
-
-  @Test
-  void scoresNewestOffersFirst() {
-    when(repository.readScores()).thenReturn(new LinkedHashMap<>());
-    when(repository.readRawOffers()).thenReturn(List.of(
-        stored("old", "old text", "2026-10-01T00:00:00Z"),
-        stored("undated", "undated text", null),
-        stored("new", "new text", "2026-11-05T00:00:00Z")));
-    when(claude.ask(contains("new text"), eq(ScoreResult.class))).thenReturn(new ScoreResult(6, "ok"));
-
-    var result = service.scoreMissing(1);
-
-    assertThat(result.scored()).isEqualTo(1);
-    assertThat(saved()).containsOnlyKeys("new");
   }
 
   @Test

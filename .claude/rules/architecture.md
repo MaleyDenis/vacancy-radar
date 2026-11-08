@@ -11,11 +11,12 @@ ScraperService        → raw-offers.json   (new offers only, nothing removed)
 OfferDetailsService   → raw-offers.json   (description + domain from offer page JSON-LD, no AI)
     ▼
 ExtractionService     → extractions.json  (Claude, once per offer: skills, requirements, …)
-    ▼
-ScoringService        → scores.json       (Claude: raw offer + profile → matchScore, reason; newest radar.score.batch only)
+
+Scoring is NOT part of the scan — on demand only:
+POST /api/jobs/{id}/score → ScoringService → scores.json  (Claude: raw offer + profile → matchScore, reason)
+  UI: "Оценить" on unscored offers, "Переоценить" on stale ones (card + detail view)
 
 GET /api/jobs = raw ⨝ extraction ⨝ score by offer id, filtered/sorted/paged on the server (see api-design.md)
-POST /api/jobs/{id}/score = score one offer now (card button), synchronous
 ```
 
 ## Component Responsibilities
@@ -26,7 +27,7 @@ POST /api/jobs/{id}/score = score one offer now (card button), synchronous
 | `ScraperService` | merges new offers into the pool (dedupe by id) |
 | `OfferDetailsService` | fills description/domain from the offer page |
 | `ExtractionService` | Claude extraction, once per offer |
-| `ScoringService` | Claude scoring: newest unscored (batch per scan), one offer on demand, rescore of recent scored offers |
+| `ScoringService` | Claude scoring of one offer on demand; `rescoreRecent` (endpoint only, no UI button) |
 | `ClaudeClient` | Anthropic SDK wrapper, structured output |
 | `JsonRepository` | read/write JSON files to disk |
 
@@ -38,7 +39,7 @@ POST /api/jobs/{id}/score = score one offer now (card button), synchronous
 
 **Extraction separate from scoring**
 - Extracted facts don't depend on the profile → computed once
-- Only scoring is profile-dependent; a profile change marks scores stale, rescore is explicit
+- Only scoring is profile-dependent; a profile change marks scores stale, re-scoring is per offer
 
 **Claude Haiku over Sonnet**
 - Runs per offer (hundreds per full scan); Haiku is fast and cheap enough

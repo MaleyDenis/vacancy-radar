@@ -85,8 +85,6 @@ textarea{width:100%;min-height:240px;font-family:ui-monospace,Menlo,monospace;fo
 .modal{background:#fff;border-radius:16px;max-width:420px;width:100%;padding:20px;box-shadow:0 20px 50px rgba(0,0,0,.2)}
 .modal h3{margin:0 0 8px;font-size:17px}
 .modal p{margin:0 0 14px;color:#4b5563;font-size:14px;line-height:1.45}
-.modal label{display:block;font-size:13px;color:#374151;margin-bottom:14px}
-.modal input{width:80px;margin-left:6px;padding:6px 8px;border:1px solid #d0d4d9;border-radius:8px;font-size:14px}
 .modal .actions{display:flex;justify-content:flex-end;gap:8px}
 .toast.err{background:#b42318}
 .toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#111827;color:#fff;padding:10px 16px;border-radius:10px;font-size:14px;opacity:0;transition:opacity .2s;pointer-events:none}
@@ -100,7 +98,6 @@ textarea{width:100%;min-height:240px;font-family:ui-monospace,Menlo,monospace;fo
 <div class="bar">
   <h1>vacancy-radar</h1>
   <button class="btn primary" id="scanBtn">Сканировать</button>
-  <button class="btn" id="rescoreBtn">Пересчитать оценки</button>
   <button class="btn" id="profileBtn">Профиль</button>
   <button class="btn danger" id="delScoresBtn">Удалить оценки</button>
   <button class="btn danger" id="wipeBtn">Очистить всё</button>
@@ -109,8 +106,7 @@ textarea{width:100%;min-height:240px;font-family:ui-monospace,Menlo,monospace;fo
 <div class="status" id="status"></div>
 
 <div class="banner" id="staleBanner" style="display:none">
-  <span>Профиль изменился — <b id="staleCount"></b> устарели.</span>
-  <button class="btn" id="bannerRescore">Пересчитать</button>
+  <span>Профиль изменился — <b id="staleCount"></b>. Переоцени нужные кнопкой «Переоценить» на вакансии.</span>
 </div>
 
 <div class="panel" id="profilePanel">
@@ -150,7 +146,6 @@ textarea{width:100%;min-height:240px;font-family:ui-monospace,Menlo,monospace;fo
   <div class="modal" role="dialog" aria-modal="true">
     <h3 id="mTitle"></h3>
     <p id="mText"></p>
-    <label id="mInputWrap">За последние <input id="mInput" type="number" min="1" value="7"> дней</label>
     <div class="actions">
       <button class="btn" id="mCancel">Отмена</button>
       <button class="btn" id="mOk"></button>
@@ -164,7 +159,7 @@ const $ = id => document.getElementById(id);
 const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const unitRu = {hour:'ч', day:'день', month:'мес', year:'год'};
 const stepRu = {scrape:'список вакансий', details:'описания', extract:'извлечение (Claude)', score:'оценка (Claude)', rescore:'пересчёт оценок (Claude)'};
-const actionButtons = ['scanBtn','rescoreBtn','delScoresBtn','wipeBtn','bannerRescore'];
+const actionButtons = ['scanBtn','delScoresBtn','wipeBtn'];
 
 let profile = null;
 let polling = null;
@@ -204,14 +199,13 @@ function plural(n, one, few, many) {
 }
 
 let onOk = null, onCancel = null;
-function modal({title, text, ok, danger, input}) {
+function modal({title, text, ok, danger}) {
   $('mTitle').textContent = title;
   $('mText').textContent = text;
   $('mOk').textContent = ok;
   $('mOk').className = 'btn ' + (danger ? 'solid-danger' : 'primary');
-  $('mInputWrap').style.display = input ? 'block' : 'none';
   $('overlay').classList.add('open');
-  (input ? $('mInput') : $('mCancel')).focus();
+  $('mCancel').focus();
   return new Promise(resolve => {
     onOk = () => { closeModal(); resolve(true); };
     onCancel = () => { closeModal(); resolve(false); };
@@ -246,13 +240,16 @@ const CARD_SKILLS = 6;
 let jobs = [];
 let openId = null;
 
+// "Оценить" for unscored offers, "Переоценить" next to a stale score (profile changed since)
+function scoreButton(j, label) {
+  return `<button class="btn score-btn" data-id="${esc(j.offer.id)}" data-label="${label}" ${busy ? 'disabled' : ''}>${label}</button>`;
+}
+
 function scoreBox(j) {
-  if (!j.score) {
-    return `<button class="btn score-btn" data-id="${esc(j.offer.id)}" ${busy ? 'disabled' : ''}>Оценить</button>`;
-  }
+  if (!j.score) return scoreButton(j, 'Оценить');
   const v = j.score.matchScore;
   return `<div class="scorebox"><div class="score ${v >= 6 ? 's-hi' : v >= 5 ? 's-mid' : 's-lo'}">${v}</div>`
-    + `${j.stale ? '<span class="stale-tag">устарела</span>' : ''}</div>`;
+    + `${j.stale ? '<span class="stale-tag">устарела</span>' + scoreButton(j, 'Переоценить') : ''}</div>`;
 }
 
 function badges(e) {
@@ -404,6 +401,13 @@ function jobsUrl(p) {
   return '/api/jobs?' + q;
 }
 
+let staleCount = 0;
+function setStaleCount(n) {
+  staleCount = Math.max(0, n);
+  $('staleBanner').style.display = staleCount ? 'flex' : 'none';
+  $('staleCount').textContent = `${staleCount} ${plural(staleCount, 'оценка устарела', 'оценки устарели', 'оценок устарели')}`;
+}
+
 // reset = first page (filters changed, scan finished, …); otherwise append the next page
 async function loadJobs(reset = true) {
   const next = reset ? 1 : page + 1;
@@ -424,8 +428,7 @@ async function loadJobs(reset = true) {
   total = data.total;
   jobs = reset ? data.items : jobs.concat(data.items);
   $('count').textContent = total ? `${total} ${plural(total, 'вакансия', 'вакансии', 'вакансий')} · показано ${jobs.length}` : '';
-  $('staleBanner').style.display = data.staleCount ? 'flex' : 'none';
-  $('staleCount').textContent = `${data.staleCount} ${plural(data.staleCount, 'оценка', 'оценки', 'оценок')}`;
+  setStaleCount(data.staleCount);
   if (reset) {
     $('list').innerHTML = jobs.length ? jobs.map(card).join('')
       : '<div class="empty">Нет вакансий под эти фильтры. Ослабь фильтры или нажми «Сканировать».</div>';
@@ -453,9 +456,9 @@ function describeResult(st) {
   const r = st.result;
   if (!r) return '';
   if (st.task === 'scan') {
-    return `Последний скан: +${r.added} новых · ${r.extracted} извлечено · ${r.scored} оценено`
-      + (r.detailsRemaining + r.extractRemaining + r.scoreRemaining > 0
-        ? ` · осталось ${r.detailsRemaining} описаний, ${r.extractRemaining} извлечений · без оценки ${r.scoreRemaining}` : '');
+    return `Последний скан: +${r.added} новых · ${r.extracted} извлечено`
+      + (r.detailsRemaining + r.extractRemaining > 0
+        ? ` · осталось ${r.detailsRemaining} описаний, ${r.extractRemaining} извлечений` : '');
   }
   return `Пересчитано оценок: ${r.scored}` + (r.remaining ? ` · не удалось: ${r.remaining}` : '');
 }
@@ -497,14 +500,7 @@ async function startTask(request) {
 // ---------- actions ----------
 $('scanBtn').onclick = () => startTask(() => api('POST', '/api/scan'));
 
-async function rescore() {
-  if (!await modal({title: 'Пересчитать оценки', ok: 'Пересчитать', input: true,
-    text: 'Вакансии, опубликованные за выбранный период, будут заново оценены под текущий профиль. Это запросы к Claude.'})) return;
-  const days = parseInt($('mInput').value, 10);
-  if (!(days > 0)) { toast('Укажи число дней больше нуля', true); return; }
-  startTask(() => api('POST', `/api/scores/rescore?days=${days}`));
-}
-$('rescoreBtn').onclick = rescore;
+
 
 // ---------- score one offer from its card ----------
 async function scoreOne(btn) {
@@ -515,6 +511,8 @@ async function scoreOne(btn) {
   });
   try {
     const job = await api('POST', `/api/jobs/${encodeURIComponent(id)}/score`);
+    const before = jobs.find(j => j.offer.id === id);
+    if (before && before.stale && !job.stale) setStaleCount(staleCount - 1);
     jobs = jobs.map(j => j.offer.id === id ? job : j);
     const el = document.querySelector(`.card[data-card="${CSS.escape(id)}"]`);
     if (el) el.outerHTML = card(job);
@@ -523,7 +521,7 @@ async function scoreOne(btn) {
     toast(err.message, true);
     document.querySelectorAll(`.score-btn[data-id="${CSS.escape(id)}"]`).forEach(b => {
       b.disabled = busy;
-      b.textContent = 'Оценить';
+      b.textContent = b.dataset.label;
     });
   }
 }
@@ -540,7 +538,6 @@ $('detail').addEventListener('click', ev => {
 document.addEventListener('keydown', e => {
   if (e.key === 'Escape' && !$('overlay').classList.contains('open') && openId) closeDetail();
 });
-$('bannerRescore').onclick = rescore;
 
 $('delScoresBtn').onclick = async () => {
   if (!await modal({title: 'Удалить все оценки?', ok: 'Удалить оценки', danger: true,
