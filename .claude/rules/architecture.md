@@ -8,9 +8,9 @@ JustJoin listing HTML (justjoin.it/job-offers/all-locations/java?experience-leve
     ▼
 ScraperService        → raw-offers.json   (new offers only, nothing removed)
     ▼
-OfferDetailsService   → raw-offers.json   (description + domain from offer page JSON-LD, no AI)
+OfferDetailsService   → raw-offers.json   (description + domain from offer page JSON-LD, no AI; sequential, 0.3–0.6 s polite pause; saved every 10)
     ▼
-ExtractionService     → extractions.json  (Claude, once per offer: skills, requirements, …)
+ExtractionService     → extractions.json  (Claude, once per offer, 5 requests in parallel; saved every 10)
 
 Scoring is NOT part of the scan — on demand only:
 POST /api/jobs/{id}/score → ScoringService → scores.json  (Claude: raw offer + profile → matchScore, reason)

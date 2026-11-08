@@ -1,5 +1,8 @@
 package radar.service;
 
+import java.util.Map;
+import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicInteger;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -31,6 +34,8 @@ public class ExtractionService {
   /** @param limit optional cap on how many offers to extract this run; {@code null} = no cap */
   /** Progress is written to disk after every this many extractions, not only at the end. */
   static final int SAVE_EVERY = 10;
+  /** Claude requests running at the same time. */
+  static final int PARALLEL = 5;
 
   public ExtractionResult extractMissing(Integer limit) {
     var extractions = repository.readExtractions();
@@ -40,27 +45,37 @@ public class ExtractionService {
         .toList();
     var batch = limit == null ? todo : todo.subList(0, Math.min(limit, todo.size()));
     progress.begin("extract", batch.size());
-    var extracted = 0;
-    try {
+    var extracted = new AtomicInteger();
+    // close() waits for every submitted extraction to finish
+    try (var pool = Executors.newFixedThreadPool(PARALLEL, Thread.ofVirtual().factory())) {
       for (var offer : batch) {
-        try {
-          var facts = claude.ask(prompt(offer), ExtractedFacts.class);
-          extractions.put(offer.id(), facts.toExtraction());
-          extracted++;
-          if (extracted % SAVE_EVERY == 0) {
-            repository.saveExtractions(extractions); // a stopped server loses at most SAVE_EVERY
-          }
-        } catch (RuntimeException e) {
-          log.warn("Extraction failed for {}: {}", offer.id(), e.toString());
-        }
-        progress.advance();
+        pool.submit(() -> extractOne(offer, extractions, extracted));
       }
     } finally {
-      repository.saveExtractions(extractions);
+      synchronized (extractions) {
+        repository.saveExtractions(extractions);
+      }
     }
-    var remaining = todo.size() - extracted;
-    log.info("Extract: extracted {}, remaining {} (limit={})", extracted, remaining, limit);
-    return new ExtractionResult(extracted, remaining);
+    var remaining = todo.size() - extracted.get();
+    log.info("Extract: extracted {}, remaining {} (limit={})", extracted.get(), remaining, limit);
+    return new ExtractionResult(extracted.get(), remaining);
+  }
+
+  /** One Claude call (outside the lock); the shared map and disk writes are guarded by it. */
+  private void extractOne(RawJobOffer offer, Map<String, OfferExtraction> extractions,
+      AtomicInteger extracted) {
+    try {
+      var facts = claude.ask(prompt(offer), ExtractedFacts.class);
+      synchronized (extractions) {
+        extractions.put(offer.id(), facts.toExtraction());
+        if (extracted.incrementAndGet() % SAVE_EVERY == 0) {
+          repository.saveExtractions(extractions); // a stopped server loses at most SAVE_EVERY
+        }
+      }
+    } catch (RuntimeException e) {
+      log.warn("Extraction failed for {}: {}", offer.id(), e.toString());
+    }
+    progress.advance();
   }
 
   private static boolean hasDescription(RawJobOffer offer) {
