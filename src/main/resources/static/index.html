@@ -10,7 +10,48 @@ body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,san
 .layout{display:flex;align-items:flex-start}
 .wrap{flex:1;min-width:0;max-width:860px;margin:0 auto;padding:16px}
 .bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:12px}
-.bar h1{font-size:20px;margin:0 auto 0 0}
+.bar h1{font-size:20px;margin:0}
+.tabs{display:flex;gap:4px;background:#e9ecef;border-radius:10px;padding:3px;margin-right:auto}
+.tabs button{border:none;background:none;padding:6px 12px;border-radius:8px;font-size:14px;color:#4b5563;cursor:pointer}
+.tabs button.on{background:#fff;color:#111827;font-weight:600;box-shadow:0 1px 2px rgba(0,0,0,.06)}
+.wrap.wide{max-width:1100px}
+/* analytics */
+.domains{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px}
+.chip{border:1px solid #d0d4d9;background:#fff;border-radius:999px;padding:5px 12px;font-size:13px;cursor:pointer}
+.chip b{color:#6b7280;font-weight:400;margin-left:4px}
+.chip.on{background:#2563eb;border-color:#2563eb;color:#fff}
+.chip.on b{color:#dbeafe}
+.agrid{display:grid;grid-template-columns:1.4fr 1fr;gap:12px}
+.acol{display:flex;flex-direction:column;gap:12px}
+.box{background:#fff;border:1px solid #e6e8eb;border-radius:14px;padding:14px;font-size:14px}
+.box h2{margin:0 0 4px;font-size:15px}
+.box .sub{color:#6b7280;font-size:12px;margin-bottom:10px}
+.arow{display:grid;grid-template-columns:120px 1fr 84px;gap:8px;align-items:center;margin:5px 0;font-size:13px}
+.arow .name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.track{height:14px;background:#f1f2f4;border-radius:4px;position:relative;overflow:hidden}
+.fill{position:absolute;left:0;top:0;bottom:0;background:#6366f1;border-radius:4px}
+.fill.nice{background:#c7d2fe}
+.pct{text-align:right;color:#374151;font-variant-numeric:tabular-nums}
+.pct small{color:#9ca3af}
+.cmp{font-size:11px;margin-left:4px}
+.up{color:#15803d}.down{color:#b45309}
+.legend{display:flex;gap:12px;font-size:12px;color:#6b7280;margin-bottom:6px}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:4px;vertical-align:-1px}
+.kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:10px}
+.kpi{background:#f8fafc;border-radius:10px;padding:8px 10px}
+.kpi .v{font-size:20px;font-weight:700}
+.kpi .l{font-size:12px;color:#6b7280}
+.stack{display:flex;height:22px;border-radius:6px;overflow:hidden;margin:6px 0 4px}
+.stack div{display:flex;align-items:center;justify-content:center;font-size:11px;color:#fff;white-space:nowrap;overflow:hidden}
+.legend2{display:flex;flex-wrap:wrap;gap:4px 12px;font-size:12px;color:#4b5563;margin-bottom:10px}
+.legend2 i{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:4px}
+.sal{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.salc{background:#f8fafc;border-radius:10px;padding:10px}
+.salc .k{font-size:12px;color:#6b7280}
+.salc .v{font-size:22px;font-weight:700;margin:2px 0}
+.salc .r{font-size:12px;color:#4b5563}
+.note{font-size:12px;color:#9ca3af;margin-top:8px}
+@media (max-width:860px){.agrid{grid-template-columns:1fr}}
 .btn{padding:8px 14px;font-size:14px;border-radius:10px;border:1px solid #d0d4d9;background:#fff;cursor:pointer;color:#1f2328}
 .btn:hover{background:#f3f4f6}
 .btn.primary{background:#2563eb;border-color:#2563eb;color:#fff}
@@ -103,6 +144,7 @@ textarea{width:100%;min-height:240px;font-family:ui-monospace,Menlo,monospace;fo
 
 <div class="bar">
   <h1>vacancy-radar</h1>
+  <div class="tabs"><button id="tabJobs" class="on">Вакансии</button><button id="tabAnalytics">Аналитика</button></div>
   <button class="btn primary" id="scanBtn">Сканировать</button>
   <button class="btn" id="profileBtn">Профиль</button>
   <button class="btn danger" id="delScoresBtn">Удалить оценки</button>
@@ -124,6 +166,7 @@ textarea{width:100%;min-height:240px;font-family:ui-monospace,Menlo,monospace;fo
   </div>
 </div>
 
+<div id="jobsView">
 <div class="filters" id="filters">
   <label>Оценка от
     <select id="fMinScore">
@@ -144,6 +187,19 @@ textarea{width:100%;min-height:240px;font-family:ui-monospace,Menlo,monospace;fo
 <div class="count" id="count"></div>
 <div class="list" id="list"></div>
 <button class="btn more-btn" id="moreBtn" style="display:none">Показать ещё</button>
+</div>
+<div id="analyticsView" style="display:none">
+  <div class="domains" id="aDomains"></div>
+  <div class="agrid">
+    <div class="acol"><div class="box" id="aSkills"></div></div>
+    <div class="acol">
+      <div class="box" id="aSalary"></div>
+      <div class="box" id="aAi"></div>
+      <div class="box" id="aConditions"></div>
+      <div class="box" id="aCities"></div>
+    </div>
+  </div>
+</div>
 </div>
 <aside class="detail" id="detail"></aside>
 </div>
@@ -634,10 +690,119 @@ $('saveProfile').onclick = async () => {
   } catch (err) { toast(err.message, true); }
 };
 
+// ---------- analytics (no AI: computed by the server from the JSON files) ----------
+let aDomain = 'all';
+const pct = (a, n) => n ? Math.round(a * 100 / n) : 0;
+const fmtNum = n => n.toLocaleString('ru');
+const VALUE_RU = {
+  remote: 'удалённо', hybrid: 'гибрид', office: 'офис', 'true': 'нужен', 'false': 'не нужен',
+  outsourcing: 'аутсорс', agency: 'агентство', product: 'продукт', bodyleasing: 'боди-лизинг',
+};
+const COLORS = ['#6366f1', '#22c55e', '#f59e0b', '#ef4444', '#06b6d4', '#a855f7', '#94a3b8'];
+
+function showTab(name) {
+  const analytics = name === 'analytics';
+  $('tabJobs').classList.toggle('on', !analytics);
+  $('tabAnalytics').classList.toggle('on', analytics);
+  $('jobsView').style.display = analytics ? 'none' : 'block';
+  $('analyticsView').style.display = analytics ? 'block' : 'none';
+  document.querySelector('.wrap').classList.toggle('wide', analytics);
+  if (analytics) { closeDetail(); loadAnalytics(); }
+  history.replaceState(null, '', location.pathname + location.search + (analytics ? '#analytics' : ''));
+}
+$('tabJobs').onclick = () => showTab('jobs');
+$('tabAnalytics').onclick = () => showTab('analytics');
+
+async function loadAnalytics() {
+  let d;
+  try {
+    d = await api('GET', '/api/analytics?domain=' + encodeURIComponent(aDomain));
+  } catch (err) {
+    $('aSkills').innerHTML = `<div class="empty">Не удалось загрузить аналитику: ${esc(err.message)}</div>`;
+    return;
+  }
+  const chips = [{key: 'all', label: 'Все', count: d.marketTotal}, ...d.domains];
+  $('aDomains').innerHTML = chips.map(c =>
+    `<span class="chip ${c.key === aDomain ? 'on' : ''}" data-domain="${esc(c.key)}">${esc(c.label)}<b>${c.count}</b></span>`).join('');
+  $('aSkills').innerHTML = aSkills(d);
+  $('aSalary').innerHTML = aSalary(d);
+  $('aAi').innerHTML = aAi(d);
+  $('aConditions').innerHTML = `<h2>Условия</h2>`
+    + aStack('Формат работы', d.workMode, d.total) + aStack('Тип компании', d.companyType, d.total)
+    + aStack('English', d.englishLevel, d.total) + aStack('Польский', d.polishRequired, d.total);
+  $('aCities').innerHTML = aCities(d);
+}
+$('aDomains').addEventListener('click', ev => {
+  const chip = ev.target.closest('.chip');
+  if (!chip) return;
+  aDomain = chip.dataset.domain;
+  loadAnalytics();
+});
+
+function aSkills(d) {
+  if (!d.total) return '<h2>Самые нужные навыки</h2><div class="note">Нет извлечённых вакансий — запусти скан.</div>';
+  const all = aDomain === 'all';
+  const max = Math.max(...d.skills.map(x => pct(x.must + x.nice, d.total)), 1);
+  return `<h2>Самые нужные навыки</h2>
+    <div class="sub">% из ${d.total} вакансий${all ? '' : ' · ▲▼ — разница со всем рынком'}</div>
+    <div class="legend"><span><i style="background:#6366f1"></i>обязательно</span><span><i style="background:#c7d2fe"></i>будет плюсом</span></div>
+    ${d.skills.map(x => {
+      const m = pct(x.must, d.total), p = pct(x.nice, d.total), base = pct(x.marketMust, d.marketTotal);
+      const diff = all ? '' : m - base >= 5 ? `<span class="cmp up">▲${m - base}</span>`
+        : base - m >= 5 ? `<span class="cmp down">▼${base - m}</span>` : '';
+      return `<div class="arow"><span class="name" title="${esc(x.name)}">${esc(x.name)}</span>
+        <div class="track"><div class="fill nice" style="width:${(m + p) / max * 100}%"></div><div class="fill" style="width:${m / max * 100}%"></div></div>
+        <span class="pct">${m}% <small>+${p}</small>${diff}</span></div>`;
+    }).join('')}`;
+}
+
+function aSalary(d) {
+  const card = (k, v) => v
+    ? `<div class="salc"><div class="k">${k}</div><div class="v">${fmtNum(v.median)}</div>
+       <div class="r">PLN/мес, медиана · обычно ${fmtNum(v.p25)}–${fmtNum(v.p75)}</div><div class="r">${v.count} вакансий</div></div>`
+    : `<div class="salc"><div class="k">${k}</div><div class="r">нет данных</div></div>`;
+  return `<h2>Зарплаты</h2><div class="sub">приведено к PLN в месяц · указана в ${d.withSalary} из ${d.total} вакансий</div>
+    <div class="sal">${card('B2B (нетто)', d.salary.b2b)}${card('Трудовой договор (брутто)', d.salary.permanent)}</div>
+    <div class="note">час × 168 · день × 21 · год ÷ 12 · курсы EUR/USD из настроек</div>`;
+}
+
+function aAi(d) {
+  const top = d.ai.tools.length ? d.ai.tools[0].count : 1;
+  return `<h2>AI</h2><div class="sub">AI-инструменты для разработки</div>
+    <div class="kpis">
+      <div class="kpi"><div class="v">${pct(d.ai.mentioned, d.total)}%</div><div class="l">упоминают</div></div>
+      <div class="kpi"><div class="v">${pct(d.ai.required, d.total)}%</div><div class="l">обязательно</div></div>
+      <div class="kpi"><div class="v">${pct(d.ai.preferred, d.total)}%</div><div class="l">будет плюсом</div></div>
+    </div>
+    ${d.ai.tools.map(t => `<div class="arow"><span class="name">${esc(t.value)}</span>
+      <div class="track"><div class="fill" style="width:${t.count / top * 100}%;background:#a855f7"></div></div>
+      <span class="pct">${t.count}</span></div>`).join('') || '<div class="note">не упоминается</div>'}`;
+}
+
+function aStack(title, items, n) {
+  if (!n) return '';
+  const color = (s, i) => s.value == null ? '#e5e7eb' : COLORS[i % COLORS.length];
+  const label = s => s.value == null ? 'не указано' : (VALUE_RU[s.value] || s.value);
+  return `<div style="font-size:13px;font-weight:600;margin-top:8px">${title}</div>
+    <div class="stack">${items.map((s, i) =>
+      `<div style="width:${s.count / n * 100}%;background:${color(s, i)}">${s.count / n > .08 ? pct(s.count, n) + '%' : ''}</div>`).join('')}</div>
+    <div class="legend2">${items.map((s, i) =>
+      `<span><i style="background:${color(s, i)}"></i>${esc(label(s))} ${pct(s.count, n)}%</span>`).join('')}</div>`;
+}
+
+function aCities(d) {
+  const max = d.cities.length ? d.cities[0].count : 1;
+  return `<h2>Города</h2><div class="sub">вакансия в нескольких городах считается в каждом</div>
+    ${d.cities.map(c => `<div class="arow"><span class="name">${esc(c.value)}</span>
+      <div class="track"><div class="fill" style="width:${c.count / max * 100}%;background:#06b6d4"></div></div>
+      <span class="pct">${c.count}</span></div>`).join('')}`;
+}
+
 // ---------- start ----------
 (async () => {
   await loadProfile();
   initFilters();
+  if (location.hash === '#analytics') showTab('analytics');
   await loadJobs();
   await refreshStatus();
 })();

@@ -55,6 +55,7 @@ class WebControllersTest {
   private ScoringService scoringService;
   private ProfileHasher hasher;
   private ReporterService reporterService;
+  private radar.service.AnalyticsService analyticsService;
   private BackgroundRunner runner;
   private MockMvc mvc;
 
@@ -70,12 +71,13 @@ class WebControllersTest {
     scoringService = mock(ScoringService.class);
     hasher = mock(ProfileHasher.class);
     reporterService = mock(ReporterService.class);
+    analyticsService = mock(radar.service.AnalyticsService.class);
     runner = new BackgroundRunner(new Progress());
     mvc = MockMvcBuilders.standaloneSetup(
         new ScanController(scraperService, offerDetailsService, extractionService,
             runner),
         new JobController(repository, hasher, scoringService, runner, 7),
-        new AnalyticsController(reporterService),
+        new AnalyticsController(reporterService, analyticsService),
         new ProfileController(repository),
         new DataController(repository, runner)).build();
   }
@@ -359,6 +361,21 @@ class WebControllersTest {
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.total").value(0))
         .andExpect(jsonPath("$.items").isEmpty());
+  }
+
+  @Test
+  void getAnalyticsPassesDomainAndRejectsUnknown() throws Exception {
+    when(analyticsService.dashboard("finance")).thenReturn(new radar.model.Dashboard("finance", 2,
+        5, List.of(), List.of(), 0, new radar.model.Dashboard.Salary(null, null),
+        new radar.model.Dashboard.Ai(0, 0, 0, 0, List.of()), List.of(), List.of(), List.of(),
+        List.of(), List.of()));
+    when(analyticsService.dashboard("mars")).thenThrow(new IllegalArgumentException("Unknown domain mars"));
+
+    mvc.perform(get("/api/analytics").param("domain", "finance"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.total").value(2))
+        .andExpect(jsonPath("$.marketTotal").value(5));
+    mvc.perform(get("/api/analytics").param("domain", "mars")).andExpect(status().isBadRequest());
   }
 
   @Test

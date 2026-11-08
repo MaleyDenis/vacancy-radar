@@ -40,5 +40,8 @@
 ## JobPage (`GET /api/jobs`)
 `items (JobView, offer without description), total, page, size, staleCount`
 
-## Analytics
+## Dashboard (`GET /api/analytics`)
+`domain, total, marketTotal, domains[{key,label,count}], skills[{name,must,nice,marketMust}], withSalary, salary{b2b,permanent: {count,median,p25,p75}}, ai{mentioned,required,preferred,used,tools}, workMode, companyType, englishLevel, polishRequired, cities` — Share = `{value, count}`, value null = not stated. Counts only; the UI computes percentages.
+
+## Analytics (legacy, unused)
 `date, totalScanned, skillFrequency, topCompanies, salaryDistribution, remotePercentage`

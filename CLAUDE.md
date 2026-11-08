@@ -24,8 +24,9 @@ no build, no dependencies). Phase 2 (GoWork, new connectors) — do NOT implemen
 ## Package Structure
 
 ```
-radar.model       — POJOs: RawJobOffer, StoredRawOffer, OfferExtraction, OfferScore, JobView, UserProfile
-radar.service     — ScraperService, OfferDetailsService, ExtractionService, ScoringService, ClaudeClient
+radar.model       — POJOs: RawJobOffer, StoredRawOffer, OfferExtraction, OfferScore, JobView, JobPage, Dashboard, UserProfile
+radar.service     — ScraperService, OfferDetailsService, ExtractionService, ScoringService, ClaudeClient,
+                    AnalyticsService (+ Domain, SkillNames)
 radar.connector   — JustJoinConnector
 radar.repository  — read/write JSON files to disk
 radar.web         — REST controllers
