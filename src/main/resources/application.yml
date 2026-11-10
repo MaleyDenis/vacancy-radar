@@ -1,0 +1,19 @@
+server:
+  port: 8080
+
+anthropic:
+  api:
+    key: ${ANTHROPIC_API_KEY:}
+
+radar:
+  justjoin:
+    # JustJoin listing filter by experience (comma-separated): intern, junior, mid, senior,
+    # team-leader-manager, c-level. Empty = all levels.
+    experience-levels: senior,team-leader-manager
+  # POST /api/scores/rescore re-scores offers published within this many days (override with ?days=N).
+  rescore:
+    days: 7
+  # analytics: currency -> PLN rates for salaries
+  rate:
+    eur: 4.3
+    usd: 4.0
