@@ -12,12 +12,6 @@ import radar.service.ExtractionService;
 import radar.service.OfferDetailsService;
 import radar.service.ScraperService;
 
-/**
- * Starts a scan in the background: scrape the listing into the raw-offers pool, fetch missing page
- * details, then extract facts with Claude (once per offer). No scoring: offers are scored one by
- * one from their card. Progress and the final {@link ScanResponse} are read from
- * {@code GET /api/status}.
- */
 @RestController
 public class ScanController {
 
@@ -34,13 +28,6 @@ public class ScanController {
     this.runner = runner;
   }
 
-  /**
-   * @param fullFetch walk every listing page; default {@code false} stops early once a page brings
-   *                  nothing new
-   * @param limit     caps each step this run (newest N scraped, N details, N extractions);
-   *                  omit for no cap
-   * @return 202 when started, 409 when a scan or rescore is already running
-   */
   @PostMapping("/api/scan")
   public ResponseEntity<Map<String, Object>> scan(
       @RequestParam(defaultValue = "false") boolean fullFetch,
@@ -56,7 +43,6 @@ public class ScanController {
     return ScanResponse.of(scan, details, extraction);
   }
 
-  /** What runs now (step, progress) and the result or error of the last finished task. */
   @GetMapping("/api/status")
   public BackgroundRunner.Status status() {
     return runner.status();

@@ -14,12 +14,6 @@ import radar.model.ScoringResult;
 import radar.model.UserProfile;
 import radar.repository.JsonRepository;
 
-/**
- * Scores offers against the profile with Claude (raw offer text + profile → score + reason) into
- * {@code scores.json}. Offers are scored one by one on demand ({@link #scoreOne}); scans do not
- * score. A profile change re-scores nothing by itself (scores just become stale): the card button
- * re-scores one offer, {@link #rescoreRecent(int)} (endpoint only, no UI) re-scores many.
- */
 @Service
 public class ScoringService {
 
@@ -42,11 +36,6 @@ public class ScoringService {
     this.progress = progress;
   }
 
-  /**
-   * Re-scores, against the current profile, every already scored offer published within the
-   * last {@code days} days (by {@code publishedAt}), replacing existing scores. Offers that fail stay
-   * as they were and are counted in {@code remaining}.
-   */
   public ScoringResult rescoreRecent(int days) {
     var profile = repository.readProfile();
     var profileHash = hasher.hash(profile);
@@ -78,13 +67,6 @@ public class ScoringService {
     return new ScoringResult(scored, failed);
   }
 
-  /**
-   * Scores one offer now (the card button) and stores the score; safe to call for several offers
-   * at once.
-   *
-   * @throws java.util.NoSuchElementException no such offer
-   * @throws IllegalStateException            the offer has no description yet
-   */
   public OfferScore scoreOne(String id) {
     var profile = repository.readProfile();
     var offer = repository.readRawOffers().stream()

@@ -42,10 +42,7 @@ import radar.service.ReporterService;
 import radar.service.ScoringService;
 import radar.service.ScraperService;
 
-/**
- * Standalone MockMvc tests for the REST layer — no Spring context, so no dependency on the web test
- * slice (which Spring Boot 4 splits into a separate module not on the classpath).
- */
+// standalone MockMvc: Spring Boot 4's web test slice is not on the classpath
 class WebControllersTest {
 
   private JsonRepository repository;
@@ -88,7 +85,6 @@ class WebControllersTest {
     return new StoredRawOffer(offer, "2026-07-04T00:00:00Z", null);
   }
 
-  /** Waits until the background task finishes, then returns {@code GET /api/status} assertions. */
   private ResultActions awaitStatus() throws Exception {
     var deadline = System.currentTimeMillis() + 5000;
     while (runner.isRunning() && System.currentTimeMillis() < deadline) {
@@ -98,7 +94,6 @@ class WebControllersTest {
         .andExpect(jsonPath("$.running").value(false));
   }
 
-  /** Occupies the runner until the returned latch is released. */
   private CountDownLatch occupyRunner() {
     var latch = new CountDownLatch(1);
     runner.start("scan", () -> {

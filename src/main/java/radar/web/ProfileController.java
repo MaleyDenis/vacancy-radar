@@ -7,7 +7,6 @@ import org.springframework.web.bind.annotation.RestController;
 import radar.model.UserProfile;
 import radar.repository.JsonRepository;
 
-/** Reads and updates the user profile used to score offers. */
 @RestController
 public class ProfileController {
 

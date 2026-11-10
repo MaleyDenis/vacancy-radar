@@ -8,7 +8,6 @@ import org.springframework.web.bind.annotation.RestController;
 import radar.service.AnalyticsService;
 import radar.service.ReporterService;
 
-/** Analytics dashboard ({@code /api/analytics}) and legacy skill trends ({@code /api/trends}). */
 @RestController
 public class AnalyticsController {
 
@@ -20,10 +19,6 @@ public class AnalyticsController {
     this.analyticsService = analyticsService;
   }
 
-  /**
-   * Dashboard statistics for one domain ({@code all}, {@code finance}, {@code insurance}, …),
-   * computed from the JSON files without AI. 400 for an unknown domain.
-   */
   @GetMapping("/api/analytics")
   public ResponseEntity<?> analytics(
       @RequestParam(defaultValue = AnalyticsService.ALL) String domain) {

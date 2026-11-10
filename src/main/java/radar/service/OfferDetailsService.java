@@ -11,12 +11,6 @@ import radar.connector.OfferDetailsParser;
 import radar.model.DetailsResult;
 import radar.repository.JsonRepository;
 
-/**
- * Fills in offer page details (full description + company domain) for pooled offers that don't have
- * them yet. Reads {@code raw-offers.json}, fetches each pending offer's page, parses the JobPosting
- * JSON-LD, and writes the updated pool back. Incremental (only {@code detailsFetchedAt == null}
- * offers), bounded by {@code limit}, and never calls Claude.
- */
 @Service
 public class OfferDetailsService {
 
@@ -35,13 +29,6 @@ public class OfferDetailsService {
     this.progress = progress;
   }
 
-  /**
-   * Fetches page details for offers still missing them.
-   *
-   * @param limit optional cap on how many offers to fetch this run; {@code null} = no cap. Offers a
-   *              fetch fails on are left for a later run.
-   */
-  /** Progress is written to disk after every this many fetched pages, not only at the end. */
   static final int SAVE_EVERY = 10;
 
   public DetailsResult fetchMissing(Integer limit) {
@@ -84,7 +71,7 @@ public class OfferDetailsService {
     return new DetailsResult(fetched, remaining);
   }
 
-  /** Rate-limits between page fetches. Package-private/overridable so tests can run without sleeping. */
+  // overridable so tests run without sleeping
   void sleepPolitely() {
     try {
       Thread.sleep(300 + ThreadLocalRandom.current().nextInt(300));

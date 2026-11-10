@@ -2,7 +2,6 @@ package radar.service;
 
 import radar.model.RawJobOffer;
 
-/** Renders a {@link RawJobOffer} as the plain-text block used in Claude prompts. */
 final class OfferPrompt {
 
   private OfferPrompt() {

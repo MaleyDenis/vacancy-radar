@@ -5,10 +5,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 
-/**
- * Unit tests for listing-page parsing (no network). Fixtures mimic justjoin.it's server-rendered
- * listing: offer objects live inside Next.js flight chunks {@code self.__next_f.push([1,"..."])}.
- */
 class JustJoinConnectorTest {
 
   private final ObjectMapper mapper = new ObjectMapper();
@@ -32,7 +28,7 @@ class JustJoinConnectorTest {
        "companyName":"Globex","city":"Warszawa","workplaceType":"hybrid","experienceLevel":"mid",
        "employmentTypes":[]}""";
 
-  /** Wraps a flight payload into script chunks, split in two to exercise concatenation. */
+  // split in two to exercise chunk concatenation
   private String html(String payload) throws Exception {
     var mid = payload.length() / 2;
     return "<html><body>"

@@ -3,11 +3,6 @@ package radar.service;
 import java.util.List;
 import java.util.Locale;
 
-/**
- * Business-domain groups for analytics, from the free-text {@code OfferExtraction.industry}
- * ("banking", "fintech", "insurance", …) by keywords. Small domains go to {@link #OTHER}. No AI —
- * edit the keywords and the analytics change at once.
- */
 public enum Domain {
   // order matters: the first matching group wins (insurance before finance)
   INSURANCE("insurance", "Страхование", List.of("insur")),
@@ -39,7 +34,6 @@ public enum Domain {
     return label;
   }
 
-  /** The group of an extracted industry; {@link #UNKNOWN} when the offer does not say. */
   public static Domain of(String industry) {
     if (industry == null || industry.isBlank()) {
       return UNKNOWN;
@@ -53,7 +47,6 @@ public enum Domain {
     return OTHER;
   }
 
-  /** By {@link #key()}; null for an unknown key. */
   public static Domain byKey(String key) {
     for (var domain : values()) {
       if (domain.key.equals(key)) {

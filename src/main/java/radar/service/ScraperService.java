@@ -11,14 +11,6 @@ import radar.model.ScanResult;
 import radar.model.StoredRawOffer;
 import radar.repository.JsonRepository;
 
-/**
- * Orchestrates scraping. {@link #scan(boolean, Integer)} fetches offers from the connector
- * newest-first, merges new ones into the {@code raw-offers.json} pool (deduplicating by id — the pool
- * itself is the source of truth, no separate seen-ids list). Never removes offers.
- *
- * <p>This step is profile-independent and never calls Claude — extraction and scoring happen later, reading the
- * pool this method fills.
- */
 @Service
 public class ScraperService {
 
@@ -34,20 +26,9 @@ public class ScraperService {
     this.progress = progress;
   }
 
-  /**
-   * Walks the connector newest-first, merging brand-new offers into the pool (preserving each
-   * existing offer's {@code firstSeenAt}), and persists.
-   *
-   * @param fullFetch when {@code false} (default), stops paginating as soon as a whole page holds no
-   *                  offer that wasn't already in the pool — cheap incremental scans. When
-   *                  {@code true}, walks every page to refresh the entire pool.
-   * @param limit     optional cap on how many offers to process this run (newest first); {@code null}
-   *                  = no cap.
-   */
   public ScanResult scan(boolean fullFetch, Integer limit) {
     var now = Instant.now().toString();
 
-    // Existing pool, keyed by id: an offer is "new" only if absent here.
     var pool = new LinkedHashMap<String, StoredRawOffer>();
     for (var stored : repository.readRawOffers()) {
       pool.put(stored.offer().id(), stored);

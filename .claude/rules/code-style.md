@@ -23,3 +23,22 @@ List<RawJobOffer> offers = ...;
 - Keep an explicit type only when `var` genuinely won't compile (e.g. the
   initializer is `null`, an array initializer `{...}`, or a lambda/method-ref
   that needs a target type).
+
+## Comments — "why", not "what"
+
+- Comment only to explain **why** (a non-obvious reason, constraint, or trade-off),
+  never **what** the code does — the code says that itself.
+- Short: one line where possible.
+- Timeless: no ticket numbers, PR links, URLs, dates, or history
+  ("changed from X", "added for VR-NN") — that belongs in git.
+- No section dividers, no javadoc that restates the method or parameter names.
+
+```java
+// good — the reason is not visible in the code
+// insurance before finance: "insurance" texts often mention "financial" too
+INSURANCE(...),
+
+// avoid — restates the code / not timeless
+/** Returns the domain of the industry. */
+// VR-42: added per review, see https://...
+```
