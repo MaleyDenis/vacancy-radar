@@ -21,7 +21,9 @@ final class OfferPrompt {
       append(sb, "Salary",
           offer.salaryMin() + " - " + offer.salaryMax() + " " + offer.currency() + gross + unit);
     }
+
     append(sb, "Description", offer.description());
+
     return sb.toString();
   }
 

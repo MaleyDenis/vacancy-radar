@@ -88,6 +88,7 @@ public record ExtractedFacts(
           .toList();
       nice = nice.isEmpty() ? null : nice;
     }
+
     return new OfferExtraction(must, nice, list(requirements), first(MAX_RESPONSIBILITIES, list(responsibilities)),
         first(MAX_PROJECT, list(projectDescription)), oneOf(realSeniority, SENIORITY, false),
         oneOf(englishLevel, ENGLISH, true), polishRequired.orElse(null),
@@ -105,6 +106,7 @@ public record ExtractedFacts(
     if (cleaned == null) {
       return null;
     }
+
     var result = SkillNames.clean(cleaned);
     return result.isEmpty() ? null : result;
   }

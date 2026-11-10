@@ -30,6 +30,7 @@ public class ClaudeClient {
     var usage = message.usage();
     log.info("Claude {} {}: {} in / {} out tokens", MODEL, type.getSimpleName(),
         usage.inputTokens(), usage.outputTokens());
+
     return message.content().stream()
         .flatMap(block -> block.text().stream())
         .map(text -> text.text())
@@ -46,6 +47,7 @@ public class ClaudeClient {
         .addUserMessage(prompt);
     // outputConfig(type) derives the JSON schema; re-set the config with the same format + effort
     var format = builder.build().rawParams().outputConfig().orElseThrow().format();
+
     return builder
         .outputConfig(OutputConfig.builder().format(format).effort(EFFORT).build())
         .build();

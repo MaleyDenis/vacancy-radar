@@ -71,6 +71,7 @@ public class JobController {
       return ResponseEntity.badRequest().body(Map.of("error",
           "sort must be one of " + SORTS.keySet() + ", page >= 1, 1 <= size <= " + MAX_PAGE_SIZE));
     }
+
     var all = allJobs();
     var staleCount = (int) all.stream().filter(job -> job.stale()).count();
     var matching = all.stream()
@@ -79,9 +80,11 @@ public class JobController {
             || job.score().matchScore() >= minScore)
         .sorted(order)
         .toList();
+
     var from = Math.min((page - 1) * size, matching.size());
     var to = Math.min(from + size, matching.size());
     var items = matching.subList(from, to).stream().map(job -> forCard(job)).toList();
+
     return ResponseEntity.ok(new JobPage(items, matching.size(), page, size, staleCount));
   }
 
@@ -98,6 +101,7 @@ public class JobController {
     var resumeHash = hasher.hash(repository.readResume());
     var extractions = repository.readExtractions();
     var scores = repository.readScores();
+
     return repository.readRawOffers().stream()
         .map(stored -> stored.offer())
         .map(offer -> view(offer, extractions.get(offer.id()), scores.get(offer.id()),
@@ -122,12 +126,14 @@ public class JobController {
       if (score.isEmpty()) {
         return Busy.conflict();
       }
+
       var resumeHash = score.get().resumeHash();
       var offer = repository.readRawOffers().stream()
           .map(stored -> stored.offer())
           .filter(candidate -> candidate.id().equals(id))
           .findFirst()
           .orElseThrow();
+
       return ResponseEntity.ok(
           view(offer, repository.readExtractions().get(id), score.get(), resumeHash));
     } catch (NoSuchElementException e) {
@@ -163,6 +169,7 @@ public class JobController {
     if (runner.isRunning()) {
       return Busy.conflict();
     }
+
     return ResponseEntity.ok(Map.of("deleted", repository.deleteScores()));
   }
 }

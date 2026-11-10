@@ -40,6 +40,7 @@ public class ScanController {
     var scan = scraperService.scan(fullFetch, limit);
     var details = offerDetailsService.fetchMissing(limit);
     var extraction = extractionService.extractMissing(limit);
+
     return ScanResponse.of(scan, details, extraction);
   }
 

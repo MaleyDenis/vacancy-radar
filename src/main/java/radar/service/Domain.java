@@ -38,12 +38,15 @@ public enum Domain {
     if (industry == null || industry.isBlank()) {
       return UNKNOWN;
     }
+
     var text = industry.toLowerCase(Locale.ROOT) + " ";
+
     for (var domain : values()) {
       if (domain.keywords.stream().anyMatch(text::contains)) {
         return domain;
       }
     }
+
     return OTHER;
   }
 
@@ -53,6 +56,7 @@ public enum Domain {
         return domain;
       }
     }
+
     return null;
   }
 }

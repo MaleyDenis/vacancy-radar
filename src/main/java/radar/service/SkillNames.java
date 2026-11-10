@@ -60,6 +60,7 @@ final class SkillNames {
   static List<String> clean(List<String> skills) {
     var seen = new HashSet<String>();
     var result = new ArrayList<String>();
+
     for (var skill : skills) {
       var name = canonical(skill);
       var key = name.toLowerCase(Locale.ROOT);
@@ -67,6 +68,7 @@ final class SkillNames {
         result.add(name);
       }
     }
+
     return result;
   }
 
@@ -76,6 +78,7 @@ final class SkillNames {
     if (glued.matches()) {
       name = glued.group(1);
     }
+
     name = SPACED_VERSION.matcher(name).replaceFirst("");
     return SYNONYMS.getOrDefault(name.toLowerCase(Locale.ROOT), name);
   }

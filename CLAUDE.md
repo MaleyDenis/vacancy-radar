@@ -73,3 +73,4 @@ static/index.html — the UI (single file, talks to /api/*)
 - Use `var` for every local variable where the compiler allows it (Java 25).
   See `.claude/rules/code-style.md`.
 - Comments explain "why", not "what" — short and timeless (no tickets, links, dates).
+- One blank line between the steps of a method (guard → prepare → process → return).

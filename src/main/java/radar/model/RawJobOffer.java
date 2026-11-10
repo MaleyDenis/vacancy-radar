@@ -45,6 +45,7 @@ public record RawJobOffer(
     if (locations != null && !locations.isEmpty()) {
       return locations;
     }
+
     return location == null ? List.of() : List.of(location);
   }
 }

@@ -33,6 +33,7 @@ public class BackgroundRunner {
     if (running || quickTasks > 0) {
       return false;
     }
+
     running = true;
     task = name;
     startedAt = Instant.now().toString();
@@ -41,18 +42,21 @@ public class BackgroundRunner {
     error = null;
     progress.clear();
     Thread.ofVirtual().name("bg-" + name).start(() -> run(work));
+
     return true;
   }
 
   private void run(Supplier<?> work) {
     Object value = null;
     String failure = null;
+
     try {
       value = work.get();
     } catch (RuntimeException e) {
       log.error("Background task {} failed", task, e);
       failure = e.getMessage() == null ? e.toString() : e.getMessage();
     }
+
     synchronized (this) {
       result = value;
       error = failure;
@@ -68,8 +72,10 @@ public class BackgroundRunner {
       if (running) {
         return Optional.empty();
       }
+
       quickTasks++;
     }
+
     try {
       return Optional.of(work.get());
     } finally {
