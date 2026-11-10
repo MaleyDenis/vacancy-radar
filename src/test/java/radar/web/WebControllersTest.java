@@ -31,12 +31,11 @@ import radar.model.RawJobOffer;
 import radar.model.ScanResult;
 import radar.model.ScoringResult;
 import radar.model.StoredRawOffer;
-import radar.model.UserProfile;
 import radar.repository.JsonRepository;
 import radar.service.BackgroundRunner;
 import radar.service.ExtractionService;
 import radar.service.OfferDetailsService;
-import radar.service.ProfileHasher;
+import radar.service.ResumeHasher;
 import radar.service.Progress;
 import radar.service.ReporterService;
 import radar.service.ScoringService;
@@ -50,14 +49,13 @@ class WebControllersTest {
   private OfferDetailsService offerDetailsService;
   private ExtractionService extractionService;
   private ScoringService scoringService;
-  private ProfileHasher hasher;
+  private ResumeHasher hasher;
   private ReporterService reporterService;
   private radar.service.AnalyticsService analyticsService;
   private BackgroundRunner runner;
   private MockMvc mvc;
 
-  private final UserProfile profile = new UserProfile(
-      List.of("Java", "Spring"), 3, "B2B", true, 15000, "PLN", "B2B", List.of("Kraków"), 6);
+  private final String resume = "Senior Java engineer";
 
   @BeforeEach
   void setUp() {
@@ -66,7 +64,7 @@ class WebControllersTest {
     offerDetailsService = mock(OfferDetailsService.class);
     extractionService = mock(ExtractionService.class);
     scoringService = mock(ScoringService.class);
-    hasher = mock(ProfileHasher.class);
+    hasher = mock(ResumeHasher.class);
     reporterService = mock(ReporterService.class);
     analyticsService = mock(radar.service.AnalyticsService.class);
     runner = new BackgroundRunner(new Progress());
@@ -75,7 +73,7 @@ class WebControllersTest {
             runner),
         new JobController(repository, hasher, scoringService, runner, 7),
         new AnalyticsController(reporterService, analyticsService),
-        new ProfileController(repository),
+        new ResumeController(repository),
         new DataController(repository, runner)).build();
   }
 
@@ -107,8 +105,8 @@ class WebControllersTest {
     return latch;
   }
 
-  private OfferScore score(int value, String profileHash) {
-    return new OfferScore(value, "why", profileHash, "2026-11-07T00:00:00Z");
+  private OfferScore score(int value, String resumeHash) {
+    return new OfferScore(value, "why", resumeHash, "2026-11-07T00:00:00Z");
   }
 
   @Test
@@ -161,8 +159,8 @@ class WebControllersTest {
 
   /** low(4, day 3), old(7 stale, day 1), best(9, day 2 morning), mid(7, day 2 evening), none(day 3). */
   private void givenJobs() {
-    when(repository.readProfile()).thenReturn(profile);
-    when(hasher.hash(profile)).thenReturn("current");
+    when(repository.readResume()).thenReturn(resume);
+    when(hasher.hash(resume)).thenReturn("current");
     when(repository.readRawOffers()).thenReturn(List.of(
         stored("low", "2026-11-03T10:00:00Z"), stored("old", "2026-11-01T10:00:00Z"),
         stored("best", "2026-11-02T08:00:00Z"), stored("mid", "2026-11-02T20:00:00Z"),
@@ -346,8 +344,8 @@ class WebControllersTest {
 
   @Test
   void getJobsReturnsEmptyWhenNone() throws Exception {
-    when(repository.readProfile()).thenReturn(profile);
-    when(hasher.hash(profile)).thenReturn("current");
+    when(repository.readResume()).thenReturn(resume);
+    when(hasher.hash(resume)).thenReturn("current");
     when(repository.readRawOffers()).thenReturn(List.of());
     when(repository.readExtractions()).thenReturn(new LinkedHashMap<>());
     when(repository.readScores()).thenReturn(new LinkedHashMap<>());
@@ -383,28 +381,22 @@ class WebControllersTest {
   }
 
   @Test
-  void getProfileReturnsProfile() throws Exception {
-    when(repository.readProfile()).thenReturn(profile);
+  void getResumeReturnsText() throws Exception {
+    when(repository.readResume()).thenReturn(resume);
 
-    mvc.perform(get("/api/profile"))
+    mvc.perform(get("/api/resume"))
         .andExpect(status().isOk())
-        .andExpect(jsonPath("$.minMatchScore").value(6))
-        .andExpect(jsonPath("$.currentSkills[0]").value("Java"));
+        .andExpect(content().string(resume));
   }
 
   @Test
-  void putProfilePersistsAndReturnsSaved() throws Exception {
-    when(repository.readProfile()).thenReturn(profile);
-    String body = """
-        {"currentSkills":["Java","Spring"],"experienceYears":3,"preferredType":"B2B",
-         "preferredRemote":true,"salaryMin":15000,"currency":"PLN","contractType":"B2B",
-         "locations":["Kraków"],"minMatchScore":6}
-        """;
+  void putResumeStoresStrippedText() throws Exception {
+    when(repository.readResume()).thenReturn(resume);
 
-    mvc.perform(put("/api/profile").contentType(MediaType.APPLICATION_JSON).content(body))
+    mvc.perform(put("/api/resume").contentType(MediaType.TEXT_PLAIN).content("  " + resume + "\n"))
         .andExpect(status().isOk())
-        .andExpect(jsonPath("$.minMatchScore").value(6));
+        .andExpect(content().string(resume));
 
-    verify(repository).writeProfile(any(UserProfile.class));
+    verify(repository).writeResume(resume);
   }
 }

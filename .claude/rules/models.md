@@ -17,22 +17,22 @@
 ## OfferDetails
 `description, domain` — the "as written" fields lifted from an offer page's JobPosting JSON-LD (no AI). Produced by `OfferDetailsParser`.
 
-## UserProfile (`data/profile.json`)
-`currentSkills, experienceYears, preferredType, preferredRemote, salaryMin, currency, contractType, locations, minMatchScore`
+## Resume (`data/resume.txt`)
+Plain text, pasted as is; wishes (contract, salary, remote) can be written at its end. Scoring sends it to Claude whole. An empty resume → scoring refuses (400).
 
 ## OfferExtraction (`extractions.json`, keyed by offer id)
 `skills, niceToHaveSkills, requirements, responsibilities, projectDescription, realSeniority, englishLevel, polishRequired, workMode, benefits, recruitmentSteps, industry, companyType, leadership, aiTools, aiToolsUsage`
 
-- Claude, once per offer, profile-independent. Any field is null when the text does not say.
+- Claude, once per offer, resume-independent. Any field is null when the text does not say.
 - Claude answers with `ExtractedFacts` (Optional fields → nullable schema; enum-like values are strings checked in `toExtraction()`, the SDK rejects nullable enums).
 - Values: `realSeniority` junior/mid/senior/lead · `englishLevel` A2–C2 · `workMode` remote/hybrid/office · `companyType` product/outsourcing/bodyleasing/agency · `aiToolsUsage` required/preferred/used.
 - `responsibilities` (≤ 5) and `projectDescription` (≤ 4, capped in code) are lists of short bullets in Claude's own words, English.
 - `skills` = must-have, `niceToHaveSkills` = a plus (no overlap); canonical names, no versions, no AI tools. Full list with notes: `docs/fields.html`.
 
 ## OfferScore (`scores.json`, keyed by offer id)
-`matchScore (1-10), reason, profileHash, scoredAt`
+`matchScore (1-10), reason, resumeHash, scoredAt`
 
-- `profileHash` ≠ current profile hash → score is stale.
+- `resumeHash` ≠ SHA-256 of the current resume → score is stale.
 
 ## JobView (`GET /api/jobs` element)
 `offer (RawJobOffer), extraction (OfferExtraction|null), score (OfferScore|null), stale`

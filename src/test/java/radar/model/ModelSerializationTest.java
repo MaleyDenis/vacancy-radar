@@ -32,14 +32,6 @@ class ModelSerializationTest {
   }
 
   @Test
-  void userProfileRoundTrips() throws Exception {
-    var profile = new UserProfile(
-        List.of("Java", "Spring Boot"), 3, "B2B", true, 15000, "PLN", "B2B",
-        List.of("Warsaw", "Remote"), 6);
-    assertRoundTrip(profile, UserProfile.class);
-  }
-
-  @Test
   void jobReportRoundTrips() throws Exception {
     var offer = new RawJobOffer(
         "jj-1", "Java Dev", "Acme", "50", "Kraków", false, "2026-07-04", "mid",

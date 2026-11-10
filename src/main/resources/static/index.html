@@ -116,7 +116,7 @@ body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,san
 .panel{display:none;background:#fff;border:1px solid #e6e8eb;border-radius:14px;padding:16px;margin-bottom:12px}
 .panel.open{display:block}
 .panel h2{font-size:16px;margin:0 0 12px}
-textarea{width:100%;min-height:240px;font-family:ui-monospace,Menlo,monospace;font-size:13px;border:1px solid #d0d4d9;border-radius:10px;padding:10px}
+textarea{width:100%;min-height:420px;font-family:inherit;font-size:13px;line-height:1.45;border:1px solid #d0d4d9;border-radius:10px;padding:10px}
 .empty{text-align:center;color:#6b7280;padding:40px 0}
 .hint{font-size:12px;color:#9ca3af;margin-top:12px;text-align:center}
 .overlay{position:fixed;inset:0;background:rgba(17,24,39,.45);display:none;align-items:center;justify-content:center;padding:16px;z-index:10}
@@ -144,7 +144,7 @@ textarea{width:100%;min-height:240px;font-family:ui-monospace,Menlo,monospace;fo
   <h1>vacancy-radar</h1>
   <div class="tabs"><button id="tabJobs" class="on">Вакансии</button><button id="tabAnalytics">Аналитика</button></div>
   <button class="btn primary" id="scanBtn">Сканировать</button>
-  <button class="btn" id="profileBtn">Профиль</button>
+  <button class="btn" id="resumeBtn">Резюме</button>
   <button class="btn danger" id="delScoresBtn">Удалить оценки</button>
   <button class="btn danger" id="wipeBtn">Очистить всё</button>
 </div>
@@ -152,15 +152,15 @@ textarea{width:100%;min-height:240px;font-family:ui-monospace,Menlo,monospace;fo
 <div class="status" id="status"></div>
 
 <div class="banner" id="staleBanner" style="display:none">
-  <span>Профиль изменился — <b id="staleCount"></b>. Переоцени нужные кнопкой «Переоценить» на вакансии.</span>
+  <span>Резюме изменилось — <b id="staleCount"></b>. Переоцени нужные кнопкой «Переоценить» на вакансии.</span>
 </div>
 
-<div class="panel" id="profilePanel">
-  <h2>Профиль</h2>
-  <textarea id="profileText" spellcheck="false"></textarea>
+<div class="panel" id="resumePanel">
+  <h2>Резюме</h2>
+  <textarea id="resumeText" placeholder="Вставь текст резюме. Пожелания (контракт, зарплата, удалёнка) можно дописать в конце."></textarea>
   <div style="margin-top:8px;display:flex;gap:8px">
-    <button class="btn primary" id="saveProfile">Сохранить</button>
-    <button class="btn" id="closeProfile">Закрыть</button>
+    <button class="btn primary" id="saveResume">Сохранить</button>
+    <button class="btn" id="closeResume">Закрыть</button>
   </div>
 </div>
 
@@ -222,14 +222,14 @@ const unitRu = {hour:'ч', day:'день', month:'мес', year:'год'};
 const stepRu = {scrape:'список вакансий', details:'описания', extract:'извлечение (Claude)', score:'оценка (Claude)', rescore:'пересчёт оценок (Claude)'};
 const actionButtons = ['scanBtn','delScoresBtn','wipeBtn'];
 
-let profile = null;
 let polling = null;
 
 async function api(method, url, body) {
+  const plain = typeof body === 'string';
   const res = await fetch(url, {
     method,
-    headers: body === undefined ? {} : {'Content-Type': 'application/json'},
-    body: body === undefined ? undefined : JSON.stringify(body)
+    headers: body === undefined ? {} : {'Content-Type': plain ? 'text/plain' : 'application/json'},
+    body: body === undefined || plain ? body : JSON.stringify(body)
   });
   const text = await res.text();
   let data = null;
@@ -438,9 +438,8 @@ let page = 1, total = 0;
 
 function initFilters() {
   const q = new URLSearchParams(location.search);
-  const profileMin = profile && profile.minMatchScore != null ? String(profile.minMatchScore) : '';
   filters = {
-    minScore: q.has('minScore') ? q.get('minScore') : profileMin,
+    minScore: q.has('minScore') ? q.get('minScore') : '6',
     scoredOnly: q.get('scoredOnly') === 'true',
     sort: ['score', 'date', 'date_score'].includes(q.get('sort')) ? q.get('sort') : 'score',
   };
@@ -648,27 +647,21 @@ $('wipeBtn').onclick = async () => {
   catch (err) { toast(err.message, true); }
 };
 
-async function loadProfile() {
+async function loadResume() {
   try {
-    profile = await api('GET', '/api/profile');
-    $('profileText').value = JSON.stringify(profile, null, 2);
-  } catch (err) {
-    profile = null;
-    $('profileText').value = '';
-    toast('Профиль не найден — заполни и сохрани', true);
-  }
+    $('resumeText').value = await api('GET', '/api/resume') || '';
+  } catch (err) { toast(err.message, true); }
 }
-$('profileBtn').onclick = () => $('profilePanel').classList.toggle('open');
-$('closeProfile').onclick = () => $('profilePanel').classList.remove('open');
-$('saveProfile').onclick = async () => {
-  let body;
-  try { body = JSON.parse($('profileText').value); }
-  catch (err) { toast('Неверный JSON: ' + err.message, true); return; }
+$('resumeBtn').onclick = () => {
+  $('resumePanel').classList.toggle('open');
+  if ($('resumePanel').classList.contains('open')) loadResume();
+};
+$('closeResume').onclick = () => $('resumePanel').classList.remove('open');
+$('saveResume').onclick = async () => {
   try {
-    profile = await api('PUT', '/api/profile', body);
-    $('profileText').value = JSON.stringify(profile, null, 2);
-    $('profilePanel').classList.remove('open');
-    toast('Профиль сохранён');
+    $('resumeText').value = await api('PUT', '/api/resume', $('resumeText').value) || '';
+    $('resumePanel').classList.remove('open');
+    toast('Резюме сохранено');
     loadJobs();
   } catch (err) { toast(err.message, true); }
 };
@@ -781,7 +774,6 @@ function aCities(d) {
 }
 
 (async () => {
-  await loadProfile();
   initFilters();
   if (location.hash === '#analytics') showTab('analytics');
   await loadJobs();

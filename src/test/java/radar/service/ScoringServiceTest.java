@@ -8,9 +8,9 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.LinkedHashMap;
@@ -23,14 +23,11 @@ import org.mockito.ArgumentCaptor;
 import radar.model.OfferScore;
 import radar.model.RawJobOffer;
 import radar.model.StoredRawOffer;
-import radar.model.UserProfile;
 import radar.repository.JsonRepository;
 
 class ScoringServiceTest {
 
-  private final ObjectMapper mapper = new ObjectMapper();
-  private final UserProfile profile = new UserProfile(
-      List.of("Java"), 5, "B2B", true, 20000, "PLN", "B2B", List.of("Remote"), 6);
+  private final String resume = "Senior Java engineer, 5 years, wants B2B remote";
 
   private ClaudeClient claude;
   private JsonRepository repository;
@@ -40,9 +37,8 @@ class ScoringServiceTest {
   void setUp() {
     claude = mock(ClaudeClient.class);
     repository = mock(JsonRepository.class);
-    service = new ScoringService(claude, repository, new ProfileHasher(mapper), mapper,
-        new Progress());
-    when(repository.readProfile()).thenReturn(profile);
+    service = new ScoringService(claude, repository, new ResumeHasher(), new Progress());
+    when(repository.readResume()).thenReturn(resume);
   }
 
   private StoredRawOffer stored(String id, String description) {
@@ -102,21 +98,17 @@ class ScoringServiceTest {
   }
 
   @Test
-  void minMatchScoreDoesNotAffectHashOrPrompt() {
-    var hasher = new ProfileHasher(mapper);
-    var stricter = new UserProfile(profile.currentSkills(), profile.experienceYears(),
-        profile.preferredType(), profile.preferredRemote(), profile.salaryMin(), profile.currency(),
-        profile.contractType(), profile.locations(), 9);
-    var offer = stored("a", "text").offer();
-    assertThat(hasher.hash(stricter)).isEqualTo(hasher.hash(profile));
-    assertThat(service.prompt(offer, stricter)).isEqualTo(service.prompt(offer, profile))
-        .doesNotContain("minMatchScore\":6");
+  void scoreOneRefusesWithoutResume() {
+    when(repository.readResume()).thenReturn("  ");
+    assertThatThrownBy(() -> service.scoreOne("a")).isInstanceOf(IllegalStateException.class)
+        .hasMessageContaining("Resume");
+    verifyNoInteractions(claude);
   }
 
   @Test
-  void promptHasProfileAndPlainOfferText() {
-    var prompt = service.prompt(stored("a", "Plain text").offer(), profile);
-    assertThat(prompt).contains("CANDIDATE PROFILE").contains("\"currentSkills\":[\"Java\"]")
+  void promptHasResumeAndPlainOfferText() {
+    var prompt = service.prompt(stored("a", "Plain text").offer(), resume);
+    assertThat(prompt).contains("=== CANDIDATE RESUME ===\n" + resume)
         .contains("Description: Plain text").doesNotContain("<");
   }
 }

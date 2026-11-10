@@ -1,7 +1,5 @@
 package radar.service;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.NoSuchElementException;
@@ -11,7 +9,6 @@ import org.springframework.stereotype.Service;
 import radar.model.OfferScore;
 import radar.model.RawJobOffer;
 import radar.model.ScoringResult;
-import radar.model.UserProfile;
 import radar.repository.JsonRepository;
 
 @Service
@@ -23,22 +20,20 @@ public class ScoringService {
 
   private final ClaudeClient claude;
   private final JsonRepository repository;
-  private final ProfileHasher hasher;
-  private final ObjectMapper objectMapper;
+  private final ResumeHasher hasher;
   private final Progress progress;
 
-  public ScoringService(ClaudeClient claude, JsonRepository repository, ProfileHasher hasher,
-      ObjectMapper objectMapper, Progress progress) {
+  public ScoringService(ClaudeClient claude, JsonRepository repository, ResumeHasher hasher,
+      Progress progress) {
     this.claude = claude;
     this.repository = repository;
     this.hasher = hasher;
-    this.objectMapper = objectMapper;
     this.progress = progress;
   }
 
   public ScoringResult rescoreRecent(int days) {
-    var profile = repository.readProfile();
-    var profileHash = hasher.hash(profile);
+    var resume = requireResume();
+    var resumeHash = hasher.hash(resume);
     var cutoff = Instant.now().minus(days, ChronoUnit.DAYS);
     var scores = repository.readScores();
     var batch = repository.readRawOffers().stream()
@@ -52,7 +47,7 @@ public class ScoringService {
     try {
       for (var offer : batch) {
         try {
-          scores.put(offer.id(), score(offer, profile, profileHash));
+          scores.put(offer.id(), score(offer, resume, resumeHash));
           scored++;
         } catch (RuntimeException e) {
           failed++;
@@ -68,7 +63,7 @@ public class ScoringService {
   }
 
   public OfferScore scoreOne(String id) {
-    var profile = repository.readProfile();
+    var resume = requireResume();
     var offer = repository.readRawOffers().stream()
         .map(stored -> stored.offer())
         .filter(candidate -> candidate.id().equals(id))
@@ -77,7 +72,7 @@ public class ScoringService {
     if (!hasDescription(offer)) {
       throw new IllegalStateException("Offer " + id + " has no description yet");
     }
-    var score = score(offer, profile, hasher.hash(profile));
+    var score = score(offer, resume, hasher.hash(resume));
     synchronized (this) {
       var scores = repository.readScores();
       scores.put(id, score);
@@ -85,6 +80,14 @@ public class ScoringService {
     }
     log.info("Scored {} on demand: {}", id, score.matchScore());
     return score;
+  }
+
+  private String requireResume() {
+    var resume = repository.readResume();
+    if (resume.isBlank()) {
+      throw new IllegalStateException("Resume is empty: fill it in first");
+    }
+    return resume;
   }
 
   private static boolean hasDescription(RawJobOffer offer) {
@@ -107,24 +110,16 @@ public class ScoringService {
     }
   }
 
-  OfferScore score(RawJobOffer offer, UserProfile profile, String profileHash) {
-    var result = claude.ask(prompt(offer, profile), ScoreResult.class);
+  OfferScore score(RawJobOffer offer, String resume, String resumeHash) {
+    var result = claude.ask(prompt(offer, resume), ScoreResult.class);
     var value = Math.max(MIN_SCORE, Math.min(MAX_SCORE, result.matchScore()));
-    return new OfferScore(value, result.reason(), profileHash, Instant.now().toString());
+    return new OfferScore(value, result.reason(), resumeHash, Instant.now().toString());
   }
 
-  String prompt(RawJobOffer offer, UserProfile profile) {
+  String prompt(RawJobOffer offer, String resume) {
     return "You are a career advisor. Score how well this job offer matches the candidate's "
-        + "profile on a scale of 1 to 10, and give a reason of at most 20 words.\n\n"
-        + "=== CANDIDATE PROFILE (JSON) ===\n" + writeJson(profile.forScoring()) + "\n\n"
+        + "resume on a scale of 1 to 10, and give a reason of at most 20 words.\n\n"
+        + "=== CANDIDATE RESUME ===\n" + resume + "\n\n"
         + "=== JOB OFFER ===\n" + OfferPrompt.describe(offer);
-  }
-
-  private String writeJson(UserProfile profile) {
-    try {
-      return objectMapper.writeValueAsString(profile);
-    } catch (JsonProcessingException e) {
-      throw new IllegalStateException("Failed to serialize profile for prompt", e);
-    }
   }
 }

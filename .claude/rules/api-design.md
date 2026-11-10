@@ -11,8 +11,8 @@ GET    /api/jobs/{id}                   — one JobView with full description (4
 POST   /api/jobs/{id}/score             — score one offer now (sync; 404/400/409/502)
 POST   /api/scores/rescore?days=N       — rescore scored offers of last N days (background; no UI button)
 DELETE /api/scores                      — delete scores.json (409 if busy)
-DELETE /api/data                        — delete everything except profile.json (409 if busy)
-GET    /api/profile, PUT /api/profile   — user profile
+DELETE /api/data                        — delete everything except resume.txt (409 if busy)
+GET    /api/resume, PUT /api/resume     — resume as text/plain (PUT strips surrounding whitespace)
 GET    /api/analytics?domain=all|finance|insurance|retail|it|other|unknown
                                         — Dashboard (no AI, computed from the JSON files; 400 unknown domain)
 GET    /api/trends                      — legacy, unused
@@ -21,7 +21,7 @@ GET    /api/trends                      — legacy, unused
 ## GET /api/jobs
 
 - `minScore` — hides scored offers below it; unscored offers are not affected. The UI sends
-  `profile.minMatchScore` by default.
+  6 by default.
 - `scoredOnly=true` — hides unscored offers.
 - `sort` — `score` (best first, then newest; unscored last) | `date` (newest first) |
   `date_score` (newest day first, best score within a day). Default `score`.
