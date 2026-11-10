@@ -42,3 +42,37 @@ INSURANCE(...),
 /** Returns the domain of the industry. */
 // VR-42: added per review, see https://...
 ```
+
+## Blank lines — separate the steps of a method
+
+A method body reads as steps: guard → prepare → process → result. Put one blank line
+between steps, so each step is seen at a glance.
+
+- After a guard clause (`if (...) { return/throw }`) at the top.
+- After declarations/setup, before the loop or stream that uses them.
+- After a loop or multi-line block, before what follows.
+- Before the final `return` when something precedes it.
+- Never two blank lines in a row; inside a method, no blank line right after `{` or before `}`.
+- A short method of one step (2–3 lines) stays without blank lines.
+- If a method needs many blank lines, it probably needs splitting or simplifying instead.
+
+```java
+// good
+private double remotePercentage(List<RawJobOffer> offers, int total) {
+  if (total == 0) {
+    return 0.0;
+  }
+
+  var remote = offers.stream()
+      .filter(o -> Boolean.TRUE.equals(o.remote()))
+      .count();
+
+  return remote * 100.0 / total;
+}
+
+// good — one step, no blank lines needed
+private String hash(String text) throws NoSuchAlgorithmException {
+  var digest = MessageDigest.getInstance("SHA-256").digest(text.getBytes(UTF_8));
+  return HexFormat.of().formatHex(digest);
+}
+```

@@ -57,14 +57,17 @@ public class AnalyticsService {
           return new Item(offer, facts, Domain.of(facts.industry()));
         })
         .toList();
+
     var domain = ALL.equals(domainKey) ? null : Domain.byKey(domainKey);
     if (!ALL.equals(domainKey) && domain == null) {
       throw new IllegalArgumentException("Unknown domain " + domainKey);
     }
+
     var items = domain == null ? all : all.stream().filter(i -> i.domain() == domain).toList();
 
     var withSalary = (int) items.stream()
         .filter(i -> i.offer().salaryMin() != null || i.offer().salaryMax() != null).count();
+
     return new Dashboard(domainKey, items.size(), all.size(), domains(all), skills(items, all),
         withSalary, new Salary(salary(items, "b2b"), salary(items, "permanent")), ai(items),
         shares(items, i -> i.facts().workMode()),
@@ -77,9 +80,11 @@ public class AnalyticsService {
 
   private static List<DomainCount> domains(List<Item> all) {
     var counts = new LinkedHashMap<Domain, Integer>();
+
     for (var item : all) {
       counts.merge(item.domain(), 1, Integer::sum);
     }
+
     return counts.entrySet().stream()
         .sorted(Map.Entry.<Domain, Integer>comparingByValue().reversed())
         .map(e -> new DomainCount(e.getKey().key(), e.getKey().label(), e.getValue()))
@@ -115,6 +120,7 @@ public class AnalyticsService {
   private static List<SkillStat> skills(List<Item> items, List<Item> all) {
     var must = new SkillCounter();
     var nice = new SkillCounter();
+
     for (var item : items) {
       var required = cleaned(item.facts().skills());
       var requiredKeys = new HashSet<String>();
@@ -124,12 +130,16 @@ public class AnalyticsService {
       nice.add(cleaned(item.facts().niceToHaveSkills()).stream()
           .filter(s -> !requiredKeys.contains(s.toLowerCase(Locale.ROOT))).toList());
     }
+
     var market = new SkillCounter();
+
     for (var item : all) {
       market.add(cleaned(item.facts().skills()));
     }
+
     var keys = new HashSet<>(must.offers.keySet());
     keys.addAll(nice.offers.keySet());
+
     return keys.stream()
         .sorted(Comparator.comparingInt((String k) -> must.get(k)).reversed()
             .thenComparing(Comparator.comparingInt((String k) -> nice.get(k)).reversed())
@@ -146,6 +156,7 @@ public class AnalyticsService {
     if (rate == null || perMonth == null) {
       return null;
     }
+
     var values = new ArrayList<Integer>();
     if (offer.salaryMin() != null) {
       values.add(offer.salaryMin());
@@ -153,9 +164,11 @@ public class AnalyticsService {
     if (offer.salaryMax() != null) {
       values.add(offer.salaryMax());
     }
+
     if (values.isEmpty()) {
       return null;
     }
+
     var mid = values.stream().mapToInt(Integer::intValue).average().orElseThrow();
     return mid * perMonth * rate;
   }
@@ -164,6 +177,7 @@ public class AnalyticsService {
     if (unit == null) {
       return null;
     }
+
     return switch (unit) {
       case "hour" -> (double) HOURS_PER_MONTH;
       case "day" -> (double) DAYS_PER_MONTH;
@@ -180,9 +194,11 @@ public class AnalyticsService {
         .filter(Objects::nonNull)
         .sorted()
         .toList();
+
     if (values.isEmpty()) {
       return null;
     }
+
     return new SalaryStat(values.size(), round(percentile(values, 0.5)),
         round(percentile(values, 0.25)), round(percentile(values, 0.75)));
   }
@@ -191,6 +207,7 @@ public class AnalyticsService {
     var pos = p * (sorted.size() - 1);
     var lower = (int) Math.floor(pos);
     var upper = (int) Math.ceil(pos);
+
     return sorted.get(lower) + (sorted.get(upper) - sorted.get(lower)) * (pos - lower);
   }
 
@@ -202,10 +219,13 @@ public class AnalyticsService {
     var mentioning = items.stream()
         .filter(i -> i.facts().aiTools() != null && !i.facts().aiTools().isEmpty())
         .toList();
+
     var tools = new LinkedHashMap<String, Integer>();
+
     for (var item : mentioning) {
       new HashSet<>(item.facts().aiTools()).forEach(t -> tools.merge(t, 1, Integer::sum));
     }
+
     return new Ai(mentioning.size(), usage(mentioning, "required"),
         usage(mentioning, "preferred"), usage(mentioning, "used"), top(tools, TOP_AI_TOOLS));
   }
@@ -217,6 +237,7 @@ public class AnalyticsService {
   private static List<Share> shares(List<Item> items, Function<Item, String> field) {
     var counts = new HashMap<String, Integer>();
     var unknown = 0;
+
     for (var item : items) {
       var value = field.apply(item);
       if (value == null) {
@@ -225,18 +246,22 @@ public class AnalyticsService {
         counts.merge(value, 1, Integer::sum);
       }
     }
+
     var result = new ArrayList<>(top(counts, Integer.MAX_VALUE));
     if (unknown > 0) {
       result.add(new Share(null, unknown));
     }
+
     return result;
   }
 
   private static List<Share> cities(List<Item> items) {
     var counts = new HashMap<String, Integer>();
+
     for (var item : items) {
       new HashSet<>(item.offer().allLocations()).forEach(c -> counts.merge(c, 1, Integer::sum));
     }
+
     return top(counts, TOP_CITIES);
   }
 

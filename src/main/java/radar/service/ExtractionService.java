@@ -35,9 +35,11 @@ public class ExtractionService {
         .map(stored -> stored.offer())
         .filter(offer -> !extractions.containsKey(offer.id()) && hasDescription(offer))
         .toList();
+
     var batch = limit == null ? todo : todo.subList(0, Math.min(limit, todo.size()));
     progress.begin("extract", batch.size());
     var extracted = new AtomicInteger();
+
     // close() waits for every submitted extraction to finish
     try (var pool = Executors.newFixedThreadPool(PARALLEL, Thread.ofVirtual().factory())) {
       for (var offer : batch) {
@@ -48,8 +50,10 @@ public class ExtractionService {
         repository.saveExtractions(extractions);
       }
     }
+
     var remaining = todo.size() - extracted.get();
     log.info("Extract: extracted {}, remaining {} (limit={})", extracted.get(), remaining, limit);
+
     return new ExtractionResult(extracted.get(), remaining);
   }
 
@@ -67,6 +71,7 @@ public class ExtractionService {
     } catch (RuntimeException e) {
       log.warn("Extraction failed for {}: {}", offer.id(), e.toString());
     }
+
     progress.advance();
   }
 

@@ -45,10 +45,12 @@ public class OfferDetailsService {
       if (stored.hasDetails() || stored.offer().applyUrl() == null) {
         continue;
       }
+
       missing++;
       if (limit != null && fetched >= limit) {
         continue; // leave for a later run
       }
+
       try {
         var html = connector.fetchOfferPageHtml(stored.offer().applyUrl());
         var details = parser.parse(html);
@@ -61,6 +63,7 @@ public class OfferDetailsService {
       } catch (RuntimeException e) {
         log.warn("Details fetch failed for {}: {}", stored.offer().id(), e.toString());
       }
+
       progress.advance();
       sleepPolitely();
     }
@@ -68,6 +71,7 @@ public class OfferDetailsService {
     repository.saveRawOffers(updated);
     var remaining = missing - fetched;
     log.info("Details: fetched {}, remaining {} (limit={})", fetched, remaining, limit);
+
     return new DetailsResult(fetched, remaining);
   }
 

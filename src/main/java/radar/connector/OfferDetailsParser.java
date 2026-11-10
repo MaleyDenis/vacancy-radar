@@ -19,6 +19,7 @@ public class OfferDetailsParser {
 
   public OfferDetails parse(String html) {
     var doc = Jsoup.parse(html);
+
     for (var script : doc.select("script[type=application/ld+json]")) {
       var node = readJson(script.data());
       if (node != null && "JobPosting".equals(node.path("@type").asText())) {
@@ -27,6 +28,7 @@ public class OfferDetailsParser {
         return new OfferDetails(description, domain);
       }
     }
+
     return new OfferDetails(null, null);
   }
 
@@ -42,6 +44,7 @@ public class OfferDetailsParser {
     if (node.isMissingNode() || node.isNull()) {
       return null;
     }
+
     var raw = node.asText();
     return raw.isBlank() ? null : Parser.unescapeEntities(raw, false);
   }
@@ -50,11 +53,13 @@ public class OfferDetailsParser {
     if (url == null || url.isBlank()) {
       return null;
     }
+
     try {
       var host = URI.create(url.trim()).getHost();
       if (host == null) {
         return null;
       }
+
       return host.startsWith("www.") ? host.substring(4) : host;
     } catch (RuntimeException e) {
       return null;

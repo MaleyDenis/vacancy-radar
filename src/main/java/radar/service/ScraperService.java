@@ -30,6 +30,7 @@ public class ScraperService {
     var now = Instant.now().toString();
 
     var pool = new LinkedHashMap<String, StoredRawOffer>();
+
     for (var stored : repository.readRawOffers()) {
       pool.put(stored.offer().id(), stored);
     }
@@ -47,11 +48,13 @@ public class ScraperService {
       progress.advance();
 
       var newOnPage = 0;
+
       for (var offer : p.offers()) {
         if (limit != null && processed >= limit) {
           limitReached = true;
           break;
         }
+
         var known = pool.get(offer.id());
         if (known == null) {
           pool.put(offer.id(), StoredRawOffer.fresh(offer, now));
@@ -64,14 +67,17 @@ public class ScraperService {
           pool.put(offer.id(), new StoredRawOffer(known.offer().withLocations(offer.locations()),
               known.firstSeenAt(), known.detailsFetchedAt()));
         }
+
         processed++;
       }
+
       log.info("Scan page {}: {} offers, {} new", page, p.offers().size(), newOnPage);
 
       // Incremental stop: once a full page brought nothing new, older pages hold only known offers.
       if (!fullFetch && !limitReached && newOnPage == 0) {
         break;
       }
+
       page++;
       if (hasNext && !limitReached) {
         sleepPolitely();
@@ -81,6 +87,7 @@ public class ScraperService {
     repository.saveRawOffers(pool.values().stream().toList());
     log.info("Scan done: added {}, pool size {} (fullFetch={}, limit={})",
         added, pool.size(), fullFetch, limit);
+
     return new ScanResult(added, pool.size());
   }
 

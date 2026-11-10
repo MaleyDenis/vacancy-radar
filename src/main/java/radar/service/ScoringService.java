@@ -41,9 +41,11 @@ public class ScoringService {
         .filter(offer -> scores.containsKey(offer.id()) && hasDescription(offer)
             && isPublishedAfter(offer, cutoff))
         .toList();
+
     progress.begin("rescore", batch.size());
     var scored = 0;
     var failed = 0;
+
     try {
       for (var offer : batch) {
         try {
@@ -53,12 +55,15 @@ public class ScoringService {
           failed++;
           log.warn("Rescoring failed for {}: {}", offer.id(), e.toString());
         }
+
         progress.advance();
       }
     } finally {
       repository.saveScores(scores);
     }
+
     log.info("Rescore: {} offers from the last {} days, {} failed", scored, days, failed);
+
     return new ScoringResult(scored, failed);
   }
 
@@ -69,16 +74,20 @@ public class ScoringService {
         .filter(candidate -> candidate.id().equals(id))
         .findFirst()
         .orElseThrow(() -> new NoSuchElementException("No offer " + id));
+
     if (!hasDescription(offer)) {
       throw new IllegalStateException("Offer " + id + " has no description yet");
     }
+
     var score = score(offer, resume, hasher.hash(resume));
     synchronized (this) {
       var scores = repository.readScores();
       scores.put(id, score);
       repository.saveScores(scores);
     }
+
     log.info("Scored {} on demand: {}", id, score.matchScore());
+
     return score;
   }
 
@@ -87,6 +96,7 @@ public class ScoringService {
     if (resume.isBlank()) {
       throw new IllegalStateException("Resume is empty: fill it in first");
     }
+
     return resume;
   }
 
@@ -103,6 +113,7 @@ public class ScoringService {
     if (value == null || value.isBlank()) {
       return null;
     }
+
     try {
       return Instant.parse(value);
     } catch (RuntimeException e) {

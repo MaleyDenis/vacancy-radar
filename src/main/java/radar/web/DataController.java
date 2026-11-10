@@ -23,6 +23,7 @@ public class DataController {
     if (runner.isRunning()) {
       return Busy.conflict();
     }
+
     return ResponseEntity.ok(Map.of("removed", repository.deleteAllData()));
   }
 }

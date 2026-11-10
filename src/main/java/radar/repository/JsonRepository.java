@@ -72,6 +72,7 @@ public class JsonRepository {
       if (!Files.exists(file)) {
         return new ArrayList<>();
       }
+
       return objectMapper.readValue(Files.readAllBytes(file),
           new TypeReference<List<StoredRawOffer>>() {});
     } catch (IOException e) {
@@ -118,7 +119,9 @@ public class JsonRepository {
       if (!Files.isDirectory(dataDir)) {
         return 0;
       }
+
       var removed = 0;
+
       try (var entries = Files.list(dataDir)) {
         for (var entry : entries.toList()) {
           var name = entry.getFileName().toString();
@@ -126,10 +129,12 @@ public class JsonRepository {
           if (name.equals(RESUME_FILE) || name.startsWith(".")) {
             continue;
           }
+
           deleteRecursively(entry);
           removed++;
         }
       }
+
       return removed;
     } catch (IOException e) {
       throw new UncheckedIOException("Failed to delete data", e);
@@ -146,6 +151,7 @@ public class JsonRepository {
         }
       }
     }
+
     Files.deleteIfExists(path);
   }
 
@@ -163,6 +169,7 @@ public class JsonRepository {
       if (!Files.isDirectory(dataDir)) {
         return new ArrayList<>();
       }
+
       try (var entries = Files.list(dataDir)) {
         return entries
             .filter(Files::isDirectory)
@@ -190,6 +197,7 @@ public class JsonRepository {
       if (!Files.exists(file)) {
         return new LinkedHashMap<>();
       }
+
       return objectMapper.readValue(Files.readAllBytes(file), type);
     } catch (IOException e) {
       throw new UncheckedIOException("Failed to read " + name, e);
@@ -204,6 +212,7 @@ public class JsonRepository {
       if (!Files.exists(file)) {
         throw new IllegalStateException("File not found: " + file);
       }
+
       return objectMapper.readValue(Files.readAllBytes(file), type);
     } catch (IOException e) {
       throw new UncheckedIOException("Failed to read " + file, e);

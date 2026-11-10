@@ -55,6 +55,7 @@ public class JustJoinConnector {
     var html = get(listingUrl(page), "listing page " + page);
     var offers = parseOffers(html);
     var hasNext = !offers.isEmpty() && html.contains("page=" + (page + 1) + "\"");
+
     return new OfferPage(offers, hasNext);
   }
 
@@ -75,12 +76,14 @@ public class JustJoinConnector {
         .timeout(Duration.ofSeconds(30))
         .GET()
         .build();
+
     try {
       var response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
       if (response.statusCode() != 200) {
         throw new IllegalStateException(
             "JustJoin returned HTTP " + response.statusCode() + " for " + what);
       }
+
       return response.body();
     } catch (IOException e) {
       throw new IllegalStateException("Failed to fetch " + what, e);
@@ -96,6 +99,7 @@ public class JustJoinConnector {
     var chars = flight.toCharArray();
     var byGuid = new LinkedHashMap<String, RawJobOffer>();
     var from = 0;
+
     while ((from = flight.indexOf(OFFER_START, from)) >= 0) {
       var node = readObjectAt(chars, from);
       from += OFFER_START.length();
@@ -103,6 +107,7 @@ public class JustJoinConnector {
         byGuid.putIfAbsent(node.get("guid").asText(), toRawJobOffer(node));
       }
     }
+
     return new ArrayList<>(byGuid.values());
   }
 
@@ -111,8 +116,10 @@ public class JustJoinConnector {
     var chars = html.toCharArray();
     var sb = new StringBuilder();
     var from = 0;
+
     while ((from = html.indexOf(FLIGHT_CHUNK, from)) >= 0) {
       from += FLIGHT_CHUNK.length();
+
       try (var parser = objectMapper.getFactory()
           .createParser(chars, from, chars.length - from)) {
         if (parser.nextToken() == JsonToken.VALUE_STRING) {
@@ -122,6 +129,7 @@ public class JustJoinConnector {
         // a malformed chunk only loses the offers inside it
       }
     }
+
     return sb.toString();
   }
 
@@ -138,6 +146,7 @@ public class JustJoinConnector {
     var employment = originalEmployment(n.path("employmentTypes"));
     var salary = employment.hasNonNull("from") || employment.hasNonNull("to")
         ? employment : MissingNode.getInstance();
+
     return new RawJobOffer(
         textOrNull(n, "guid"),
         textOrNull(n, "title"),
@@ -167,12 +176,14 @@ public class JustJoinConnector {
     if (main != null) {
       cities.add(main);
     }
+
     for (var location : n.path("multilocation")) {
       var city = textOrNull(location, "city");
       if (city != null) {
         cities.add(city);
       }
     }
+
     return List.copyOf(cities);
   }
 
@@ -183,6 +194,7 @@ public class JustJoinConnector {
         return t;
       }
     }
+
     return types.path(0);
   }
 
