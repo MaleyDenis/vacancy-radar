@@ -20,7 +20,7 @@ import radar.model.JobPage;
 import radar.model.JobView;
 import radar.repository.JsonRepository;
 import radar.service.BackgroundRunner;
-import radar.service.ProfileHasher;
+import radar.service.ResumeHasher;
 import radar.service.ScoringService;
 
 @RestController
@@ -44,12 +44,12 @@ public class JobController {
       "date_score", NEWEST_DAY.thenComparing(BEST).thenComparing(NEWEST));
 
   private final JsonRepository repository;
-  private final ProfileHasher hasher;
+  private final ResumeHasher hasher;
   private final ScoringService scoringService;
   private final BackgroundRunner runner;
   private final int rescoreDays;
 
-  public JobController(JsonRepository repository, ProfileHasher hasher,
+  public JobController(JsonRepository repository, ResumeHasher hasher,
       ScoringService scoringService, BackgroundRunner runner,
       @Value("${radar.rescore.days:7}") int rescoreDays) {
     this.repository = repository;
@@ -95,13 +95,13 @@ public class JobController {
   }
 
   private List<JobView> allJobs() {
-    var profileHash = hasher.hash(repository.readProfile());
+    var resumeHash = hasher.hash(repository.readResume());
     var extractions = repository.readExtractions();
     var scores = repository.readScores();
     return repository.readRawOffers().stream()
         .map(stored -> stored.offer())
         .map(offer -> view(offer, extractions.get(offer.id()), scores.get(offer.id()),
-            profileHash))
+            resumeHash))
         .toList();
   }
 
@@ -122,14 +122,14 @@ public class JobController {
       if (score.isEmpty()) {
         return Busy.conflict();
       }
-      var profileHash = score.get().profileHash();
+      var resumeHash = score.get().resumeHash();
       var offer = repository.readRawOffers().stream()
           .map(stored -> stored.offer())
           .filter(candidate -> candidate.id().equals(id))
           .findFirst()
           .orElseThrow();
       return ResponseEntity.ok(
-          view(offer, repository.readExtractions().get(id), score.get(), profileHash));
+          view(offer, repository.readExtractions().get(id), score.get(), resumeHash));
     } catch (NoSuchElementException e) {
       return error(HttpStatus.NOT_FOUND, e);
     } catch (IllegalStateException e) {
@@ -145,8 +145,8 @@ public class JobController {
   }
 
   private static JobView view(RawJobOffer offer, OfferExtraction extraction, OfferScore score,
-      String profileHash) {
-    var stale = score != null && !profileHash.equals(score.profileHash());
+      String resumeHash) {
+    var stale = score != null && !resumeHash.equals(score.resumeHash());
     return new JobView(offer, extraction, score, stale);
   }
 

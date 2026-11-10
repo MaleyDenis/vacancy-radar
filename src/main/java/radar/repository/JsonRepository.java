@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
 import java.io.UncheckedIOException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -18,13 +19,12 @@ import radar.model.Analytics;
 import radar.model.OfferExtraction;
 import radar.model.OfferScore;
 import radar.model.StoredRawOffer;
-import radar.model.UserProfile;
 
 // one lock for all files: concurrent tasks must not corrupt them
 @Component
 public class JsonRepository {
 
-  private static final String PROFILE_FILE = "profile.json";
+  private static final String RESUME_FILE = "resume.txt";
   private static final String RAW_OFFERS_FILE = "raw-offers.json";
   private static final String EXTRACTIONS_FILE = "extractions.json";
   private static final String SCORES_FILE = "scores.json";
@@ -41,12 +41,28 @@ public class JsonRepository {
     ensureDir(this.dataDir);
   }
 
-  public UserProfile readProfile() {
-    return read(dataDir.resolve(PROFILE_FILE), UserProfile.class);
+  public String readResume() {
+    lock.readLock().lock();
+    try {
+      var file = dataDir.resolve(RESUME_FILE);
+      // stripped: a hand-edited file and a UI save of the same text must hash the same
+      return Files.exists(file) ? Files.readString(file, StandardCharsets.UTF_8).strip() : "";
+    } catch (IOException e) {
+      throw new UncheckedIOException("Failed to read " + RESUME_FILE, e);
+    } finally {
+      lock.readLock().unlock();
+    }
   }
 
-  public void writeProfile(UserProfile profile) {
-    write(dataDir.resolve(PROFILE_FILE), profile);
+  public void writeResume(String resume) {
+    lock.writeLock().lock();
+    try {
+      Files.writeString(dataDir.resolve(RESUME_FILE), resume, StandardCharsets.UTF_8);
+    } catch (IOException e) {
+      throw new UncheckedIOException("Failed to write " + RESUME_FILE, e);
+    } finally {
+      lock.writeLock().unlock();
+    }
   }
 
   public List<StoredRawOffer> readRawOffers() {
@@ -106,8 +122,8 @@ public class JsonRepository {
       try (var entries = Files.list(dataDir)) {
         for (var entry : entries.toList()) {
           var name = entry.getFileName().toString();
-          // keep the profile and any dotfile scaffolding (e.g. .gitkeep)
-          if (name.equals(PROFILE_FILE) || name.startsWith(".")) {
+          // keep the resume and any dotfile scaffolding (e.g. .gitkeep)
+          if (name.equals(RESUME_FILE) || name.startsWith(".")) {
             continue;
           }
           deleteRecursively(entry);

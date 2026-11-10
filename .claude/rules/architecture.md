@@ -13,7 +13,7 @@ OfferDetailsService   → raw-offers.json   (description + domain from offer pag
 ExtractionService     → extractions.json  (Claude, once per offer, 5 requests in parallel; saved every 10)
 
 Scoring is NOT part of the scan — on demand only:
-POST /api/jobs/{id}/score → ScoringService → scores.json  (Claude: raw offer + profile → matchScore, reason)
+POST /api/jobs/{id}/score → ScoringService → scores.json  (Claude: raw offer + resume text → matchScore, reason)
   UI: "Оценить" on unscored offers, "Переоценить" on stale ones (card + detail view)
 
 GET /api/jobs = raw ⨝ extraction ⨝ score by offer id, filtered/sorted/paged on the server (see api-design.md)
@@ -38,8 +38,8 @@ GET /api/jobs = raw ⨝ extraction ⨝ score by offer id, filtered/sorted/paged 
 - One file per concern, linked by offer id
 
 **Extraction separate from scoring**
-- Extracted facts don't depend on the profile → computed once
-- Only scoring is profile-dependent; a profile change marks scores stale, re-scoring is per offer
+- Extracted facts don't depend on the resume → computed once
+- Only scoring is resume-dependent; a resume change marks scores stale, re-scoring is per offer
 
 **Claude Haiku over Sonnet**
 - Runs per offer (hundreds per full scan); Haiku is fast and cheap enough

@@ -13,9 +13,9 @@ This agent owns `radar.service.ReporterService`.
 ## Does NOT know about
 - Scraping or `JustJoinConnector`
 - Claude API or enrichment
-- Filtering by `minMatchScore` — analytics cover ALL offers
+- Filtering by `minScore` — analytics cover ALL offers
 
 ## Key constraints
 - `remotePercentage` must be in range 0–100
-- Analytics must be computed even if no offers pass the `minMatchScore` filter
+- Analytics must be computed even if no offers pass the `minScore` filter
 - No database — JSON files in `data/{date}/analytics.json` only

@@ -16,7 +16,6 @@ import radar.model.Analytics;
 import radar.model.OfferExtraction;
 import radar.model.OfferScore;
 import radar.model.SalaryRange;
-import radar.model.UserProfile;
 
 class JsonRepositoryTest {
 
@@ -37,17 +36,14 @@ class JsonRepositoryTest {
   }
 
   @Test
-  void profileRoundTrips() {
-    var profile = new UserProfile(
-        List.of("Java", "Spring"), 3, "B2B", true, 15000, "PLN", "B2B",
-        List.of("Warsaw", "Remote"), 6);
-    repo.writeProfile(profile);
-    assertThat(repo.readProfile()).isEqualTo(profile);
+  void resumeRoundTrips() {
+    repo.writeResume("Senior Java\nKraków — Warszawa");
+    assertThat(repo.readResume()).isEqualTo("Senior Java\nKraków — Warszawa");
   }
 
   @Test
-  void readProfileThrowsWhenMissing() {
-    assertThatThrownBy(() -> repo.readProfile()).isInstanceOf(IllegalStateException.class);
+  void resumeIsEmptyWhenMissing() {
+    assertThat(repo.readResume()).isEmpty();
   }
 
   @Test
@@ -75,8 +71,8 @@ class JsonRepositoryTest {
   }
 
   @Test
-  void deleteAllDataRemovesEverythingExceptProfileAndDotfiles() throws Exception {
-    repo.writeProfile(new UserProfile(List.of(), 0, null, false, 0, "PLN", null, List.of(), 0));
+  void deleteAllDataRemovesEverythingExceptResumeAndDotfiles() throws Exception {
+    repo.writeResume("resume");
     repo.saveRawOffers(List.of());
     repo.saveScores(Map.of());
     repo.saveAnalytics("2026-07-05",
@@ -84,11 +80,11 @@ class JsonRepositoryTest {
     var gitkeep = tmp.resolve("data").resolve(".gitkeep");
     Files.createFile(gitkeep);
 
-    // top-level entries besides profile.json and .gitkeep: raw-offers.json, scores.json, one date dir
+    // top-level entries besides resume.txt and .gitkeep: raw-offers.json, scores.json, one date dir
     var removed = repo.deleteAllData();
 
     assertThat(removed).isEqualTo(3);
-    assertThat(repo.readProfile()).isNotNull();
+    assertThat(repo.readResume()).isEqualTo("resume");
     assertThat(Files.exists(gitkeep)).isTrue(); // dotfiles are preserved
     assertThat(repo.readRawOffers()).isEmpty();
     assertThat(repo.listDates()).isEmpty();
@@ -119,7 +115,7 @@ class JsonRepositoryTest {
         new Analytics("2026-07-04", 0, Map.of(), List.of(), null, 0.0));
     // noise that must be ignored
     Files.createDirectories(tmp.resolve("data").resolve("not-a-date"));
-    repo.writeProfile(new UserProfile(List.of(), 0, null, false, 0, "PLN", null, List.of(), 0));
+    repo.writeResume("resume");
 
     assertThat(repo.listDates()).containsExactly("2026-07-04", "2026-07-06");
   }

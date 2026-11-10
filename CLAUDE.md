@@ -2,7 +2,7 @@
 
 ## Project
 
-**Goal:** Collect job offers from JustJoin, enrich via Claude Haiku, filter by user profile, analyze skill trends.
+**Goal:** Collect job offers from JustJoin, enrich via Claude Haiku, score against the resume, analyze skill trends.
 **Trigger:** REST API + a minimal static UI (`src/main/resources/static/index.html`: plain HTML/CSS/JS,
 no build, no dependencies). Phase 2 (GoWork, new connectors) — do NOT implement.
 **Storage:** JSON files by date. No database.
@@ -24,7 +24,7 @@ no build, no dependencies). Phase 2 (GoWork, new connectors) — do NOT implemen
 ## Package Structure
 
 ```
-radar.model       — POJOs: RawJobOffer, StoredRawOffer, OfferExtraction, OfferScore, JobView, JobPage, Dashboard, UserProfile
+radar.model       — POJOs: RawJobOffer, StoredRawOffer, OfferExtraction, OfferScore, JobView, JobPage, Dashboard
 radar.service     — ScraperService, OfferDetailsService, ExtractionService, ScoringService, ClaudeClient,
                     AnalyticsService (+ Domain, SkillNames)
 radar.connector   — JustJoinConnector
