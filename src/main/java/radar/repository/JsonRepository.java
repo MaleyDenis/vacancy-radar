@@ -20,22 +20,7 @@ import radar.model.OfferScore;
 import radar.model.StoredRawOffer;
 import radar.model.UserProfile;
 
-/**
- * Reads and writes the application's JSON files under the data directory. There is no database —
- * everything is JSON on disk (see {@code .claude/rules/data-storage.md}).
- *
- * <p>Layout:
- * <pre>
- *   {dataDir}/profile.json
- *   {dataDir}/raw-offers.json    (pool of scraped offers, profile-independent)
- *   {dataDir}/extractions.json   (Claude-extracted facts by offer id)
- *   {dataDir}/scores.json        (Claude match scores by offer id)
- *   {dataDir}/{YYYY-MM-DD}/analytics.json
- * </pre>
- *
- * <p>All access is guarded by a {@link ReentrantReadWriteLock} so concurrent scans don't corrupt a
- * file. Writes are pretty-printed so the files stay human-inspectable.
- */
+// one lock for all files: concurrent tasks must not corrupt them
 @Component
 public class JsonRepository {
 
@@ -56,8 +41,6 @@ public class JsonRepository {
     ensureDir(this.dataDir);
   }
 
-  // ---- profile ----
-
   public UserProfile readProfile() {
     return read(dataDir.resolve(PROFILE_FILE), UserProfile.class);
   }
@@ -66,9 +49,6 @@ public class JsonRepository {
     write(dataDir.resolve(PROFILE_FILE), profile);
   }
 
-  // ---- raw offers ----
-
-  /** Returns the scraped-offer pool, or an empty list if it doesn't exist yet. */
   public List<StoredRawOffer> readRawOffers() {
     lock.readLock().lock();
     try {
@@ -85,14 +65,10 @@ public class JsonRepository {
     }
   }
 
-  /** Overwrites the scraped-offer pool with {@code offers}. */
   public void saveRawOffers(List<StoredRawOffer> offers) {
     write(dataDir.resolve(RAW_OFFERS_FILE), offers);
   }
 
-  // ---- extractions ----
-
-  /** Returns extractions keyed by offer id (mutable, insertion-ordered), or empty if none yet. */
   public LinkedHashMap<String, OfferExtraction> readExtractions() {
     return readMap(EXTRACTIONS_FILE, new TypeReference<LinkedHashMap<String, OfferExtraction>>() {});
   }
@@ -101,9 +77,6 @@ public class JsonRepository {
     write(dataDir.resolve(EXTRACTIONS_FILE), extractions);
   }
 
-  // ---- scores ----
-
-  /** Returns scores keyed by offer id (mutable, insertion-ordered), or empty if none yet. */
   public LinkedHashMap<String, OfferScore> readScores() {
     return readMap(SCORES_FILE, new TypeReference<LinkedHashMap<String, OfferScore>>() {});
   }
@@ -112,7 +85,6 @@ public class JsonRepository {
     write(dataDir.resolve(SCORES_FILE), scores);
   }
 
-  /** Deletes {@code scores.json}. Returns how many files were removed (0 or 1). */
   public int deleteScores() {
     lock.writeLock().lock();
     try {
@@ -124,10 +96,6 @@ public class JsonRepository {
     }
   }
 
-  /**
-   * Wipes all data — raw offers, extractions, scores, analytics snapshots — keeping only
-   * {@code profile.json}. Returns how many top-level entries were removed.
-   */
   public int deleteAllData() {
     lock.writeLock().lock();
     try {
@@ -165,8 +133,6 @@ public class JsonRepository {
     Files.deleteIfExists(path);
   }
 
-  // ---- analytics ----
-
   public void saveAnalytics(String date, Analytics analytics) {
     write(dateDir(date).resolve(ANALYTICS_FILE), analytics);
   }
@@ -175,9 +141,6 @@ public class JsonRepository {
     return read(dateDir(date).resolve(ANALYTICS_FILE), Analytics.class);
   }
 
-  // ---- dates ----
-
-  /** Lists the {@code YYYY-MM-DD} snapshot directories under the data dir, ascending. */
   public List<String> listDates() {
     lock.readLock().lock();
     try {
@@ -198,8 +161,6 @@ public class JsonRepository {
       lock.readLock().unlock();
     }
   }
-
-  // ---- internals ----
 
   private Path dateDir(String date) {
     return dataDir.resolve(date);

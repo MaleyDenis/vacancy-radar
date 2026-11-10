@@ -3,7 +3,7 @@ package radar.service;
 import com.fasterxml.jackson.annotation.JsonClassDescription;
 import com.fasterxml.jackson.annotation.JsonPropertyDescription;
 
-/** Claude's structured answer for scoring one offer. Descriptions are sent as the schema. */
+// field descriptions go into the JSON schema Claude sees
 @JsonClassDescription("How well a job offer matches the candidate's profile.")
 public record ScoreResult(
     @JsonPropertyDescription("Match from 1 (poor) to 10 (excellent).")

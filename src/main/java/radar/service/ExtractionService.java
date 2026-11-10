@@ -11,11 +11,6 @@ import radar.model.OfferExtraction;
 import radar.model.RawJobOffer;
 import radar.repository.JsonRepository;
 
-/**
- * Extracts the facts of {@link OfferExtraction} (skills, work mode, company type, AI tools, …) from
- * each offer's text with Claude — once per offer, independent of the profile. Processes offers that have a description
- * and no entry in {@code extractions.json}; a failed offer is left for a later run.
- */
 @Service
 public class ExtractionService {
 
@@ -31,10 +26,7 @@ public class ExtractionService {
     this.progress = progress;
   }
 
-  /** @param limit optional cap on how many offers to extract this run; {@code null} = no cap */
-  /** Progress is written to disk after every this many extractions, not only at the end. */
   static final int SAVE_EVERY = 10;
-  /** Claude requests running at the same time. */
   static final int PARALLEL = 5;
 
   public ExtractionResult extractMissing(Integer limit) {
@@ -61,7 +53,7 @@ public class ExtractionService {
     return new ExtractionResult(extracted.get(), remaining);
   }
 
-  /** One Claude call (outside the lock); the shared map and disk writes are guarded by it. */
+  // Claude call outside the lock, so requests run in parallel
   private void extractOne(RawJobOffer offer, Map<String, OfferExtraction> extractions,
       AtomicInteger extracted) {
     try {

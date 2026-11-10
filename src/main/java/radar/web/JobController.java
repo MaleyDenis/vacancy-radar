@@ -23,20 +23,17 @@ import radar.service.BackgroundRunner;
 import radar.service.ProfileHasher;
 import radar.service.ScoringService;
 
-/** Jobs = raw offers joined with their extraction and score by offer id. */
 @RestController
 public class JobController {
 
   private static final int MAX_PAGE_SIZE = 200;
 
-  /** Newest first (ISO strings sort as dates). */
+  // ISO strings sort as dates
   private static final Comparator<JobView> NEWEST = Comparator.comparing(
       (JobView job) -> job.offer().publishedAt(), Comparator.nullsLast(Comparator.reverseOrder()));
-  /** Best score first, unscored last. */
   private static final Comparator<JobView> BEST = Comparator.comparing(
       (JobView job) -> job.score() == null ? null : job.score().matchScore(),
       Comparator.nullsLast(Comparator.reverseOrder()));
-  /** Publication day (yyyy-MM-dd), newest first. */
   private static final Comparator<JobView> NEWEST_DAY = Comparator.comparing(
       (JobView job) -> day(job.offer().publishedAt()),
       Comparator.nullsLast(Comparator.reverseOrder()));
@@ -62,16 +59,6 @@ public class JobController {
     this.rescoreDays = rescoreDays;
   }
 
-  /**
-   * Filtered, sorted, paged card views (offers without {@code description}).
-   *
-   * @param minScore   hide scored offers below this score; unscored offers are not affected
-   * @param scoredOnly hide unscored offers
-   * @param sort       {@code score} (best first, then newest), {@code date} (newest first) or
-   *                   {@code date_score} (newest day first, best score within a day)
-   * @param page       1-based page number
-   * @param size       page size, at most {@value #MAX_PAGE_SIZE}
-   */
   @GetMapping("/api/jobs")
   public ResponseEntity<?> jobs(
       @RequestParam(required = false) Integer minScore,
@@ -98,7 +85,6 @@ public class JobController {
     return ResponseEntity.ok(new JobPage(items, matching.size(), page, size, staleCount));
   }
 
-  /** One offer with everything, description included (the detail view). 404 if unknown. */
   @GetMapping("/api/jobs/{id}")
   public ResponseEntity<JobView> job(@PathVariable String id) {
     return allJobs().stream()
@@ -129,10 +115,6 @@ public class JobController {
         : publishedAt.substring(0, 10);
   }
 
-  /**
-   * Scores one offer now with Claude and returns its updated view. 404 unknown offer, 400 no
-   * description yet, 409 while a scan or rescore runs, 502 when Claude fails.
-   */
   @PostMapping("/api/jobs/{id}/score")
   public ResponseEntity<?> scoreOne(@PathVariable String id) {
     try {
@@ -168,11 +150,6 @@ public class JobController {
     return new JobView(offer, extraction, score, stale);
   }
 
-  /**
-   * Starts, in the background, re-scoring of offers published in the last {@code days} days against
-   * the current profile ({@code days} defaults to {@code radar.rescore.days}). Result (scored /
-   * failed) is read from {@code GET /api/status}. 409 when a task is already running.
-   */
   @PostMapping("/api/scores/rescore")
   public ResponseEntity<Map<String, Object>> rescore(
       @RequestParam(required = false) Integer days) {
@@ -181,7 +158,6 @@ public class JobController {
     return started ? Busy.started() : Busy.conflict();
   }
 
-  /** Deletes {@code scores.json}; extractions stay. Returns {@code {"deleted": N}} (files). */
   @DeleteMapping("/api/scores")
   public ResponseEntity<Map<String, Object>> deleteScores() {
     if (runner.isRunning()) {

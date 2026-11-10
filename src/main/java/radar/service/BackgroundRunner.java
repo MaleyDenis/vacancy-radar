@@ -7,26 +7,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
-/**
- * Runs one long task (scan or rescore) at a time on a background thread, so HTTP calls return at
- * once. {@link #status()} reports what is running, its progress and the last finished result.
- */
 @Component
 public class BackgroundRunner {
 
   private static final Logger log = LoggerFactory.getLogger(BackgroundRunner.class);
 
-  /**
-   * @param running    whether a task is running now
-   * @param task       name of the running or last task ({@code scan}, {@code rescore})
-   * @param step       current step of the running task
-   * @param done       items done in the current step
-   * @param total      items in the current step, 0 when unknown
-   * @param startedAt  ISO-8601 start of the running or last task
-   * @param finishedAt ISO-8601 end of the last task, null while running
-   * @param result     result of the last finished task, null if it failed
-   * @param error      error message of the last task, null if it succeeded
-   */
   public record Status(boolean running, String task, String step, int done, int total,
       String startedAt, String finishedAt, Object result, String error) {
   }
@@ -44,7 +29,6 @@ public class BackgroundRunner {
     this.progress = progress;
   }
 
-  /** Starts {@code work} in the background. Returns false (and does nothing) if a task is running. */
   public synchronized boolean start(String name, Supplier<?> work) {
     if (running || quickTasks > 0) {
       return false;
@@ -78,11 +62,7 @@ public class BackgroundRunner {
     }
   }
 
-  /**
-   * Runs a short task (e.g. scoring one offer) on the caller's thread. Several may run at once, but
-   * never together with a background task: returns empty if one is running, and {@link #start}
-   * refuses while any runs.
-   */
+  // short tasks run on the caller's thread, never alongside a background task
   public <T> Optional<T> runNow(Supplier<T> work) {
     synchronized (this) {
       if (running) {

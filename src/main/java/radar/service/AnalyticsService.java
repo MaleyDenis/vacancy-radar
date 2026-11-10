@@ -24,11 +24,6 @@ import radar.model.OfferExtraction;
 import radar.model.RawJobOffer;
 import radar.repository.JsonRepository;
 
-/**
- * Builds the analytics dashboard from {@code raw-offers.json} + {@code extractions.json} on every
- * request. No AI: skills are normalised with {@link SkillNames}, domains grouped with
- * {@link Domain}, salaries converted to PLN per month with configured rates.
- */
 @Service
 public class AnalyticsService {
 
@@ -36,7 +31,6 @@ public class AnalyticsService {
   static final int TOP_SKILLS = 30;
   static final int TOP_CITIES = 10;
   static final int TOP_AI_TOOLS = 8;
-  /** Working hours / days in a month, for hourly and daily rates. */
   static final int HOURS_PER_MONTH = 168;
   static final int DAYS_PER_MONTH = 21;
 
@@ -50,11 +44,9 @@ public class AnalyticsService {
     this.plnPer = Map.of("PLN", 1.0, "EUR", eur, "USD", usd);
   }
 
-  /** An offer with its extraction and domain. */
   record Item(RawJobOffer offer, OfferExtraction facts, Domain domain) {
   }
 
-  /** @param domainKey a {@link Domain} key or {@link #ALL} */
   public Dashboard dashboard(String domainKey) {
     var extractions = repository.readExtractions();
     var all = repository.readRawOffers().stream()
@@ -94,9 +86,6 @@ public class AnalyticsService {
         .toList();
   }
 
-  // ---------- skills ----------
-
-  /** Skill counts by lower-case key, keeping the most common spelling for display. */
   private static final class SkillCounter {
     final Map<String, Integer> offers = new HashMap<>();
     final Map<String, Map<String, Integer>> spellings = new HashMap<>();
@@ -151,9 +140,6 @@ public class AnalyticsService {
         .toList();
   }
 
-  // ---------- salary ----------
-
-  /** Mid of the offer's range in PLN per month; null when unknown or not convertible. */
   Double monthlyPln(RawJobOffer offer) {
     var rate = offer.currency() == null ? null : plnPer.get(offer.currency());
     var perMonth = perMonth(offer.salaryUnit());
@@ -201,7 +187,6 @@ public class AnalyticsService {
         round(percentile(values, 0.25)), round(percentile(values, 0.75)));
   }
 
-  /** Linear interpolation between closest ranks; {@code sorted} must be ascending. */
   static double percentile(List<Double> sorted, double p) {
     var pos = p * (sorted.size() - 1);
     var lower = (int) Math.floor(pos);
@@ -212,8 +197,6 @@ public class AnalyticsService {
   private static int round(double value) {
     return (int) Math.round(value / 100) * 100;
   }
-
-  // ---------- AI, shares, cities ----------
 
   private static Ai ai(List<Item> items) {
     var mentioning = items.stream()
@@ -231,7 +214,6 @@ public class AnalyticsService {
     return (int) items.stream().filter(i -> value.equals(i.facts().aiToolsUsage())).count();
   }
 
-  /** Every value with its offer count, biggest first; null (not stated) last. */
   private static List<Share> shares(List<Item> items, Function<Item, String> field) {
     var counts = new HashMap<String, Integer>();
     var unknown = 0;

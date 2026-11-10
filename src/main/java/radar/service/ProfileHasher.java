@@ -6,10 +6,6 @@ import java.util.HexFormat;
 import org.springframework.stereotype.Component;
 import radar.model.UserProfile;
 
-/**
- * Stable SHA-256 of the profile's scoring fields (all but {@code minMatchScore}) — ties a score to the
- * profile it was made for.
- */
 @Component
 public class ProfileHasher {
 

@@ -12,10 +12,6 @@ import radar.model.RawJobOffer;
 import radar.model.SalaryRange;
 import radar.repository.JsonRepository;
 
-/**
- * Aggregates {@link Analytics} across ALL scanned offers for a date (before any match-score filter),
- * and computes cross-snapshot skill trends. Does not scrape, call Claude, or filter by score.
- */
 @Service
 public class ReporterService {
 
@@ -27,7 +23,6 @@ public class ReporterService {
     this.repository = repository;
   }
 
-  /** Builds the analytics snapshot for a date from every enriched report (no score filtering). */
   public Analytics buildAnalytics(String date, List<JobReport> allReports) {
     var total = allReports.size();
     return new Analytics(
@@ -39,10 +34,6 @@ public class ReporterService {
         remotePercentage(allReports, total));
   }
 
-  /**
-   * Merges {@code skillFrequency} across every saved snapshot, summing counts per skill, sorted by
-   * total frequency descending.
-   */
   public Map<String, Integer> computeTrends() {
     var merged = new HashMap<String, Integer>();
     for (var date : repository.listDates()) {

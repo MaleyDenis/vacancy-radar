@@ -8,22 +8,15 @@ import java.util.Map;
 import java.util.Set;
 import java.util.regex.Pattern;
 
-/**
- * Safety net after Claude for skill lists: strips versions ("C++17" → "C++", "Java 21" → "Java"),
- * merges synonyms ("Apache Kafka" → "Kafka"), drops non-technology words (Jira, Agile,
- * "databases", …) and case-insensitive duplicates. Also applied when analytics reads stored
- * extractions, so editing these lists needs no re-extraction.
- */
+// also applied when analytics reads extractions, so editing these lists needs no re-extraction
 final class SkillNames {
 
-  /** Lower-case names that are not technologies; extend as junk shows up in extractions. */
   private static final Set<String> NOT_SKILLS = Set.of(
       "jira", "confluence", "git", "agile", "scrum", "kanban", "databases", "database",
       "sql databases", "relational databases", "nosql databases", "cloud", "code review",
       "testing", "unit testing", "design patterns", "mentoring", "technical mentoring",
       "e-commerce", "fintech", "english", "polish", "itil", "intellij idea", "intellij");
 
-  /** Lower-case name → canonical name; extend as variants show up in analytics. */
   private static final Map<String, String> SYNONYMS = Map.ofEntries(
       Map.entry("apache kafka", "Kafka"),
       Map.entry("kafka streams", "Kafka Streams"),

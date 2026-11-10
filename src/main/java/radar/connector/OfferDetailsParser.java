@@ -8,12 +8,6 @@ import org.jsoup.parser.Parser;
 import org.springframework.stereotype.Component;
 import radar.model.OfferDetails;
 
-/**
- * Extracts the "as written" details from a JustJoin offer page — no AI, and no HTML ever leaves the
- * app. The page embeds a schema.org {@code JobPosting} as a {@code <script type="application/ld+json">}
- * block; we read its full {@code description} text and the hiring company's domain (from
- * {@code hiringOrganization.sameAs}).
- */
 @Component
 public class OfferDetailsParser {
 
@@ -23,10 +17,6 @@ public class OfferDetailsParser {
     this.objectMapper = objectMapper;
   }
 
-  /**
-   * Parses page HTML into {@link OfferDetails}. Returns an all-null result when the page carries no
-   * JobPosting JSON-LD block.
-   */
   public OfferDetails parse(String html) {
     var doc = Jsoup.parse(html);
     for (var script : doc.select("script[type=application/ld+json]")) {
@@ -44,11 +34,10 @@ public class OfferDetailsParser {
     try {
       return objectMapper.readTree(json);
     } catch (Exception e) {
-      return null; // not valid JSON — skip this block
+      return null;
     }
   }
 
-  /** Decodes HTML entities (e.g. {@code &apos;}) in the text while preserving newlines. */
   private static String text(JsonNode node) {
     if (node.isMissingNode() || node.isNull()) {
       return null;

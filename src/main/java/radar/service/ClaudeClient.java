@@ -7,14 +7,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
-/**
- * Thin wrapper over the Anthropic SDK: sends a plain-text prompt to Claude Haiku and returns the
- * structured output parsed into {@code type} (its JSON schema is derived from the class). Never send
- * HTML here.
- *
- * <p>Haiku 5.5 thinks adaptively by default and thinking is billed as output, so effort is set to
- * {@code low}: extraction and scoring are simple, low effort keeps thinking (and cost) small.
- */
+// effort low: thinking is billed as output, and extraction/scoring are simple
 @Component
 public class ClaudeClient {
 
@@ -22,7 +15,7 @@ public class ClaudeClient {
 
   static final String MODEL = "claude-haiku-5-5";
   static final OutputConfig.Effort EFFORT = OutputConfig.Effort.LOW;
-  /** Room for thinking + the JSON answer; thinking counts towards max_tokens. */
+  // thinking counts towards max_tokens
   private static final long MAX_TOKENS = 16000L;
 
   private final AnthropicClient client;
@@ -44,7 +37,6 @@ public class ClaudeClient {
         .orElseThrow(() -> new IllegalStateException("Claude returned no structured content"));
   }
 
-  /** Structured output for {@code type} plus {@link #EFFORT} in one output config. */
   static <T> com.anthropic.models.messages.StructuredMessageCreateParams<T> params(String prompt,
       Class<T> type) {
     var builder = MessageCreateParams.builder()

@@ -18,17 +18,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import radar.model.RawJobOffer;
 
-/**
- * Scrapes Java job offers from justjoin.it.
- *
- * <p>The old JSON API ({@code api.justjoin.it/v2/user-panel/offers}) is gone (HTTP 503). The listing
- * page {@code justjoin.it/job-offers/all-locations/java?page=N} is server-rendered by Next.js and
- * embeds the same offer objects in its React Server Components payload
- * ({@code self.__next_f.push([1,"..."])} script chunks). We concatenate those chunks and pick every
- * JSON object that carries a {@code guid}. 50 offers per page, newest first by {@code publishedAt}.
- *
- * <p>The listing has no description — the details step fetches it from the offer page's JSON-LD.
- */
+// No public JSON API: offers come from the Next.js flight chunks embedded in the listing HTML
 @Component
 public class JustJoinConnector {
 
@@ -39,7 +29,6 @@ public class JustJoinConnector {
       "vacancy-radar/1.0 (+https://github.com/MaleyDenis/vacancy-radar)";
   private static final String SOURCE = "justjoin";
 
-  /** Prefix of a Next.js flight chunk {@code self.__next_f.push([1,"<json string>"])}. */
   private static final String FLIGHT_CHUNK = "self.__next_f.push([1,";
   private static final String OFFER_START = "{\"applyUrl\":";
 
@@ -47,10 +36,6 @@ public class JustJoinConnector {
   private final HttpClient httpClient;
   private final String experienceLevels;
 
-  /**
-   * @param experienceLevels comma-separated JustJoin experience slugs for the listing filter
-   *     ({@code intern, junior, mid, senior, team-leader-manager, c-level}); blank = all levels
-   */
   public JustJoinConnector(
       ObjectMapper objectMapper,
       @Value("${radar.justjoin.experience-levels:}") String experienceLevels) {
@@ -60,17 +45,12 @@ public class JustJoinConnector {
         HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(15)).build();
   }
 
-  /**
-   * One listing page: the parsed offers, and whether the page links to the next one (the last page
-   * has no {@code ?page=N+1} link).
-   */
   public record OfferPage(List<RawJobOffer> offers, boolean hasNext) {
   }
 
-  /** Upper bound on how many pages any caller will walk, as a runaway guard. */
+  // guards against an endless pagination loop
   public static final int MAX_PAGES = MAX_PAGES_SAFETY;
 
-  /** Fetches one listing page (1-based), newest first. */
   public OfferPage fetchPage(int page) {
     var html = get(listingUrl(page), "listing page " + page);
     var offers = parseOffers(html);
@@ -78,18 +58,12 @@ public class JustJoinConnector {
     return new OfferPage(offers, hasNext);
   }
 
-  /** Listing URL for a page, with the experience filter when configured. */
   String listingUrl(int page) {
     return experienceLevels.isEmpty()
         ? LISTING_URL + "?page=" + page
         : LISTING_URL + "?experience-levels=" + experienceLevels + "&page=" + page;
   }
 
-  /**
-   * Fetches the raw HTML of a single offer's page (e.g. {@code applyUrl}). The offer detail — full
-   * description and company domain — lives in a JSON-LD block on this page; parsing is done elsewhere
-   * ({@code OfferDetailsParser}). Never sends any of this to Claude.
-   */
   public String fetchOfferPageHtml(String url) {
     return get(url, "offer page " + url);
   }
@@ -116,10 +90,7 @@ public class JustJoinConnector {
     }
   }
 
-  /**
-   * Extracts offers from a listing page's HTML. Package-private so it can be unit-tested with a
-   * fixture, without touching the network. Deduplicates by {@code guid}, keeping page order.
-   */
+  // package-private for fixture tests
   List<RawJobOffer> parseOffers(String html) {
     var flight = flightPayload(html);
     var chars = flight.toCharArray();
@@ -135,10 +106,7 @@ public class JustJoinConnector {
     return new ArrayList<>(byGuid.values());
   }
 
-  /**
-   * Concatenates all Next.js flight chunks into one decoded string. Each chunk's string literal is
-   * read with Jackson's streaming parser (a regex over ~1 MB literals overflows the stack).
-   */
+  // streaming parser: a regex over ~1 MB literals overflows the stack
   private String flightPayload(String html) {
     var chars = html.toCharArray();
     var sb = new StringBuilder();
@@ -157,7 +125,6 @@ public class JustJoinConnector {
     return sb.toString();
   }
 
-  /** Reads the single JSON object starting at {@code start}, or null if it isn't valid JSON. */
   private JsonNode readObjectAt(char[] chars, int start) {
     try (var parser = objectMapper.getFactory().createParser(chars, start, chars.length - start)) {
       return objectMapper.readTree(parser);
@@ -169,19 +136,18 @@ public class JustJoinConnector {
   private RawJobOffer toRawJobOffer(JsonNode n) {
     var slug = textOrNull(n, "slug");
     var employment = originalEmployment(n.path("employmentTypes"));
-    // Undisclosed salary (from/to both null): amount, currency, unit and gross are all null.
     var salary = employment.hasNonNull("from") || employment.hasNonNull("to")
         ? employment : MissingNode.getInstance();
     return new RawJobOffer(
         textOrNull(n, "guid"),
         textOrNull(n, "title"),
         textOrNull(n, "companyName"),
-        null, // companySize — not present in the listing
+        null, // not in the listing
         textOrNull(n, "city"),
         "remote".equalsIgnoreCase(textOrNull(n, "workplaceType")),
         textOrNull(n, "publishedAt"),
         textOrNull(n, "experienceLevel"),
-        null, // description — filled by the details step
+        null, // filled by the details step
         intOrNull(salary, "from"),
         intOrNull(salary, "to"),
         upperOrNull(salary, "currency"),
@@ -190,14 +156,11 @@ public class JustJoinConnector {
         textOrNull(employment, "type"), // contract type is known even without a salary
         slug == null ? null : OFFER_URL + slug,
         SOURCE,
-        null, // domain — filled by the details step
+        null, // filled by the details step
         cities(n));
   }
 
-  /**
-   * Every city the offer is open in, main city first, without repeats. JustJoin lists one offer
-   * (one guid) with a "multilocation" array — one entry (own slug) per city.
-   */
+  // JustJoin "multilocation": one offer (one guid) open in several cities
   private static List<String> cities(JsonNode n) {
     var cities = new LinkedHashSet<String>();
     var main = textOrNull(n, "city");
@@ -213,10 +176,7 @@ public class JustJoinConnector {
     return List.copyOf(cities);
   }
 
-  /**
-   * Picks the employment type quoted in its original currency. The listing also carries converted
-   * copies (GBP/USD/EUR/CHF, {@code currencySource: "conversion"}) — often first in the array.
-   */
+  // the listing also carries converted copies (currencySource "conversion"), often first
   private static JsonNode originalEmployment(JsonNode types) {
     for (var t : types) {
       if ("original".equals(t.path("currencySource").asText())) {

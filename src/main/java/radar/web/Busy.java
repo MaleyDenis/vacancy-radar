@@ -4,7 +4,6 @@ import java.util.Map;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 
-/** HTTP answers for background-task endpoints. */
 final class Busy {
 
   private Busy() {

@@ -6,7 +6,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import java.nio.charset.StandardCharsets;
 import org.junit.jupiter.api.Test;
 
-/** Parses the JobPosting JSON-LD out of an offer page — no network, uses a bundled fixture. */
 class OfferDetailsParserTest {
 
   private final OfferDetailsParser parser = new OfferDetailsParser(new ObjectMapper());

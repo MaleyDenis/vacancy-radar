@@ -7,9 +7,6 @@ import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
 
-/**
- * Verifies every model round-trips through Jackson and that unknown JSON properties are ignored.
- */
 class ModelSerializationTest {
 
   private final ObjectMapper mapper = new ObjectMapper();

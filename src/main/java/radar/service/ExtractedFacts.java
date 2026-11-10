@@ -8,12 +8,7 @@ import java.util.Optional;
 import java.util.Set;
 import radar.model.OfferExtraction;
 
-/**
- * Claude's structured answer for extraction. {@code Optional} fields become nullable in the JSON
- * schema (Claude answers null when the text does not say). Enum-like fields are strings with the
- * allowed values in their description (the SDK rejects nullable enums); {@link #toExtraction()}
- * drops values outside the allowed set.
- */
+// enum-like fields are strings: the SDK rejects nullable enums; toExtraction() validates them
 @JsonClassDescription("Facts extracted from a single job offer. Use null when the text does not say.")
 public record ExtractedFacts(
     @JsonPropertyDescription("Required (must-have) technologies. " + SKILL_RULES)
@@ -83,7 +78,6 @@ public record ExtractedFacts(
       Set.of("product", "outsourcing", "bodyleasing", "agency");
   private static final Set<String> AI_USAGE = Set.of("required", "preferred", "used");
 
-  /** The stored form: Optionals unwrapped to nulls, enum-like values checked. */
   public OfferExtraction toExtraction() {
     var must = skills(skills);
     var nice = skills(niceToHaveSkills);
