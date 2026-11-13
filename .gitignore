@@ -33,3 +33,6 @@ replay_pid*
 
 # Runtime data (scraped offers, snapshots, seen ids) — not source
 data/
+
+# Secrets for docker --env-file
+.env
