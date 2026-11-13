@@ -5,201 +5,277 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>vacancy-radar</title>
 <style>
+:root{--paper:#f7f5ef;--paper2:#efebe1;--card:#fbfaf6;--ink:#161616;--ink2:#3a3a36;--mute:#7a776e;--hair:#dcd7cb;--rule:#1b1b1b;
+--navy:#233a8b;--sky:#b9c4e4;--sky2:#dfe4f2;--green:#3f8656;--red:#c8432b;--amber:#c99a1c;
+--mono:"JetBrains Mono","IBM Plex Mono","SF Mono",ui-monospace,Menlo,monospace;--sans:"Helvetica Neue",Helvetica,Arial,sans-serif}
 *{box-sizing:border-box}
-body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;font-size:15px;color:#1f2328;background:#f6f7f9}
-.layout{display:flex;align-items:flex-start}
-.wrap{flex:1;min-width:0;max-width:860px;margin:0 auto;padding:16px}
-.bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:12px}
-.bar h1{font-size:20px;margin:0}
-.tabs{display:flex;gap:4px;background:#e9ecef;border-radius:10px;padding:3px;margin-right:auto}
-.tabs button{border:none;background:none;padding:6px 12px;border-radius:8px;font-size:14px;color:#4b5563;cursor:pointer}
-.tabs button.on{background:#fff;color:#111827;font-weight:600;box-shadow:0 1px 2px rgba(0,0,0,.06)}
-.wrap.wide{max-width:1100px}
-.domains{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px}
-.chip{border:1px solid #d0d4d9;background:#fff;border-radius:999px;padding:5px 12px;font-size:13px;cursor:pointer}
-.chip b{color:#6b7280;font-weight:400;margin-left:4px}
-.chip.on{background:#2563eb;border-color:#2563eb;color:#fff}
-.chip.on b{color:#dbeafe}
-.agrid{display:grid;grid-template-columns:1.4fr 1fr;gap:12px}
-.acol{display:flex;flex-direction:column;gap:12px}
-.box{background:#fff;border:1px solid #e6e8eb;border-radius:14px;padding:14px;font-size:14px}
-.box h2{margin:0 0 4px;font-size:15px}
-.box .sub{color:#6b7280;font-size:12px;margin-bottom:10px}
-.arow{display:grid;grid-template-columns:120px 1fr 84px;gap:8px;align-items:center;margin:5px 0;font-size:13px}
-.arow .name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.track{height:14px;background:#f1f2f4;border-radius:4px;position:relative;overflow:hidden}
-.fill{position:absolute;left:0;top:0;bottom:0;background:#6366f1;border-radius:4px}
-.fill.nice{background:#c7d2fe}
-.pct{text-align:right;color:#374151;font-variant-numeric:tabular-nums}
-.pct small{color:#9ca3af}
-.cmp{font-size:11px;margin-left:4px}
-.up{color:#15803d}.down{color:#b45309}
-.legend{display:flex;gap:12px;font-size:12px;color:#6b7280;margin-bottom:6px}
-.legend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:4px;vertical-align:-1px}
-.kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:10px}
-.kpi{background:#f8fafc;border-radius:10px;padding:8px 10px}
-.kpi .v{font-size:20px;font-weight:700}
-.kpi .l{font-size:12px;color:#6b7280}
-.stack{display:flex;height:22px;border-radius:6px;overflow:hidden;margin:6px 0 4px}
-.stack div{display:flex;align-items:center;justify-content:center;font-size:11px;color:#fff;white-space:nowrap;overflow:hidden}
-.legend2{display:flex;flex-wrap:wrap;gap:4px 12px;font-size:12px;color:#4b5563;margin-bottom:10px}
-.legend2 i{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:4px}
-.sal{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.salc{background:#f8fafc;border-radius:10px;padding:10px}
-.salc .k{font-size:12px;color:#6b7280}
-.salc .v{font-size:22px;font-weight:700;margin:2px 0}
-.salc .r{font-size:12px;color:#4b5563}
-.note{font-size:12px;color:#9ca3af;margin-top:8px}
-@media (max-width:860px){.agrid{grid-template-columns:1fr}}
-.btn{padding:8px 14px;font-size:14px;border-radius:10px;border:1px solid #d0d4d9;background:#fff;cursor:pointer;color:#1f2328}
-.btn:hover{background:#f3f4f6}
-.btn.primary{background:#2563eb;border-color:#2563eb;color:#fff}
-.btn.primary:hover{background:#1d4ed8}
-.btn.danger{color:#b42318;border-color:#f3b5ae}
-.btn.solid-danger{background:#d92d20;border-color:#d92d20;color:#fff}
-.btn:disabled{opacity:.6;cursor:default}
-.status{font-size:13px;color:#4b5563;margin-bottom:12px;min-height:18px}
-.count{font-size:13px;color:#6b7280;margin-bottom:8px}
-.filters{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center;background:#fff;border:1px solid #e6e8eb;border-radius:12px;padding:10px 12px;margin-bottom:10px;font-size:14px}
-.filters label{display:flex;align-items:center;gap:6px;color:#374151}
-.filters select{font-size:14px;padding:5px 8px;border:1px solid #d0d4d9;border-radius:8px;background:#fff}
-.more-btn{display:block;margin:12px auto 0}
-.banner{display:flex;gap:10px;align-items:center;background:#fffbeb;border:1px solid #fde68a;color:#92400e;border-radius:12px;padding:10px 14px;margin-bottom:12px;font-size:14px}
-.banner .btn{margin-left:auto;padding:6px 12px}
-.list{display:flex;flex-direction:column;gap:10px}
-.card{background:#fff;border:1px solid #e6e8eb;border-radius:14px;padding:14px;display:flex;flex-direction:column;gap:8px;cursor:pointer;transition:border-color .15s,box-shadow .15s}
-.card:hover{border-color:#c7d2fe}
-.card.active{border-color:#6366f1;box-shadow:0 0 0 2px #e0e7ff}
-.card.stale{border-color:#fde68a}
-.top{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
-.title{font-weight:600;line-height:1.3}
-.company{font-size:13px;color:#6b7280}
-.scorebox{display:flex;flex-direction:column;align-items:center;gap:2px}
-.score{flex-shrink:0;min-width:38px;height:38px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:17px}
-.s-hi{background:#dcfce7;color:#166534}.s-mid{background:#fef3c7;color:#92400e}.s-lo{background:#f1f2f4;color:#4b5563}
-.stale-tag{font-size:10px;color:#b45309}
-.score-btn{padding:6px 10px;font-size:13px;white-space:nowrap}
-.reason{font-size:13px;color:#374151;background:#f8fafc;border-left:3px solid #c7d2fe;padding:6px 10px;border-radius:6px}
-.meta{font-size:13px;color:#4b5563}
-.salary{font-size:13px;font-weight:600}
-.muted{color:#9ca3af;font-weight:400}
-.tags{display:flex;flex-wrap:wrap;gap:4px}
-.tag{font-size:12px;padding:2px 8px;border-radius:999px;background:#eef2ff;color:#3730a3}
-.tag.nice{background:#fff;color:#4f46e5;border:1px dashed #c7d2fe}
-.tag.more{background:#f1f2f4;color:#6b7280}
-.badges{display:flex;flex-wrap:wrap;gap:4px}
-.badge{font-size:12px;padding:2px 8px;border-radius:6px;background:#f1f5f9;color:#334155;border:1px solid #e2e8f0}
-.badge.warn{background:#fff7ed;color:#9a3412;border-color:#fed7aa}
-.badge.ai{background:#f5f3ff;color:#5b21b6;border-color:#ddd6fe}
-.foot{display:flex;justify-content:space-between;align-items:center;font-size:12px;color:#9ca3af}
-.foot .more-link{color:#2563eb}
-.detail{display:none;background:#fff;border-left:1px solid #e6e8eb;width:460px;flex-shrink:0;height:100vh;position:sticky;top:0;overflow-y:auto}
-.detail.open{display:block}
-.dhead{position:sticky;top:0;background:#fff;border-bottom:1px solid #eef0f2;padding:14px 16px;display:flex;gap:10px;align-items:flex-start;z-index:1}
-.dhead .back{border:none;background:#f1f2f4;border-radius:8px;width:32px;height:32px;font-size:18px;cursor:pointer;flex-shrink:0}
-.dbody{padding:4px 16px 30px}
-.dsec{padding:12px 0;border-bottom:1px solid #f1f2f4}
-.dsec:last-child{border-bottom:none}
-.dsec h3{margin:0 0 8px;font-size:12px;color:#6b7280;text-transform:uppercase;letter-spacing:.04em}
-.dsec h4{margin:10px 0 4px;font-size:13px;color:#6b7280;font-weight:400}
-.kv{display:grid;grid-template-columns:120px 1fr;gap:6px 10px;font-size:14px}
-.kv .k{color:#6b7280}
-.dsec ul{margin:0;padding-left:18px;font-size:14px;line-height:1.45}
-.steps{display:flex;flex-direction:column;gap:6px;font-size:14px}
-.step{display:flex;gap:8px;align-items:flex-start}
-.step .n{background:#eef2ff;color:#3730a3;border-radius:999px;width:22px;height:22px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;flex-shrink:0}
-.none{color:#9ca3af;font-size:14px}
-.apply{display:block;text-align:center;background:#2563eb;color:#fff;text-decoration:none;border-radius:10px;padding:10px;font-weight:600;margin-top:14px}
-@media (max-width:900px){
-  .detail{position:fixed;inset:0;width:100%;height:100%;border:none;z-index:5}
-}
-.panel{display:none;background:#fff;border:1px solid #e6e8eb;border-radius:14px;padding:16px;margin-bottom:12px}
+body{margin:0;font-family:var(--sans);font-size:14px;color:var(--ink);background:var(--paper)}
+.lbl{font-family:var(--mono);font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--mute)}
+button{font:inherit;color:inherit}
+.btn{font-family:var(--mono);font-size:11.5px;letter-spacing:.1em;text-transform:uppercase;padding:9px 14px;border:1px solid var(--rule);background:transparent;color:var(--ink);border-radius:0;cursor:pointer}
+.btn:hover{background:var(--paper2)}
+.btn.primary{background:var(--red);border-color:var(--red);color:#fff;font-weight:700}
+.btn.primary:hover{background:#a93520}
+.btn.danger{color:var(--red);border-color:var(--hair)}
+.btn.solid-danger{background:var(--red);border-color:var(--red);color:#fff}
+.btn:disabled{opacity:.5;cursor:default}
+.status{font-family:var(--mono);font-size:12px;color:var(--mute);min-height:16px}
+.count{font-family:var(--mono);font-size:11px;letter-spacing:.06em;color:var(--mute);margin:10px 0 6px}
+.banner{display:flex;gap:10px;align-items:center;border:1px solid var(--amber);border-left:4px solid var(--amber);background:#faf3df;color:#6b5210;padding:9px 14px;margin:12px 0;font-size:13px}
+.panel{display:none;border-top:2px solid var(--rule);padding:16px 0;margin:12px 0}
 .panel.open{display:block}
-.panel h2{font-size:16px;margin:0 0 12px}
-textarea{width:100%;min-height:420px;font-family:inherit;font-size:13px;line-height:1.45;border:1px solid #d0d4d9;border-radius:10px;padding:10px}
-.empty{text-align:center;color:#6b7280;padding:40px 0}
-.hint{font-size:12px;color:#9ca3af;margin-top:12px;text-align:center}
-.overlay{position:fixed;inset:0;background:rgba(17,24,39,.45);display:none;align-items:center;justify-content:center;padding:16px;z-index:10}
+.panel h2{font-family:var(--mono);font-size:13px;letter-spacing:.12em;text-transform:uppercase;margin:0 0 12px}
+textarea{width:100%;min-height:380px;font-family:var(--mono);font-size:12.5px;line-height:1.5;border:1px solid var(--rule);border-radius:0;padding:12px;background:var(--card);color:var(--ink)}
+.empty{text-align:center;color:var(--mute);padding:40px 0;font-family:var(--mono);font-size:12px}
+.muted{color:var(--mute);font-weight:400}
+.filters{display:flex;flex-wrap:wrap;gap:8px 18px;align-items:center;font-size:13px}
+.filters label{display:flex;align-items:center;gap:8px;font-family:var(--mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--mute)}
+.filters select{font-family:var(--mono);font-size:12px;padding:5px 8px;border:1px solid var(--rule);border-radius:0;background:var(--card);color:var(--ink)}
+.filters input[type=checkbox]{accent-color:var(--navy)}
+.more-btn{display:block;margin:16px auto 0}
+.title{font-weight:600;line-height:1.3}
+.company{font-size:12.5px;color:var(--mute)}
+.scorebox{display:flex;flex-direction:column;align-items:center;gap:4px}
+.score{flex-shrink:0;min-width:40px;height:40px;display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-weight:700;font-size:18px;border:1.5px solid var(--rule)}
+.s-hi{background:var(--navy);border-color:var(--navy);color:#fff}.s-mid{background:var(--sky);border-color:var(--sky);color:var(--navy)}.s-lo{background:transparent;border-color:var(--hair);color:var(--mute)}
+.stale-tag{font-family:var(--mono);font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--amber)}
+.score-btn{padding:6px 10px;font-size:10.5px;white-space:nowrap}
+.reason{font-size:13px;color:var(--ink2);background:var(--paper2);border-left:3px solid var(--navy);padding:7px 11px;line-height:1.4}
+.tags,.badges{display:flex;flex-wrap:wrap;gap:4px}
+.tag{font-family:var(--mono);font-size:11px;padding:2px 7px;border:1px solid var(--hair);background:var(--card);color:var(--ink2)}
+.tag.nice{border-style:dashed;color:var(--mute);background:transparent}
+.badge{font-size:12px;padding:2px 0;color:var(--ink2);display:inline-flex;align-items:center;gap:6px;margin-right:8px}
+.badge::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--navy)}
+.badge.ai::before{background:var(--green)}
+.detail{display:none;background:var(--card);border-left:1px solid var(--rule);flex-shrink:0;overflow-y:auto}
+.detail.open{display:block}
+.dhead{position:sticky;top:0;background:var(--card);border-bottom:1px solid var(--rule);padding:16px 18px;display:flex;gap:12px;align-items:flex-start;z-index:1}
+.dhead .back{border:1px solid var(--rule);background:transparent;width:32px;height:32px;font-size:16px;cursor:pointer;flex-shrink:0}
+.dbody{padding:4px 18px 30px}
+.dsec{padding:14px 0;border-bottom:1px solid var(--hair)}
+.dsec:last-child{border-bottom:none}
+.dsec h3{margin:0 0 10px;font-family:var(--mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink);display:flex;align-items:center;gap:8px}
+.dsec h3::before{content:"";width:8px;height:8px;background:var(--red)}
+.dsec h4{margin:12px 0 5px;font-family:var(--mono);font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--mute);font-weight:400}
+.kv{display:grid;grid-template-columns:110px 1fr;gap:6px 10px;font-size:13.5px}
+.kv .k{font-family:var(--mono);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--mute);padding-top:2px}
+.dsec ul{margin:0;padding-left:18px;font-size:13.5px;line-height:1.5}
+.steps{display:flex;flex-direction:column;gap:6px;font-size:13.5px}
+.step{display:flex;gap:10px;align-items:flex-start}
+.step .n{border:1px solid var(--navy);color:var(--navy);width:22px;height:22px;display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:11px;font-weight:700;flex-shrink:0}
+.none{color:var(--mute);font-size:13px}
+.apply{display:block;text-align:center;background:var(--red);color:#fff;text-decoration:none;padding:12px;font-family:var(--mono);font-size:12px;letter-spacing:.12em;text-transform:uppercase;font-weight:700;margin-top:16px}
+.domains{display:flex;gap:0;flex-wrap:wrap;margin-bottom:18px;border-bottom:1px solid var(--rule)}
+.chip{font-family:var(--mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;padding:9px 14px;cursor:pointer;color:var(--mute);border-bottom:3px solid transparent;margin-bottom:-1px}
+.chip b{font-weight:400;margin-left:6px;color:var(--mute)}
+.chip.on{color:var(--ink);font-weight:700;border-bottom-color:var(--red)}
+.agrid{display:grid;grid-template-columns:1.4fr 1fr;gap:28px}
+.acol{display:flex;flex-direction:column;gap:22px}
+.box{border-top:2px solid var(--rule);padding:14px 0 0;font-size:13px}
+.box h2{margin:0 0 4px;font-family:var(--mono);font-size:13px;letter-spacing:.1em;text-transform:uppercase;display:flex;align-items:center;gap:9px}
+.box h2::before{content:"";width:10px;height:10px;background:var(--navy)}
+.box .sub{color:var(--mute);font-size:12px;margin-bottom:12px}
+.arow{display:grid;grid-template-columns:120px 1fr 84px;gap:10px;align-items:center;margin:6px 0;font-size:13px}
+.arow .name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.track{height:12px;background:var(--paper2);position:relative;overflow:hidden}
+.fill{position:absolute;left:0;top:0;bottom:0;background:var(--navy)}
+.fill.nice{background:var(--sky)}
+.pct{text-align:right;font-family:var(--mono);font-size:12px}
+.pct small{color:var(--mute)}
+.cmp{font-size:10.5px;margin-left:4px}
+.up{color:var(--green)}.down{color:var(--red)}
+.legend{display:flex;gap:14px;font-size:12px;color:var(--mute);margin-bottom:8px}
+.legend i,.legend2 i{display:inline-block;width:10px;height:10px;margin-right:5px;vertical-align:-1px}
+.kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:0;margin-bottom:12px}
+.kpi{border-left:1px solid var(--hair);padding:4px 12px}
+.kpi:first-child{border-left:none;padding-left:0}
+.kpi .v{font-family:var(--mono);font-size:24px;font-weight:700}
+.kpi .l{font-family:var(--mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--mute)}
+.stack{display:flex;height:10px;margin:6px 0 6px;border:1px solid var(--rule)}
+.stack div{font-size:0}
+.legend2{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:12px;color:var(--ink2);margin-bottom:12px}
+.sal{display:grid;grid-template-columns:1fr 1fr;gap:0}
+.salc{border-left:1px solid var(--hair);padding:2px 14px}
+.salc:first-child{border-left:none;padding-left:0}
+.salc .k{font-family:var(--mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--mute)}
+.salc .v{font-family:var(--mono);font-size:28px;font-weight:700;margin:4px 0}
+.salc .r{font-size:12px;color:var(--ink2)}
+.note{font-family:var(--mono);font-size:10.5px;color:var(--mute);margin-top:10px}
+@media (max-width:860px){.agrid{grid-template-columns:1fr}}
+.overlay{position:fixed;inset:0;background:rgba(22,22,22,.35);display:none;align-items:center;justify-content:center;padding:16px;z-index:10}
 .overlay.open{display:flex}
-.modal{background:#fff;border-radius:16px;max-width:420px;width:100%;padding:20px;box-shadow:0 20px 50px rgba(0,0,0,.2)}
-.modal h3{margin:0 0 8px;font-size:17px}
-.modal p{margin:0 0 14px;color:#4b5563;font-size:14px;line-height:1.45}
-.opts{display:flex;flex-direction:column;gap:10px;margin-bottom:14px}
-.opt{display:flex;gap:10px;align-items:flex-start;border:1px solid #e6e8eb;border-radius:10px;padding:10px 12px;cursor:pointer;font-size:14px}
-.opt:has(input:checked){border-color:#2563eb;background:#eff6ff}
-.opt .sub{display:block;color:#6b7280;font-size:13px;margin-top:2px}
-.opt input[type=number]{width:70px;margin:0 4px;padding:3px 6px;border:1px solid #d0d4d9;border-radius:6px;font-size:14px}
-.cost{font-size:13px;color:#6b7280;margin:0 0 14px}
+.modal{background:var(--paper);border:1.5px solid var(--rule);max-width:440px;width:100%;padding:22px;box-shadow:8px 8px 0 rgba(22,22,22,.12)}
+.modal h3{margin:0 0 10px;font-family:var(--mono);font-size:15px;letter-spacing:.06em;text-transform:uppercase}
+.modal p{margin:0 0 14px;color:var(--ink2);font-size:13.5px;line-height:1.5}
+.opts{display:flex;flex-direction:column;gap:8px;margin-bottom:14px}
+.opt{display:flex;gap:10px;align-items:flex-start;border:1px solid var(--hair);padding:10px 12px;cursor:pointer;font-size:13.5px;background:var(--card)}
+.opt:has(input:checked){border-color:var(--navy);box-shadow:inset 3px 0 0 var(--navy)}
+.opt .sub{display:block;color:var(--mute);font-size:12.5px;margin-top:2px}
+.opt input[type=number]{width:70px;margin:0 4px;padding:3px 6px;border:1px solid var(--rule);border-radius:0;font-family:var(--mono);font-size:13px}
+.opt input[type=radio]{accent-color:var(--navy)}
+.cost{font-family:var(--mono);font-size:11.5px;color:var(--mute);margin:0 0 14px;line-height:1.5}
 .modal .actions{display:flex;justify-content:flex-end;gap:8px}
-.toast.err{background:#b42318}
-.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#111827;color:#fff;padding:10px 16px;border-radius:10px;font-size:14px;opacity:0;transition:opacity .2s;pointer-events:none}
+.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--ink);color:#fff;padding:10px 16px;font-family:var(--mono);font-size:12px;opacity:0;transition:opacity .2s;pointer-events:none}
+.toast.err{background:var(--red)}
 .toast.show{opacity:1}
+.tb{display:flex;align-items:stretch;border-bottom:1.5px solid var(--rule);background:var(--paper);height:56px;position:sticky;top:0;z-index:4}
+.tb-logo{display:flex;align-items:center;gap:10px;padding:0 22px;font-family:var(--mono);font-weight:800;font-size:19px;letter-spacing:.06em;border-right:1px solid var(--rule)}
+.tb-logo .bars{display:inline-flex;gap:3px}.tb-logo .bars i{width:4px;height:18px;background:var(--ink)}
+.tb-cell{display:flex;flex-direction:column;justify-content:center;gap:2px;padding:0 18px;border-right:1px solid var(--hair);min-width:110px}
+.tb-cell b{font-family:var(--mono);font-size:14px;font-weight:600}
+.tb-sp{flex:1}
+.tb-act{display:flex;align-items:center;gap:8px;padding:0 18px;border-left:1px solid var(--hair)}
+.h1{font-family:var(--mono);font-weight:800;font-size:40px;letter-spacing:.02em;margin:6px 0 4px;text-transform:uppercase}
+.crumb{font-family:var(--mono);font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--mute)}
+.crumb b{color:var(--ink)}
+.kstrip{display:grid;grid-template-columns:repeat(4,1fr);border-top:1.5px solid var(--rule);border-bottom:1.5px solid var(--rule);margin:22px 0 26px}
+.kcell{position:relative;padding:16px 22px 14px;border-left:1px solid var(--hair)}
+.kcell:first-child{border-left:none}
+.kcell::before{content:"";position:absolute;left:22px;top:-1px;width:10px;height:7px;border-left:1.5px solid var(--red);border-bottom:1.5px solid var(--red)}
+.kcell .v{font-family:var(--mono);font-size:30px;font-weight:700;margin:8px 0 4px}
+.kcell .d{font-family:var(--mono);font-size:10.5px;color:var(--mute)}
+.kcell .d.g{color:var(--green)}.kcell .d.r{color:var(--red)}
+.sech{display:flex;align-items:center;gap:10px;font-family:var(--mono);font-weight:700;font-size:14px;letter-spacing:.08em;text-transform:uppercase;margin:0 0 12px}
+.sech::before{content:"";width:11px;height:11px;background:var(--red)}
+.load{margin-bottom:28px}
+.load-l{display:grid;gap:0;margin-bottom:8px}
+.load-l div{padding-right:10px}
+.load-l b{font-family:var(--mono);font-size:17px;display:block}
+.load-l span{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--mute)}
+.load-bar{display:flex;height:9px;border:1px solid var(--rule)}
+.load-bar div{height:100%}
+.dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:7px;vertical-align:1px}
+.dot.hi{background:var(--green)}.dot.mid{background:var(--navy)}.dot.lo{background:var(--sky)}.dot.st{background:var(--amber)}.dot.un{background:transparent;border:1.5px solid var(--mute)}
+.sorttabs{display:flex;gap:26px;border-bottom:1.5px solid var(--rule);align-items:flex-end}
+.sorttabs button{border:none;background:none;padding:0 0 10px;font-family:var(--mono);font-size:11.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--mute);cursor:pointer;border-bottom:3px solid transparent;margin-bottom:-1.5px}
+.sorttabs button.on{color:var(--ink);font-weight:700;border-bottom-color:var(--red)}
+.sorttabs .filters{margin-left:auto;padding-bottom:8px}
+
+.shell{display:flex;align-items:stretch;min-height:calc(100vh - 56px)}
+.side{width:230px;flex-shrink:0;border-right:1.5px solid var(--rule);padding:22px 0 18px;display:flex;flex-direction:column;position:sticky;top:56px;height:calc(100vh - 56px)}
+.side-h{padding:0 18px 12px;border-bottom:1px solid var(--hair);margin-bottom:8px}
+.side>button:not(.btn){display:flex;align-items:center;gap:16px;border:none;background:none;text-align:left;padding:13px 18px;font-size:15px;cursor:pointer}
+.side>button:not(.btn) i{font-style:normal;font-family:var(--mono);font-size:10.5px;color:var(--mute);width:40px}
+.side>button.on{background:var(--paper2)}
+.side>button.on i{color:var(--red);font-weight:700}
+.acct{margin:20px 14px 0;border:1px dashed var(--mute);padding:12px;font-family:var(--mono);font-size:11px;line-height:1.7;color:var(--mute)}
+.acct b{display:block;color:var(--ink);letter-spacing:.08em}
+.side-foot{margin-top:auto;padding:0 14px;display:flex;flex-direction:column;gap:8px}
+.side-foot .btn{text-align:left}
+.layout{flex:1;display:flex;align-items:flex-start;min-width:0}
+.wrap{flex:1;min-width:0;padding:26px 40px 40px}
+.detail{width:470px;height:calc(100vh - 56px);position:sticky;top:56px}
+.thead,.card{display:grid;grid-template-columns:minmax(0,2.4fr) 1.1fr 1.5fr 1fr 1fr .8fr;gap:14px;align-items:center}
+.thead{padding:10px 10px;border-bottom:1px solid var(--hair)}
+.list{display:flex;flex-direction:column}
+.card{padding:13px 10px;border-bottom:1px solid var(--hair);cursor:pointer}
+.card:hover{background:var(--card)}
+.card.active{background:var(--paper2);box-shadow:inset 3px 0 0 var(--red)}
+.c-who{display:flex;gap:12px;align-items:center;min-width:0}
+.c-who>div{min-width:0}
+.c-who .title,.c-who .company{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.av{flex-shrink:0;width:32px;height:32px;border:1.5px solid var(--rule);border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:10px;font-weight:700}
+.c-score{font-size:13.5px;display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.c-score b{font-family:var(--mono)}
+.c-sal{font-family:var(--mono);font-size:12.5px}
+.c-sal small{display:block;color:var(--mute);font-size:10.5px}
+.c-city,.c-mode{font-size:13px}
+.c-mode small{display:block;color:var(--mute);font-size:11.5px}
+.c-date{font-family:var(--mono);font-size:12.5px}
+.c-reason{grid-column:1/-1;margin:-4px 0 0 44px;font-size:12.5px;color:var(--mute);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 </style>
 </head>
 <body>
+<header class="tb">
+  <div class="tb-logo"><span class="bars"><i></i><i></i><i></i></span>RADAR</div>
+  <div class="tb-cell"><span class="lbl">Sheet</span><b id="tbSheet">Вакансии</b></div>
+  <div class="tb-cell"><span class="lbl">Source</span><b>JustJoin</b></div>
+  <div class="tb-cell"><span class="lbl">Category</span><b>Java</b></div>
+  <div class="tb-cell"><span class="lbl">Pool</span><b id="tbPool">—</b></div>
+  <div class="tb-sp"></div>
+  <div class="tb-act"><button class="btn primary" id="scanBtn">Сканировать</button></div>
+</header>
+
+<div class="shell">
+<nav class="side">
+  <div class="lbl side-h">Sheet index</div>
+  <button id="tabJobs" class="on"><i>R-101</i>Вакансии</button>
+  <button id="tabAnalytics"><i>R-102</i>Аналитика</button>
+  <button id="resumeBtn"><i>R-103</i>Резюме</button>
+  <div class="acct"><b>ИСТОЧНИК</b>JustJoin.it<br>Java · все локации<br>оценка: Claude Haiku</div>
+  <div class="side-foot">
+    <button class="btn danger" id="delScoresBtn">Удалить оценки</button>
+    <button class="btn danger" id="wipeBtn">Очистить всё</button>
+  </div>
+</nav>
+
 <div class="layout">
 <div class="wrap">
+  <div class="crumb">JustJoin / Java / <b id="crumbSheet">Вакансии</b></div>
+  <div class="h1" id="pageTitle">Вакансии</div>
+  <div class="status" id="status"></div>
 
-<div class="bar">
-  <h1>vacancy-radar</h1>
-  <div class="tabs"><button id="tabJobs" class="on">Вакансии</button><button id="tabAnalytics">Аналитика</button></div>
-  <button class="btn primary" id="scanBtn">Сканировать</button>
-  <button class="btn" id="resumeBtn">Резюме</button>
-  <button class="btn danger" id="delScoresBtn">Удалить оценки</button>
-  <button class="btn danger" id="wipeBtn">Очистить всё</button>
-</div>
-
-<div class="status" id="status"></div>
-
-<div class="banner" id="staleBanner" style="display:none">
-  <span>Резюме изменилось — <b id="staleCount"></b>. Переоцени нужные кнопкой «Переоценить» на вакансии.</span>
-</div>
-
-<div class="panel" id="resumePanel">
-  <h2>Резюме</h2>
-  <textarea id="resumeText" placeholder="Вставь текст резюме. Пожелания (контракт, зарплата, удалёнка) можно дописать в конце."></textarea>
-  <div style="margin-top:8px;display:flex;gap:8px">
-    <button class="btn primary" id="saveResume">Сохранить</button>
-    <button class="btn" id="closeResume">Закрыть</button>
+  <div class="banner" id="staleBanner" style="display:none">
+    <span>Резюме изменилось — <b id="staleCount"></b>. Переоцени нужные кнопкой «Переоценить» на вакансии.</span>
   </div>
-</div>
 
-<div id="jobsView">
-<div class="filters" id="filters">
-  <label>Оценка от
-    <select id="fMinScore">
-      <option value="">любая</option>
-      <option>1</option><option>2</option><option>3</option><option>4</option><option>5</option>
-      <option>6</option><option>7</option><option>8</option><option>9</option><option>10</option>
-    </select>
-  </label>
-  <label><input type="checkbox" id="fScoredOnly"> только оценённые</label>
-  <label>Сортировка
-    <select id="fSort">
-      <option value="score">по оценке</option>
-      <option value="date">по дате</option>
-      <option value="date_score">по дате + оценке</option>
-    </select>
-  </label>
-</div>
-<div class="count" id="count"></div>
-<div class="list" id="list"></div>
-<button class="btn more-btn" id="moreBtn" style="display:none">Показать ещё</button>
-</div>
-<div id="analyticsView" style="display:none">
-  <div class="domains" id="aDomains"></div>
-  <div class="agrid">
-    <div class="acol"><div class="box" id="aSkills"></div></div>
-    <div class="acol">
-      <div class="box" id="aSalary"></div>
-      <div class="box" id="aAi"></div>
-      <div class="box" id="aConditions"></div>
-      <div class="box" id="aCities"></div>
+  <div class="panel" id="resumePanel">
+    <h2>Резюме</h2>
+    <textarea id="resumeText" placeholder="Вставь текст резюме. Пожелания (контракт, зарплата, удалёнка) можно дописать в конце."></textarea>
+    <div style="margin-top:10px;display:flex;gap:8px">
+      <button class="btn primary" id="saveResume">Сохранить</button>
+      <button class="btn" id="closeResume">Закрыть</button>
+    </div>
+  </div>
+
+  <div id="jobsView">
+    <div class="kstrip">
+      <div class="kcell"><div class="lbl">В выборке</div><div class="v" id="kTotal">—</div><div class="d" id="kShown"></div></div>
+      <div class="kcell"><div class="lbl">Оценено</div><div class="v" id="kScored">—</div><div class="d" id="kScoredD"></div></div>
+      <div class="kcell"><div class="lbl">Средняя оценка</div><div class="v" id="kAvg">—</div><div class="d g" id="kTop"></div></div>
+      <div class="kcell"><div class="lbl">Устарело</div><div class="v" id="kStale">—</div><div class="d" id="kStaleD"></div></div>
+    </div>
+    <div class="load">
+      <div class="sech">Оценки — load diagram</div>
+      <div class="load-l" id="loadL"></div>
+      <div class="load-bar" id="loadBar"></div>
+    </div>
+    <div class="sorttabs">
+      <button data-sort="score">По оценке</button>
+      <button data-sort="date">По дате</button>
+      <button data-sort="date_score">Дата + оценка</button>
+      <div class="filters" id="filters">
+        <label>Оценка от
+          <select id="fMinScore">
+            <option value="">любая</option>
+            <option>1</option><option>2</option><option>3</option><option>4</option><option>5</option>
+            <option>6</option><option>7</option><option>8</option><option>9</option><option>10</option>
+          </select>
+        </label>
+        <label><input type="checkbox" id="fScoredOnly"> только оценённые</label>
+      </div>
+    </div>
+    <div class="thead lbl"><span>Вакансия</span><span>Оценка</span><span>Зарплата</span><span>Город</span><span>Формат</span><span>Опубл.</span></div>
+    <div class="list" id="list"></div>
+    <div class="count" id="count"></div>
+    <button class="btn more-btn" id="moreBtn" style="display:none">Показать ещё</button>
+  </div>
+
+  <div id="analyticsView" style="display:none">
+    <div class="domains" id="aDomains"></div>
+    <div class="agrid">
+      <div class="acol"><div class="box" id="aSkills"></div></div>
+      <div class="acol">
+        <div class="box" id="aSalary"></div>
+        <div class="box" id="aAi"></div>
+        <div class="box" id="aConditions"></div>
+        <div class="box" id="aCities"></div>
+      </div>
     </div>
   </div>
 </div>
-</div>
 <aside class="detail" id="detail"></aside>
+</div>
 </div>
 
 <div class="overlay" id="overlay">
@@ -296,7 +372,6 @@ const RU = {
   companyType: {product: 'продукт', outsourcing: 'аутсорс', bodyleasing: 'боди-лизинг', agency: 'агентство'},
   aiToolsUsage: {required: 'AI обязателен', preferred: 'AI — плюс', used: 'AI используют'},
 };
-const CARD_SKILLS = 6;
 let jobs = [];
 let openId = null;
 
@@ -311,24 +386,6 @@ function scoreBox(j) {
     + `${j.stale ? '<span class="stale-tag">устарела</span>' + scoreButton(j, 'Переоценить') : ''}</div>`;
 }
 
-function badges(e) {
-  const b = [];
-  if (e.workMode) b.push(`<span class="badge">${RU.workMode[e.workMode]}</span>`);
-  if (e.companyType) {
-    const warn = e.companyType === 'agency' || e.companyType === 'bodyleasing';
-    b.push(`<span class="badge ${warn ? 'warn' : ''}">${RU.companyType[e.companyType]}</span>`);
-  }
-  if (e.englishLevel) b.push(`<span class="badge">English ${esc(e.englishLevel)}</span>`);
-  if (e.polishRequired === true) b.push('<span class="badge warn">польский нужен</span>');
-  return b.join('');
-}
-
-function aiLine(e) {
-  if (!e.aiTools || !e.aiTools.length) return '';
-  const label = e.aiToolsUsage ? RU.aiToolsUsage[e.aiToolsUsage] : 'AI';
-  return `<div class="badges"><span class="badge ai">${label}: ${e.aiTools.map(esc).join(', ')}</span></div>`;
-}
-
 // every city of the offer; older entries only have the main `location`
 function cities(o) {
   return o.locations && o.locations.length ? o.locations : (o.location ? [o.location] : []);
@@ -340,23 +397,46 @@ function where(o) {
   return [esc(o.companyName || ''), city].filter(Boolean).join(' · ');
 }
 
+function initials(name) {
+  const w = String(name || '?').replace(/[^\p{L}\p{N} ]/gu, ' ').split(/\s+/).filter(Boolean);
+  return ((w[0] || '?')[0] + (w[1] ? w[1][0] : (w[0] || '')[1] || '')).toUpperCase();
+}
+
+function ago(date) {
+  if (!date) return '—';
+  const days = Math.max(0, Math.round((Date.now() - new Date(date)) / 864e5));
+  return days === 0 ? 'сегодня' : days + 'д назад';
+}
+
+const scoreLevel = v => v >= 8 ? 'hi' : v >= 6 ? 'mid' : 'lo';
+
+function scoreCell(j) {
+  if (!j.score) return `<span class="dot un"></span>${scoreButton(j, 'Оценить')}`;
+  return `<span class="dot ${j.stale ? 'st' : scoreLevel(j.score.matchScore)}"></span>`
+    + `<b>${j.score.matchScore}</b><span class="muted">/10</span>`
+    + (j.stale ? ' ' + scoreButton(j, 'Переоценить') : '');
+}
+
+function salaryCell(o) {
+  if (o.salaryMin == null && o.salaryMax == null) return '<span class="muted">—</span>';
+  const a = o.salaryMin, b = o.salaryMax;
+  const range = a == null ? fmtNum(b) : b == null || a === b ? fmtNum(a) : `${fmtNum(a)}–${fmtNum(b)}`;
+  const unit = o.salaryUnit ? ' · /' + (unitRu[o.salaryUnit] || o.salaryUnit) : '';
+  return `${range} ${esc(o.currency || '')}<small>${esc(o.contractType || '')}${unit}</small>`;
+}
+
 function card(j) {
   const o = j.offer, e = j.extraction || {};
-  const skills = e.skills || [];
-  const rest = Math.max(0, skills.length - CARD_SKILLS) + (e.niceToHaveSkills || []).length;
-  const contract = o.contractType ? ` <span class="muted">· ${esc(o.contractType)}</span>` : '';
-  return `<div class="card ${j.stale ? 'stale' : ''} ${openId === o.id ? 'active' : ''}" data-card="${esc(o.id)}">
-    <div class="top">
-      <div><div class="title">${esc(o.title)}</div><div class="company">${where(o)}</div></div>
-      ${scoreBox(j)}
-    </div>
-    ${j.score && j.score.reason ? `<div class="reason">${esc(j.score.reason)}</div>` : ''}
-    <div class="salary">${salary(o)}${contract}</div>
-    ${j.extraction ? `<div class="badges">${badges(e)}</div>` : ''}
-    <div class="tags">${skills.slice(0, CARD_SKILLS).map(x => `<span class="tag">${esc(x)}</span>`).join('')}${rest ? `<span class="tag more">+${rest}</span>` : ''}</div>
-    ${aiLine(e)}
-    <div class="foot"><span>${o.publishedAt ? 'опубликовано ' + esc(o.publishedAt.slice(0, 10)) : ''}</span>
-      <span class="more-link">подробнее →</span></div>
+  const c = cities(o);
+  return `<div class="card ${openId === o.id ? 'active' : ''}" data-card="${esc(o.id)}">
+    <div class="c-who"><span class="av">${esc(initials(o.companyName))}</span>
+      <div><div class="title">${esc(o.title)}</div><div class="company">${esc(o.companyName || '')}</div></div></div>
+    <div class="c-score">${scoreCell(j)}</div>
+    <div class="c-sal">${salaryCell(o)}</div>
+    <div class="c-city">${c.length ? esc(c[0]) + (c.length > 1 ? ` <span class="muted">+${c.length - 1}</span>` : '') : '—'}</div>
+    <div class="c-mode">${e.workMode ? RU.workMode[e.workMode] : '—'}<small>${e.companyType ? RU.companyType[e.companyType] : ''}</small></div>
+    <div class="c-date">${ago(o.publishedAt)}</div>
+    ${j.score && j.score.reason ? `<div class="c-reason">${esc(j.score.reason)}</div>` : ''}
   </div>`;
 }
 
@@ -445,11 +525,15 @@ function initFilters() {
   };
   $('fMinScore').value = filters.minScore;
   $('fScoredOnly').checked = filters.scoredOnly;
-  $('fSort').value = filters.sort;
+  syncSortTabs();
+}
+
+function syncSortTabs() {
+  document.querySelectorAll('[data-sort]').forEach(b => b.classList.toggle('on', b.dataset.sort === filters.sort));
 }
 
 function onFilterChange() {
-  filters = {minScore: $('fMinScore').value, scoredOnly: $('fScoredOnly').checked, sort: $('fSort').value};
+  filters = {minScore: $('fMinScore').value, scoredOnly: $('fScoredOnly').checked, sort: filters.sort};
   const q = new URLSearchParams();
   if (filters.minScore !== '') q.set('minScore', filters.minScore);
   if (filters.scoredOnly) q.set('scoredOnly', 'true');
@@ -457,7 +541,12 @@ function onFilterChange() {
   history.replaceState(null, '', q.toString() ? '?' + q : location.pathname);
   loadJobs();
 }
-['fMinScore', 'fScoredOnly', 'fSort'].forEach(id => $(id).onchange = onFilterChange);
+['fMinScore', 'fScoredOnly'].forEach(id => $(id).onchange = onFilterChange);
+document.querySelectorAll('[data-sort]').forEach(b => b.onclick = () => {
+  filters.sort = b.dataset.sort;
+  syncSortTabs();
+  onFilterChange();
+});
 
 function jobsUrl(p) {
   const q = new URLSearchParams({sort: filters.sort, page: p, size: PAGE_SIZE});
@@ -471,6 +560,39 @@ function setStaleCount(n) {
   staleCount = Math.max(0, n);
   $('staleBanner').style.display = staleCount ? 'flex' : 'none';
   $('staleCount').textContent = `${staleCount} ${plural(staleCount, 'оценка устарела', 'оценки устарели', 'оценок устарели')}`;
+}
+
+// computed over the loaded page only: the API returns no pool-wide score totals
+function scoreStats() {
+  const s = {hi: 0, mid: 0, lo: 0, un: 0, st: 0, sum: 0, n: 0};
+  jobs.forEach(j => {
+    if (!j.score) { s.un++; return; }
+    if (j.stale) s.st++; else s[scoreLevel(j.score.matchScore)]++;
+    s.sum += j.score.matchScore;
+    s.n++;
+  });
+  return s;
+}
+
+function renderKpis() {
+  const s = scoreStats();
+  $('tbPool').textContent = fmtNum(total);
+  $('kTotal').textContent = fmtNum(total);
+  $('kShown').textContent = `показано ${jobs.length}`;
+  $('kScored').textContent = s.n;
+  $('kScoredD').textContent = jobs.length ? `${pct(s.n, jobs.length)}% загруженных` : '—';
+  $('kAvg').textContent = s.n ? (s.sum / s.n).toFixed(1) : '—';
+  $('kTop').textContent = `▲ ${s.hi} с оценкой 8+`;
+  $('kStale').textContent = staleCount;
+  $('kStaleD').textContent = staleCount ? '▼ резюме изменилось' : 'всё актуально';
+  $('kStaleD').className = 'd ' + (staleCount ? 'r' : 'g');
+
+  const seg = [['8–10', s.hi, 'var(--green)'], ['6–7', s.mid, 'var(--navy)'], ['≤ 5', s.lo, 'var(--sky)'],
+    ['не оценено', s.un, 'var(--sky2)'], ['устарело', s.st, 'var(--red)']].filter(x => x[1]);
+  const n = jobs.length || 1;
+  $('loadL').style.gridTemplateColumns = seg.map(x => Math.max(x[1] / n, .12) + 'fr').join(' ');
+  $('loadL').innerHTML = seg.map(x => `<div><b>${x[1]}</b><span>${x[0]} · ${pct(x[1], n)}%</span></div>`).join('');
+  $('loadBar').innerHTML = seg.map(x => `<div style="flex:${x[1]};background:${x[2]}"></div>`).join('');
 }
 
 async function loadJobs(reset = true) {
@@ -500,6 +622,7 @@ async function loadJobs(reset = true) {
     $('list').insertAdjacentHTML('beforeend', data.items.map(card).join(''));
   }
   $('moreBtn').style.display = jobs.length < total ? 'block' : 'none';
+  renderKpis();
   if (reset) {
     if (openId && jobs.some(j => j.offer.id === openId)) openDetail(openId); else closeDetail();
   }
@@ -610,6 +733,7 @@ async function scoreOne(btn) {
     jobs = jobs.map(j => j.offer.id === id ? job : j);
     const el = document.querySelector(`.card[data-card="${CSS.escape(id)}"]`);
     if (el) el.outerHTML = card(job);
+    renderKpis();
     if (openId === id) openDetail(id);
   } catch (err) {
     toast(err.message, true);
@@ -673,7 +797,7 @@ const VALUE_RU = {
   remote: 'удалённо', hybrid: 'гибрид', office: 'офис', 'true': 'нужен', 'false': 'не нужен',
   outsourcing: 'аутсорс', agency: 'агентство', product: 'продукт', bodyleasing: 'боди-лизинг',
 };
-const COLORS = ['#6366f1', '#22c55e', '#f59e0b', '#ef4444', '#06b6d4', '#a855f7', '#94a3b8'];
+const COLORS = ['#233a8b', '#3f8656', '#c99a1c', '#c8432b', '#b9c4e4', '#77746b', '#1b1b1b'];
 
 function showTab(name) {
   const analytics = name === 'analytics';
@@ -681,7 +805,8 @@ function showTab(name) {
   $('tabAnalytics').classList.toggle('on', analytics);
   $('jobsView').style.display = analytics ? 'none' : 'block';
   $('analyticsView').style.display = analytics ? 'block' : 'none';
-  document.querySelector('.wrap').classList.toggle('wide', analytics);
+  $('pageTitle').textContent = analytics ? 'Аналитика рынка' : 'Вакансии';
+  $('crumbSheet').textContent = $('tbSheet').textContent = analytics ? 'Аналитика' : 'Вакансии';
   if (analytics) { closeDetail(); loadAnalytics(); }
   history.replaceState(null, '', location.pathname + location.search + (analytics ? '#analytics' : ''));
 }
@@ -720,7 +845,7 @@ function aSkills(d) {
   const max = Math.max(...d.skills.map(x => pct(x.must + x.nice, d.total)), 1);
   return `<h2>Самые нужные навыки</h2>
     <div class="sub">% из ${d.total} вакансий${all ? '' : ' · ▲▼ — разница со всем рынком'}</div>
-    <div class="legend"><span><i style="background:#6366f1"></i>обязательно</span><span><i style="background:#c7d2fe"></i>будет плюсом</span></div>
+    <div class="legend"><span><i style="background:var(--navy)"></i>обязательно</span><span><i style="background:var(--sky)"></i>будет плюсом</span></div>
     ${d.skills.map(x => {
       const m = pct(x.must, d.total), p = pct(x.nice, d.total), base = pct(x.marketMust, d.marketTotal);
       const diff = all ? '' : m - base >= 5 ? `<span class="cmp up">▲${m - base}</span>`
@@ -750,13 +875,13 @@ function aAi(d) {
       <div class="kpi"><div class="v">${pct(d.ai.preferred, d.total)}%</div><div class="l">будет плюсом</div></div>
     </div>
     ${d.ai.tools.map(t => `<div class="arow"><span class="name">${esc(t.value)}</span>
-      <div class="track"><div class="fill" style="width:${t.count / top * 100}%;background:#a855f7"></div></div>
+      <div class="track"><div class="fill" style="width:${t.count / top * 100}%;background:var(--green)"></div></div>
       <span class="pct">${t.count}</span></div>`).join('') || '<div class="note">не упоминается</div>'}`;
 }
 
 function aStack(title, items, n) {
   if (!n) return '';
-  const color = (s, i) => s.value == null ? '#e5e7eb' : COLORS[i % COLORS.length];
+  const color = (s, i) => s.value == null ? 'var(--hair)' : COLORS[i % COLORS.length];
   const label = s => s.value == null ? 'не указано' : (VALUE_RU[s.value] || s.value);
   return `<div style="font-size:13px;font-weight:600;margin-top:8px">${title}</div>
     <div class="stack">${items.map((s, i) =>
@@ -769,9 +894,10 @@ function aCities(d) {
   const max = d.cities.length ? d.cities[0].count : 1;
   return `<h2>Города</h2><div class="sub">вакансия в нескольких городах считается в каждом</div>
     ${d.cities.map(c => `<div class="arow"><span class="name">${esc(c.value)}</span>
-      <div class="track"><div class="fill" style="width:${c.count / max * 100}%;background:#06b6d4"></div></div>
+      <div class="track"><div class="fill" style="width:${c.count / max * 100}%"></div></div>
       <span class="pct">${c.count}</span></div>`).join('')}`;
 }
+
 
 (async () => {
   initFilters();
