@@ -183,6 +183,51 @@ textarea{width:100%;min-height:380px;font-family:var(--mono);font-size:12.5px;li
 .c-mode small{display:block;color:var(--mute);font-size:11.5px}
 .c-date{font-family:var(--mono);font-size:12.5px}
 .c-reason{grid-column:1/-1;margin:-4px 0 0 44px;font-size:12.5px;color:var(--mute);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+/* phone: the side index becomes a top strip, list rows become stacked cards, the detail covers the screen */
+@media (max-width:760px){
+  .tb{height:52px}
+  .tb-logo{padding:0 14px;font-size:16px;border-right:none}
+  .tb-cell{display:none}
+  .tb-act{border-left:none;padding:0 12px}
+  .shell{flex-direction:column;min-height:0}
+  .side{position:sticky;top:52px;z-index:3;width:auto;height:auto;flex-direction:row;align-items:stretch;overflow-x:auto;scrollbar-width:none;padding:0;border-right:none;border-bottom:1.5px solid var(--rule);background:var(--paper)}
+  .side-h,.acct{display:none}
+  .side>button:not(.btn){padding:12px 14px;font-size:14px;gap:8px;white-space:nowrap;border-bottom:3px solid transparent}
+  .side>button:not(.btn) i{display:none}
+  .side>button.on{background:none;border-bottom-color:var(--red);font-weight:700}
+  .side-foot{margin:0 0 0 auto;padding:6px 10px;flex-direction:row;align-items:center}
+  .side-foot .btn{padding:6px 8px;font-size:10px;white-space:nowrap}
+  .wrap{padding:16px 14px 32px}
+  .h1{font-size:26px}
+  .kstrip{grid-template-columns:1fr 1fr;margin:14px 0 18px}
+  .kcell{padding:12px 12px 10px}
+  .kcell:nth-child(3){border-left:none}
+  .kcell:nth-child(n+3){border-top:1px solid var(--hair)}
+  .kcell::before{left:12px}
+  .kcell .v{font-size:24px}
+  .load-l b{font-size:14px}
+  .load-l span{font-size:9.5px}
+  .sorttabs{flex-wrap:wrap;gap:6px 18px}
+  .sorttabs .filters{margin-left:0;width:100%;padding:4px 0 10px}
+  .thead{display:none}
+  .card{grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"who score" "sal city" "mode date" "reason reason";gap:6px 12px;padding:14px 4px}
+  .c-who{grid-area:who}.c-score{grid-area:score;justify-content:flex-end}
+  .c-sal{grid-area:sal}.c-city{grid-area:city;text-align:right}
+  .c-mode{grid-area:mode}.c-date{grid-area:date;text-align:right;color:var(--mute)}
+  .c-who .title{white-space:normal}
+  .c-mode small{display:inline;margin-left:6px}
+  .c-reason{grid-area:reason;margin:0;white-space:normal;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+  .detail{position:fixed;inset:0;width:auto;height:auto;z-index:6;border-left:none}
+  .dhead{padding:12px 14px}
+  .dbody{padding:4px 14px 30px}
+  .kv{grid-template-columns:96px 1fr}
+  .arow{grid-template-columns:92px 1fr 70px}
+  .salc{padding:2px 10px}
+  .salc .v{font-size:22px}
+  .chip{padding:8px 10px}
+  textarea{min-height:300px}
+}
 </style>
 </head>
 <body>
