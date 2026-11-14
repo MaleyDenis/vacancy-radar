@@ -19,7 +19,7 @@ repositories {
 
 dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-web'
-    implementation 'org.jsoup:jsoup:1.18.3'
+    implementation 'org.jsoup:jsoup:1.24.1'
     implementation 'com.fasterxml.jackson.core:jackson-databind'
     implementation 'com.anthropic:anthropic-java:2.16.1'
 
