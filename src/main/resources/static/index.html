@@ -178,7 +178,11 @@ textarea{width:100%;min-height:380px;font-family:var(--mono);font-size:12.5px;li
 .c-score{font-size:13.5px;display:flex;align-items:center;gap:6px;flex-wrap:wrap}
 .c-score b{font-family:var(--mono)}
 .c-sal{font-family:var(--mono);font-size:12.5px}
-.c-sal small{display:block;color:var(--mute);font-size:10.5px}
+.c-sal small{display:block;color:var(--mute);font-size:10.5px;margin-top:3px}
+.salbox{display:inline-block;font-family:var(--mono);font-size:12.5px;font-weight:700;padding:2px 7px;border:1.5px solid var(--red);color:var(--red);white-space:nowrap}
+.dsal{display:flex;flex-wrap:wrap;align-items:center;gap:6px 12px;padding:14px 0;border-bottom:1px solid var(--hair)}
+.dsal .salbox{font-size:15px;padding:5px 10px}
+.dsal small{font-family:var(--mono);font-size:11px;color:var(--mute)}
 .c-city,.c-mode{font-size:13px}
 .c-mode small{display:block;color:var(--mute);font-size:11.5px}
 .c-date{font-family:var(--mono);font-size:12.5px}
@@ -450,13 +454,23 @@ document.addEventListener('keydown', e => {
   if (e.key === 'Enter') onOk();
 });
 
-function salary(o) {
-  if (o.salaryMin == null && o.salaryMax == null) return '<span class="muted">Зарплата не указана</span>';
+const hasSalary = o => o.salaryMin != null || o.salaryMax != null;
+
+function salaryBox(o) {
   const a = o.salaryMin, b = o.salaryMax;
-  const range = a == null ? b : b == null || a === b ? a : `${a}–${b}`;
+  const range = a == null ? fmtNum(b) : b == null || a === b ? fmtNum(a) : `${fmtNum(a)}–${fmtNum(b)}`;
+  return `<span class="salbox">${range} ${esc(o.currency || '')}</span>`;
+}
+
+function salaryTerms(o, withGross) {
   const unit = o.salaryUnit ? '/' + (unitRu[o.salaryUnit] || o.salaryUnit) : '';
-  const gross = o.salaryGross == null ? '' : o.salaryGross ? ' брутто' : ' нетто';
-  return esc(`${range} ${o.currency || ''}${unit}${gross}`);
+  const gross = !withGross || o.salaryGross == null ? '' : o.salaryGross ? 'брутто' : 'нетто';
+  return [o.contractType, unit, gross].filter(Boolean).map(esc).join(' · ');
+}
+
+function salaryDetail(o) {
+  if (!hasSalary(o)) return '<div class="dsal"><span class="none">Зарплата не указана</span></div>';
+  return `<div class="dsal">${salaryBox(o)}<small>${salaryTerms(o, true)}</small></div>`;
 }
 
 const RU = {
@@ -510,11 +524,8 @@ function scoreCell(j) {
 }
 
 function salaryCell(o) {
-  if (o.salaryMin == null && o.salaryMax == null) return '<span class="muted">—</span>';
-  const a = o.salaryMin, b = o.salaryMax;
-  const range = a == null ? fmtNum(b) : b == null || a === b ? fmtNum(a) : `${fmtNum(a)}–${fmtNum(b)}`;
-  const unit = o.salaryUnit ? ' · /' + (unitRu[o.salaryUnit] || o.salaryUnit) : '';
-  return `${range} ${esc(o.currency || '')}<small>${esc(o.contractType || '')}${unit}</small>`;
+  if (!hasSalary(o)) return '<span class="muted">—</span>';
+  return `${salaryBox(o)}<small>${salaryTerms(o, false)}</small>`;
 }
 
 function card(j) {
@@ -547,11 +558,9 @@ const kv = rows => {
 function detail(j) {
   const o = j.offer, e = j.extraction || {};
   const steps = e.recruitmentSteps ? e.recruitmentSteps.split(/\s*(?:->|→)\s*/).filter(Boolean) : null;
-  const contract = o.contractType ? ` <span class="muted">· ${esc(o.contractType)}</span>` : '';
   const body = !j.extraction
     ? `<div class="dsec"><span class="none">Факты ещё не извлечены — появятся после следующего скана.</span></div>`
     : `<div class="dsec"><h3>Условия</h3>${kv([
-          ['Зарплата', salary(o) + contract],
           ['Города', cities(o).map(esc).join(', ')],
           ['Формат', e.workMode && RU.workMode[e.workMode]],
           ['Компания', e.companyType && RU.companyType[e.companyType]],
@@ -582,6 +591,7 @@ function detail(j) {
       ${scoreBox(j)}
     </div>
     <div class="dbody">
+      ${salaryDetail(o)}
       ${j.score && j.score.reason ? `<div class="dsec"><div class="reason">${esc(j.score.reason)}</div></div>` : ''}
       ${body}
       <div class="dsec"><h3>Описание с сайта</h3><div id="dDesc"><span class="none">Загружается…</span></div></div>
