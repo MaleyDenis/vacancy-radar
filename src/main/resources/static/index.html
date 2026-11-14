@@ -189,7 +189,7 @@ mark{background:#f3dc8a;color:inherit;padding:0 1px}
 .desc::after{content:"";position:absolute;left:0;right:0;bottom:0;height:3em;background:linear-gradient(transparent,var(--card))}
 .desc.full{max-height:none}.desc.full::after{display:none}
 .more-link{margin-top:8px;border:none;background:none;padding:0;font-family:var(--mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--navy);cursor:pointer}
-.c-reason{grid-column:1/-1;margin:-4px 0 0 44px;font-size:12.5px;color:var(--mute);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.c-skills{grid-column:1/-1;margin:-4px 0 0 44px}
 
 /* phone: the side index becomes a top strip, list rows become stacked cards, the detail covers the screen */
 @media (max-width:760px){
@@ -218,7 +218,7 @@ mark{background:#f3dc8a;color:inherit;padding:0 1px}
   .sorttabs{flex-wrap:wrap;gap:6px 18px}
   .sorttabs .filters{margin-left:0;width:100%;padding:4px 0 10px}
   .thead{display:none}
-  .card{grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"who score" "sal city" "mode date" "reason reason";gap:6px 12px;padding:14px 4px}
+  .card{grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"who score" "sal city" "mode date" "skills skills";gap:6px 12px;padding:14px 4px}
   .c-who{grid-area:who}.c-score{grid-area:score;justify-content:flex-end}
   .c-sal{grid-area:sal}.c-city{grid-area:city;text-align:right}
   .c-mode{grid-area:mode}.c-date{grid-area:date;text-align:right;color:var(--mute)}
@@ -226,7 +226,7 @@ mark{background:#f3dc8a;color:inherit;padding:0 1px}
   .c-mode small{display:inline;margin-left:6px}
   .search{width:100%}
   .c-snip{margin:0}
-  .c-reason{grid-area:reason;margin:0;white-space:normal;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+  .c-skills{grid-area:skills;margin:0}
   .detail{position:fixed;inset:0;width:auto;height:auto;z-index:6;border-left:none}
   .dhead{padding:12px 14px}
   .dbody{padding:4px 14px 30px}
@@ -528,8 +528,8 @@ function card(j) {
     <div class="c-city">${c.length ? esc(c[0]) + (c.length > 1 ? ` <span class="muted">+${c.length - 1}</span>` : '') : '—'}</div>
     <div class="c-mode">${e.workMode ? RU.workMode[e.workMode] : '—'}<small>${e.companyType ? RU.companyType[e.companyType] : ''}</small></div>
     <div class="c-date">${ago(o.publishedAt)}</div>
-    ${j.snippet ? `<div class="c-snip">${highlight(j.snippet, searchTerms())}</div>`
-      : j.score && j.score.reason ? `<div class="c-reason">${esc(j.score.reason)}</div>` : ''}
+    ${e.skills && e.skills.length ? `<div class="c-skills">${tagList(e.skills)}</div>` : ''}
+    ${j.snippet ? `<div class="c-snip">${highlight(j.snippet, searchTerms())}</div>` : ''}
   </div>`;
 }
 
