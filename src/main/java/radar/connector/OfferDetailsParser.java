@@ -23,7 +23,7 @@ public class OfferDetailsParser {
     for (var script : doc.select("script[type=application/ld+json]")) {
       var node = readJson(script.data());
       if (node != null && "JobPosting".equals(node.path("@type").asText())) {
-        var description = text(node.path("description"));
+        var description = HtmlText.toText(text(node.path("description")));
         var domain = domainFrom(node.path("hiringOrganization").path("sameAs").asText(null));
         return new OfferDetails(description, domain);
       }

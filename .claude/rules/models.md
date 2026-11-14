@@ -6,7 +6,7 @@
 - `location` = main city; `locations` = every city the offer is open in (JustJoin "multilocation": one offer, several cities — stored once, not duplicated; the site's "1 019 offers" counts city variants, the pool holds ~583 unique offers). Null for older entries; `allLocations()` falls back to `[location]`. A scan refreshes `locations` of known offers it sees again.
 - Salary is the original (non-converted) amount; `salaryUnit` = `hour`/`day`/`month`/`year`, `salaryGross` = gross (`true`) or net (`false`).
 
-- `description` and `domain` come from the offer's own page (details step), not the listing API — `null` until fetched. `RawJobOffer.withDetails(description, domain)` returns an updated copy.
+- `description` and `domain` come from the offer's own page (details step), not the listing API — `null` until fetched. `description` is plain text (`HtmlText.toText`: paragraphs split by a blank line, list items as `- item`); `DescriptionMigration` converts old HTML entries on startup (backup `raw-offers.json.bak`). `RawJobOffer.withDetails(description, domain)` returns an updated copy.
 - No `skills` field: the listing's skill list is unreliable, so skills are extracted by Claude from the description (→ `OfferExtraction.skills`).
 
 ## StoredRawOffer (element of `raw-offers.json`)

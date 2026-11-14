@@ -7,6 +7,7 @@ import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -84,6 +85,21 @@ public class JsonRepository {
 
   public void saveRawOffers(List<StoredRawOffer> offers) {
     write(dataDir.resolve(RAW_OFFERS_FILE), offers);
+  }
+
+  public void backupRawOffers() {
+    lock.writeLock().lock();
+    try {
+      var file = dataDir.resolve(RAW_OFFERS_FILE);
+      if (Files.exists(file)) {
+        Files.copy(file, dataDir.resolve(RAW_OFFERS_FILE + ".bak"),
+            StandardCopyOption.REPLACE_EXISTING);
+      }
+    } catch (IOException e) {
+      throw new UncheckedIOException("Failed to back up " + RAW_OFFERS_FILE, e);
+    } finally {
+      lock.writeLock().unlock();
+    }
   }
 
   public LinkedHashMap<String, OfferExtraction> readExtractions() {
