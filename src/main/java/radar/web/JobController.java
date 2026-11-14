@@ -113,7 +113,7 @@ public class JobController {
         .toList();
   }
 
-  private static JobView forCard(JobView job, List<String> terms) {
+  private static JobView forCard(JobView job, List<TextSearch.Term> terms) {
     var offer = job.offer().withDetails(null, job.offer().domain());
     return new JobView(offer, job.extraction(), job.score(), job.stale(),
         TextSearch.snippet(job.offer(), terms));
