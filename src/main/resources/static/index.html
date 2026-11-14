@@ -353,14 +353,29 @@ const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;
 // same folding as the server's search, length-preserving so hit positions map back to the text
 const FOLD = {'ą': 'a', 'ć': 'c', 'ę': 'e', 'ł': 'l', 'ń': 'n', 'ó': 'o', 'ś': 's', 'ź': 'z', 'ż': 'z'};
 const fold = s => Array.from(String(s), c => { const l = c.toLowerCase(); return l.length === 1 ? FOLD[l] || l : c; }).join('');
-const searchTerms = () => [...new Set(fold(filters.q || '').split(/\s+/).filter(Boolean))];
+const isWordChar = c => /[\p{L}\p{N}]/u.test(c);
+const quoteRe = s => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+// mirrors TextSearch on the server: a term matches at a word start, a quoted one whole words only
+function searchTerms() {
+  const terms = [];
+  for (const [, quoted, plain] of fold(filters.q || '').matchAll(/"([^"]*)"?|(\S+)/g)) {
+    const words = (quoted ?? plain).trim();
+    if (!words) continue;
+    const body = words.split(/\s+/).map(quoteRe).join('\\s+');
+    const start = isWordChar(words[0]) ? '(?<![\\p{L}\\p{N}])' : '';
+    const end = quoted != null && isWordChar(words.at(-1)) ? '(?![\\p{L}\\p{N}])' : '';
+    terms.push(new RegExp(start + body + end, 'gu'));
+  }
+  return terms;
+}
 
 function highlight(text, terms) {
   text = String(text ?? '');
   if (!terms.length) return esc(text);
   const folded = fold(text), marks = new Array(text.length).fill(false);
-  terms.forEach(t => {
-    for (let i = folded.indexOf(t); i >= 0; i = folded.indexOf(t, i + t.length)) marks.fill(true, i, i + t.length);
+  terms.forEach(re => {
+    for (const m of folded.matchAll(re)) marks.fill(true, m.index, m.index + m[0].length);
   });
   let out = '', i = 0;
   while (i < text.length) {

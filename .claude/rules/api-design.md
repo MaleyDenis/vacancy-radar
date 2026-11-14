@@ -21,8 +21,10 @@ GET    /api/trends                      — legacy, unused
 ## GET /api/jobs
 
 - `q` — text search over the site's own text (title, company, description), not Claude's fields.
-  Every whitespace-separated term must occur as a substring; case-insensitive, Polish letters fold to
-  Latin (`wroclaw` finds `Wrocław`). Each hit carries `snippet` — the description around the first
+  Every term must match; a term matches at the start of a word (`polski` finds `polskiego`, `iam`
+  skips `Miami`), a quoted term or phrase whole words only (`"java"` skips `JavaScript`).
+  Case-insensitive, Polish letters fold to Latin (`wroclaw` finds `Wrocław`). The UI's highlighting
+  repeats these rules (`searchTerms` in index.html mirrors `TextSearch`). Each hit carries `snippet` — the description around the first
   hit; the UI highlights the terms and shows the full description in the detail view.
 - `minScore` — hides scored offers below it; unscored offers are not affected. The UI sends
   6 by default.
