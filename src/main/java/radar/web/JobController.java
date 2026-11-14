@@ -22,6 +22,7 @@ import radar.repository.JsonRepository;
 import radar.service.BackgroundRunner;
 import radar.service.ResumeHasher;
 import radar.service.ScoringService;
+import radar.service.TextSearch;
 
 @RestController
 public class JobController {
@@ -63,6 +64,7 @@ public class JobController {
   public ResponseEntity<?> jobs(
       @RequestParam(required = false) Integer minScore,
       @RequestParam(defaultValue = "false") boolean scoredOnly,
+      @RequestParam(required = false) String q,
       @RequestParam(defaultValue = "score") String sort,
       @RequestParam(defaultValue = "1") int page,
       @RequestParam(defaultValue = "50") int size) {
@@ -72,10 +74,12 @@ public class JobController {
           "sort must be one of " + SORTS.keySet() + ", page >= 1, 1 <= size <= " + MAX_PAGE_SIZE));
     }
 
+    var terms = TextSearch.terms(q);
     var all = allJobs();
     var staleCount = (int) all.stream().filter(job -> job.stale()).count();
     var matching = all.stream()
         .filter(job -> !scoredOnly || job.score() != null)
+        .filter(job -> terms.isEmpty() || TextSearch.matches(job.offer(), terms))
         .filter(job -> minScore == null || job.score() == null
             || job.score().matchScore() >= minScore)
         .sorted(order)
@@ -83,7 +87,7 @@ public class JobController {
 
     var from = Math.min((page - 1) * size, matching.size());
     var to = Math.min(from + size, matching.size());
-    var items = matching.subList(from, to).stream().map(job -> forCard(job)).toList();
+    var items = matching.subList(from, to).stream().map(job -> forCard(job, terms)).toList();
 
     return ResponseEntity.ok(new JobPage(items, matching.size(), page, size, staleCount));
   }
@@ -109,9 +113,10 @@ public class JobController {
         .toList();
   }
 
-  private static JobView forCard(JobView job) {
+  private static JobView forCard(JobView job, List<String> terms) {
     var offer = job.offer().withDetails(null, job.offer().domain());
-    return new JobView(offer, job.extraction(), job.score(), job.stale());
+    return new JobView(offer, job.extraction(), job.score(), job.stale(),
+        TextSearch.snippet(job.offer(), terms));
   }
 
   private static String day(String publishedAt) {
