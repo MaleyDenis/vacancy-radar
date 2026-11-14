@@ -35,7 +35,7 @@ Plain text, pasted as is; wishes (contract, salary, remote) can be written at it
 - `resumeHash` ≠ SHA-256 of the current resume → score is stale.
 
 ## JobView (`GET /api/jobs` element)
-`offer (RawJobOffer), extraction (OfferExtraction|null), score (OfferScore|null), stale`
+`offer (RawJobOffer), extraction (OfferExtraction|null), score (OfferScore|null), stale, snippet (String|null — only for `q` search results)`
 
 ## JobPage (`GET /api/jobs`)
 `items (JobView, offer without description), total, page, size, staleCount`

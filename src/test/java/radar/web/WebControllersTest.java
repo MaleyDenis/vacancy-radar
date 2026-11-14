@@ -208,6 +208,29 @@ class WebControllersTest {
   }
 
   @Test
+  void getJobsSearchesTheOriginalTextAndReturnsSnippets() throws Exception {
+    givenJobs();
+    var kafka = new RawJobOffer("kafka", "Backend Dev", "Łódź Soft", null, "Łódź", true,
+        "2026-11-04T10:00:00Z", "senior", "We use Apache Kafka and Spring.", null, null, null,
+        null, null, "b2b", "url", "justjoin", null, null);
+    when(repository.readRawOffers()).thenReturn(List.of(stored("low", "2026-11-03T10:00:00Z"),
+        new StoredRawOffer(kafka, "2026-11-04T00:00:00Z", null)));
+
+    mvc.perform(get("/api/jobs").param("q", "KAFKA spring"))
+        .andExpect(jsonPath("$.total").value(1))
+        .andExpect(jsonPath("$.items[0].offer.id").value("kafka"))
+        .andExpect(jsonPath("$.items[0].offer.description").isEmpty())
+        .andExpect(jsonPath("$.items[0].snippet").value("We use Apache Kafka and Spring."));
+    mvc.perform(get("/api/jobs").param("q", "lodz"))
+        .andExpect(jsonPath("$.items[*].offer.id").value(org.hamcrest.Matchers.contains("kafka")));
+    mvc.perform(get("/api/jobs").param("q", "kafka python"))
+        .andExpect(jsonPath("$.total").value(0));
+    mvc.perform(get("/api/jobs").param("q", " "))
+        .andExpect(jsonPath("$.total").value(2))
+        .andExpect(jsonPath("$.items[0].snippet").isEmpty());
+  }
+
+  @Test
   void getJobsSortsByDateAndByDayThenScore() throws Exception {
     givenJobs();
 

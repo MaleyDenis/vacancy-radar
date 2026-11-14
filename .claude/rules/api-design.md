@@ -5,7 +5,7 @@
 ```
 POST   /api/scan?fullFetch&limit        — scrape → details → extract in background (202; 409 if busy); no scoring
 GET    /api/status                      — running task, step, done/total, last result or error
-GET    /api/jobs?minScore&scoredOnly&sort&page&size
+GET    /api/jobs?q&minScore&scoredOnly&sort&page&size
                                         — JobPage {items, total, page, size, staleCount}
 GET    /api/jobs/{id}                   — one JobView with full description (404 if unknown)
 POST   /api/jobs/{id}/score             — score one offer now (sync; 404/400/409/502)
@@ -20,6 +20,10 @@ GET    /api/trends                      — legacy, unused
 
 ## GET /api/jobs
 
+- `q` — text search over the site's own text (title, company, description), not Claude's fields.
+  Every whitespace-separated term must occur as a substring; case-insensitive, Polish letters fold to
+  Latin (`wroclaw` finds `Wrocław`). Each hit carries `snippet` — the description around the first
+  hit; the UI highlights the terms and shows the full description in the detail view.
 - `minScore` — hides scored offers below it; unscored offers are not affected. The UI sends
   6 by default.
 - `scoredOnly=true` — hides unscored offers.

@@ -182,6 +182,13 @@ textarea{width:100%;min-height:380px;font-family:var(--mono);font-size:12.5px;li
 .c-city,.c-mode{font-size:13px}
 .c-mode small{display:block;color:var(--mute);font-size:11.5px}
 .c-date{font-family:var(--mono);font-size:12.5px}
+.search{font-family:var(--mono);font-size:12px;padding:5px 8px;border:1px solid var(--rule);border-radius:0;background:var(--card);color:var(--ink);width:220px}
+mark{background:#f3dc8a;color:inherit;padding:0 1px}
+.c-snip{grid-column:1/-1;margin:-4px 0 0 44px;font-size:12.5px;color:var(--ink2);line-height:1.45}
+.desc{white-space:pre-line;font-size:13.5px;line-height:1.55;color:var(--ink2);max-height:10.5em;overflow:hidden;position:relative}
+.desc::after{content:"";position:absolute;left:0;right:0;bottom:0;height:3em;background:linear-gradient(transparent,var(--card))}
+.desc.full{max-height:none}.desc.full::after{display:none}
+.more-link{margin-top:8px;border:none;background:none;padding:0;font-family:var(--mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--navy);cursor:pointer}
 .c-reason{grid-column:1/-1;margin:-4px 0 0 44px;font-size:12.5px;color:var(--mute);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 
 /* phone: the side index becomes a top strip, list rows become stacked cards, the detail covers the screen */
@@ -217,6 +224,8 @@ textarea{width:100%;min-height:380px;font-family:var(--mono);font-size:12.5px;li
   .c-mode{grid-area:mode}.c-date{grid-area:date;text-align:right;color:var(--mute)}
   .c-who .title{white-space:normal}
   .c-mode small{display:inline;margin-left:6px}
+  .search{width:100%}
+  .c-snip{margin:0}
   .c-reason{grid-area:reason;margin:0;white-space:normal;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
   .detail{position:fixed;inset:0;width:auto;height:auto;z-index:6;border-left:none}
   .dhead{padding:12px 14px}
@@ -290,6 +299,7 @@ textarea{width:100%;min-height:380px;font-family:var(--mono);font-size:12.5px;li
       <button data-sort="date">По дате</button>
       <button data-sort="date_score">Дата + оценка</button>
       <div class="filters" id="filters">
+        <input type="search" class="search" id="fQuery" placeholder="Поиск по тексту вакансии" autocomplete="off">
         <label>Оценка от
           <select id="fMinScore">
             <option value="">любая</option>
@@ -339,6 +349,28 @@ textarea{width:100%;min-height:380px;font-family:var(--mono);font-size:12.5px;li
 <script>
 const $ = id => document.getElementById(id);
 const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+// same folding as the server's search, length-preserving so hit positions map back to the text
+const FOLD = {'ą': 'a', 'ć': 'c', 'ę': 'e', 'ł': 'l', 'ń': 'n', 'ó': 'o', 'ś': 's', 'ź': 'z', 'ż': 'z'};
+const fold = s => Array.from(String(s), c => { const l = c.toLowerCase(); return l.length === 1 ? FOLD[l] || l : c; }).join('');
+const searchTerms = () => [...new Set(fold(filters.q || '').split(/\s+/).filter(Boolean))];
+
+function highlight(text, terms) {
+  text = String(text ?? '');
+  if (!terms.length) return esc(text);
+  const folded = fold(text), marks = new Array(text.length).fill(false);
+  terms.forEach(t => {
+    for (let i = folded.indexOf(t); i >= 0; i = folded.indexOf(t, i + t.length)) marks.fill(true, i, i + t.length);
+  });
+  let out = '', i = 0;
+  while (i < text.length) {
+    let j = i;
+    while (j < text.length && marks[j] === marks[i]) j++;
+    out += marks[i] ? `<mark>${esc(text.slice(i, j))}</mark>` : esc(text.slice(i, j));
+    i = j;
+  }
+  return out;
+}
 const unitRu = {hour:'ч', day:'день', month:'мес', year:'год'};
 const stepRu = {scrape:'список вакансий', details:'описания', extract:'извлечение (Claude)', score:'оценка (Claude)', rescore:'пересчёт оценок (Claude)'};
 const actionButtons = ['scanBtn','delScoresBtn','wipeBtn'];
@@ -475,13 +507,14 @@ function card(j) {
   const c = cities(o);
   return `<div class="card ${openId === o.id ? 'active' : ''}" data-card="${esc(o.id)}">
     <div class="c-who"><span class="av">${esc(initials(o.companyName))}</span>
-      <div><div class="title">${esc(o.title)}</div><div class="company">${esc(o.companyName || '')}</div></div></div>
+      <div><div class="title">${highlight(o.title, searchTerms())}</div><div class="company">${highlight(o.companyName, searchTerms())}</div></div></div>
     <div class="c-score">${scoreCell(j)}</div>
     <div class="c-sal">${salaryCell(o)}</div>
     <div class="c-city">${c.length ? esc(c[0]) + (c.length > 1 ? ` <span class="muted">+${c.length - 1}</span>` : '') : '—'}</div>
     <div class="c-mode">${e.workMode ? RU.workMode[e.workMode] : '—'}<small>${e.companyType ? RU.companyType[e.companyType] : ''}</small></div>
     <div class="c-date">${ago(o.publishedAt)}</div>
-    ${j.score && j.score.reason ? `<div class="c-reason">${esc(j.score.reason)}</div>` : ''}
+    ${j.snippet ? `<div class="c-snip">${highlight(j.snippet, searchTerms())}</div>`
+      : j.score && j.score.reason ? `<div class="c-reason">${esc(j.score.reason)}</div>` : ''}
   </div>`;
 }
 
@@ -536,6 +569,7 @@ function detail(j) {
     <div class="dbody">
       ${j.score && j.score.reason ? `<div class="dsec"><div class="reason">${esc(j.score.reason)}</div></div>` : ''}
       ${body}
+      <div class="dsec"><h3>Описание с сайта</h3><div id="dDesc"><span class="none">Загружается…</span></div></div>
       ${o.applyUrl ? `<a class="apply" href="${esc(o.applyUrl)}" target="_blank" rel="noopener">Открыть на JustJoin →</a>` : ''}
     </div>`;
 }
@@ -549,6 +583,33 @@ function openDetail(id) {
   $('detail').classList.add('open');
   $('detail').scrollTop = 0;
   $('detailClose').onclick = closeDetail;
+  loadDescription(id);
+}
+
+// the list carries no descriptions, so the full offer is fetched when its detail opens
+async function loadDescription(id) {
+  let full;
+  try {
+    full = await api('GET', '/api/jobs/' + encodeURIComponent(id));
+  } catch (err) {
+    if (openId === id) $('dDesc').innerHTML = `<span class="none">Не удалось загрузить: ${esc(err.message)}</span>`;
+    return;
+  }
+  if (openId !== id || !$('dDesc')) return;
+  const text = full.offer.description;
+  if (!text) {
+    $('dDesc').innerHTML = '<span class="none">Описание ещё не загружено — появится после следующего скана.</span>';
+    return;
+  }
+  const terms = searchTerms();
+  $('dDesc').innerHTML = `<div class="desc" id="dDescText">${highlight(text, terms)}</div>
+    <button class="more-link" id="dDescMore">Показать полностью</button>`;
+  const box = $('dDescText'), more = $('dDescMore');
+  if (terms.length || box.scrollHeight <= box.clientHeight + 4) {
+    box.classList.add('full');
+    more.style.display = 'none';
+  }
+  more.onclick = () => { box.classList.add('full'); more.style.display = 'none'; };
 }
 
 function closeDetail() {
@@ -567,7 +628,9 @@ function initFilters() {
     minScore: q.has('minScore') ? q.get('minScore') : '6',
     scoredOnly: q.get('scoredOnly') === 'true',
     sort: ['score', 'date', 'date_score'].includes(q.get('sort')) ? q.get('sort') : 'score',
+    q: q.get('q') || '',
   };
+  $('fQuery').value = filters.q;
   $('fMinScore').value = filters.minScore;
   $('fScoredOnly').checked = filters.scoredOnly;
   syncSortTabs();
@@ -578,8 +641,10 @@ function syncSortTabs() {
 }
 
 function onFilterChange() {
-  filters = {minScore: $('fMinScore').value, scoredOnly: $('fScoredOnly').checked, sort: filters.sort};
+  filters = {minScore: $('fMinScore').value, scoredOnly: $('fScoredOnly').checked, sort: filters.sort,
+    q: $('fQuery').value.trim()};
   const q = new URLSearchParams();
+  if (filters.q) q.set('q', filters.q);
   if (filters.minScore !== '') q.set('minScore', filters.minScore);
   if (filters.scoredOnly) q.set('scoredOnly', 'true');
   if (filters.sort !== 'score') q.set('sort', filters.sort);
@@ -587,6 +652,11 @@ function onFilterChange() {
   loadJobs();
 }
 ['fMinScore', 'fScoredOnly'].forEach(id => $(id).onchange = onFilterChange);
+let searchTimer = null;
+$('fQuery').oninput = () => {
+  clearTimeout(searchTimer);
+  searchTimer = setTimeout(() => { if ($('fQuery').value.trim() !== filters.q) onFilterChange(); }, 300);
+};
 document.querySelectorAll('[data-sort]').forEach(b => b.onclick = () => {
   filters.sort = b.dataset.sort;
   syncSortTabs();
@@ -597,6 +667,7 @@ function jobsUrl(p) {
   const q = new URLSearchParams({sort: filters.sort, page: p, size: PAGE_SIZE});
   if (filters.minScore !== '') q.set('minScore', filters.minScore);
   if (filters.scoredOnly) q.set('scoredOnly', 'true');
+  if (filters.q) q.set('q', filters.q);
   return '/api/jobs?' + q;
 }
 
@@ -662,6 +733,7 @@ async function loadJobs(reset = true) {
   setStaleCount(data.staleCount);
   if (reset) {
     $('list').innerHTML = jobs.length ? jobs.map(card).join('')
+      : filters.q ? `<div class="empty">По запросу «${esc(filters.q)}» ничего не нашлось${filters.minScore ? ` (действует фильтр «Оценка от ${esc(filters.minScore)}»)` : ''}.</div>`
       : '<div class="empty">Нет вакансий под эти фильтры. Ослабь фильтры или нажми «Сканировать».</div>';
   } else {
     $('list').insertAdjacentHTML('beforeend', data.items.map(card).join(''));
