@@ -12,7 +12,7 @@ no build, no dependencies). Phase 2 (GoWork, new connectors) — do NOT implemen
 ## Tech Stack
 
 - Java 25
-- Spring Boot 4.0.3
+- Spring Boot 4.0.9
 - Gradle
 - JustJoin JSON API (`api.justjoin.it/v2/user-panel/offers`, `Version: 2` header, Java = `categoryId=6`)
 - Jsoup (HTML→text for job descriptions when fetched)
